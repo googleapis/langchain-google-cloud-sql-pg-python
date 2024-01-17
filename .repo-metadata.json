@@ -1,0 +1,13 @@
+{
+    "name": "langchain-google-cloud-sql-pg",
+    "name_pretty": "Cloud SQL for PostgreSQL for LangChain - Python",
+    "issue_tracker": "https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues",
+    "client_documentation": "",
+    "release_level": "preview",
+    "language": "python",
+    "library_type": "OTHER",
+    "repo": "googleapis/langchain-google-cloud-sql-pg-python",
+    "distribution_name": "langchain-google-cloud-sql-pg",
+    "requires_billing": true,
+    "codeowner_team": "@googleapis/senseai-eco"
+}
