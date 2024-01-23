@@ -43,7 +43,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install requirements
-        run: pip install .[test]
+        run: pip install -e .[test]
 
       - name: Run linters
         run: |
