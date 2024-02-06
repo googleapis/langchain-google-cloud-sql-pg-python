@@ -39,6 +39,16 @@ Import the library:
 
 ```python
 from langchain_google_cloud_sql_pg import CloudSQLVectorstore, PostgreSQLEngine
+from langchain.embeddings import VertexAIEmbeddings
+
+
+engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
+embeddings_service = VertexAIEmbeddings()
+vectorstore = AlloyDBVectorStore(
+    engine,
+    table_name="my-table",
+    embeddings=embedding_service
+)
 ```
 
 See the full [Vector Store][vectorstore] tutorial.
@@ -49,6 +59,14 @@ Import the library:
 
 ```python
 from langchain_google_cloud_sql_pg import PostgreSQLEngine, PostgreSQLLoader
+
+
+engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
+loader = PostgresSQLLoader(
+    engine,
+    table_name="my-table-name"
+)
+docs = loader.lazy_load()
 ```
 
 See the full [Document Loader][loader] tutorial.
@@ -59,10 +77,17 @@ Import the library:
 
 ```python
 from langchain_google_cloud_sql_pg import PostgreSQLChatMessageHistory, PostgreSQLEngine
+
+
+engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
+history = PostgreSQLChatMessageHistory(
+    engine,
+    table_name="my-message-store",
+    session_id="my-session_id"
+)
 ```
 
 See the full [Chat Message History][history] tutorial.
-
 
 ## Contributing
 
