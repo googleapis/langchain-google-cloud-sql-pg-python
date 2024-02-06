@@ -35,7 +35,7 @@ source <your-env>/bin/activate
 
 ## Vector Store Usage
 
-Import the library:
+Use a vector store to store embedded data and perform vector search.
 
 ```python
 from langchain_google_cloud_sql_pg import CloudSQLVectorstore, PostgreSQLEngine
@@ -55,7 +55,7 @@ See the full [Vector Store][vectorstore] tutorial.
 
 ## Document Loader Usage
 
-Import the library:
+Use a document loader to load data as LangChain `Document`s.
 
 ```python
 from langchain_google_cloud_sql_pg import PostgreSQLEngine, PostgreSQLLoader
@@ -73,7 +73,7 @@ See the full [Document Loader][loader] tutorial.
 
 ## Chat Message History Usage
 
-Import the library:
+Use `ChatMessageHistory` to store messages and provide conversation history to LLMs.
 
 ```python
 from langchain_google_cloud_sql_pg import PostgreSQLChatMessageHistory, PostgreSQLEngine
