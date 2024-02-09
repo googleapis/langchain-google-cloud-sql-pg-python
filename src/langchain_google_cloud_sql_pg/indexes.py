@@ -16,7 +16,7 @@ import enum
 from typing import List, Optional
 
 
-class DistanceStrategy(str, enum.Enum):
+class DistanceStrategy(enum.Enum):
     """Enumerator of the Distance strategies."""
 
     EUCLIDEAN = "l2"
