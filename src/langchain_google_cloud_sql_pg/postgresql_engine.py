@@ -176,7 +176,7 @@ class PostgreSQLEngine:
         await self.aexecute("CREATE EXTENSION IF NOT EXISTS vector")
 
         if overwrite_existing:
-            await self.aexecute(f"DROP TABLE {table_name}")
+            await self.aexecute(f"DROP TABLE IF EXISTS {table_name}")
 
         query = f"""CREATE TABLE IF NOT EXISTS {table_name}(
             {id_column} UUID PRIMARY KEY,
