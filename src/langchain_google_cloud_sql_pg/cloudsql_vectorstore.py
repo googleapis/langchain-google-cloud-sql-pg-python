@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import uuid
 from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
 
 import nest_asyncio  # type: ignore
@@ -30,7 +29,7 @@ from sqlalchemy import text
 
 from .postgresql_engine import PostgreSQLEngine
 
-# nest_asyncio.apply()
+nest_asyncio.apply()
 
 
 class CloudSQLVectorStore(VectorStore):
@@ -48,10 +47,6 @@ class CloudSQLVectorStore(VectorStore):
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         overwrite_existing: bool = False,
-        k: Optional[int] = None,
-        score_threshold: Optional[float] = None,
-        fetch_k: Optional[int] = None,
-        lambda_mult: Optional[float] = None,
     ):
         """_summary_
 
@@ -79,35 +74,38 @@ class CloudSQLVectorStore(VectorStore):
         self.metadata_json_column = metadata_json_column
         self.overwrite_existing = overwrite_existing
         self.store_metadata = False
-        self.k = k
-        self.score_threshold = score_threshold
-        self.fetch_k = fetch_k
-        self.lambda_mult = lambda_mult
+
         if metadata_columns and ignore_metadata_columns:
             raise ValueError(
                 "Can not use both metadata_columns and ignore_metadata_columns."
             )
         try:
-            loop = asyncio.get_running_loop()
+            # loop = asyncio.get_running_loop()
+            loop = asyncio.get_event_loop()
             loop.run_until_complete(self.__post_init_async__())
         except RuntimeError:
             self.engine.run_as_sync(self.__post_init_async__())
 
     async def __post_init_async__(self) -> None:
-        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{self.table_name}'"
         if self.overwrite_existing:
-            await self.engine.aexecute(f"TRUNCATE TABLE {self.table_name}")
-        results = await self.engine.afetch(stmt)
+            await self.engine._aexecute(f"TRUNCATE TABLE {self.table_name}")
+
         # Get field type information
+        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{self.table_name}'"
+        results = await self.engine._afetch(stmt)
         columns = {}
         for field in results:
-            columns[field[0]] = field[1]
+            columns[field["column_name"]] = field["data_type"]
 
+        # Check columns
         if self.id_column not in columns:
             raise ValueError(f"Id column, {self.id_column}, does not exist.")
         if self.content_column not in columns:
+            raise ValueError(f"Content column, {self.content_column}, does not exist.")
+        content_type = columns[self.content_column]
+        if content_type != "text" and "char" not in content_type:
             raise ValueError(
-                f"Content column, {self.content_column}, does not exist."
+                f"Content column, {self.content_column}, is type, {content_type}. It must be a type of character string."
             )
         if self.embedding_column not in columns:
             raise ValueError(
@@ -120,12 +118,11 @@ class CloudSQLVectorStore(VectorStore):
         for column in self.metadata_columns:
             if column not in columns:
                 raise ValueError(f"Metadata column, {column}, does not exist.")
-        # if column_types[content_column] is not "String":
-        #     raise ValueError(f"Content column, {content_column}, does not exist.")
+
         if self.metadata_json_column in columns:
             self.store_metadata = True
 
-        all_columns = columns  # .keys()
+        all_columns = columns
         if self.ignore_metadata_columns:
             for column in self.ignore_metadata_columns:
                 del all_columns[column]
@@ -139,18 +136,85 @@ class CloudSQLVectorStore(VectorStore):
     def embeddings(self) -> Embeddings:
         return self.embedding_service
 
+    async def aadd_embeddings(
+        self,
+        texts: Iterable[str],
+        embeddings: List[List[float]],
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        if not ids:
+            ids = ["NULL" for _ in texts]
+        if not metadatas:
+            metadatas = [{} for _ in texts]
+        # Insert embeddings
+        for id, content, embedding, metadata in zip(ids, texts, embeddings, metadatas):
+            metadata_col_names = (
+                ", " + ", ".join(self.metadata_columns)
+                if len(self.metadata_columns) > 0
+                else ""
+            )
+            insert_stmt = f"INSERT INTO {self.table_name}({self.id_column}, {self.content_column}, {self.embedding_column}{metadata_col_names}"
+            values_stmt = f" VALUES ('{id}','{content}','{embedding}'"
+            extra = metadata
+            for metadata_column in self.metadata_columns:
+                values_stmt += f",'{metadata[metadata_column]}'"
+                del extra[metadata_column]
+
+            insert_stmt += (
+                f", {self.metadata_json_column})" if self.store_metadata else ")"
+            )
+            values_stmt += f",'{json.dumps(extra)}')" if self.store_metadata else ")"
+            query = insert_stmt + values_stmt
+            await self.engine._aexecute(query)
+
+        return ids
+
+    async def aadd_texts(
+        self,
+        texts: Iterable[str],
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        embeddings = self.embedding_service.embed_documents(list(texts))
+        ids = await self.aadd_embeddings(
+            texts, embeddings, metadatas=metadatas, ids=ids, **kwargs
+        )
+        return ids
+
+    async def aadd_documents(
+        self,
+        documents: List[Document],
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        texts = [doc.page_content for doc in documents]
+        metadatas = [doc.metadata for doc in documents]
+        ids = await self.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
+        return ids
+
     def add_texts(
         self,
         texts: Iterable[str],
-        metadatas: List[dict] | None = None,
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        pass
+        try:
+            loop = asyncio.get_running_loop()
+            # loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.aadd_texts(texts, metadatas, ids))
+        except RuntimeError:
+            self.engine.run_as_sync(self.aadd_texts(texts, metadatas, ids))
+        return []
 
-    def from_texts(self):
+    @classmethod
+    def from_texts(cls):
         pass
 
     def similarity_search(
         self, query: str, k: int = 4, **kwargs: Any
     ) -> List[Document]:
-        pass
+        return []

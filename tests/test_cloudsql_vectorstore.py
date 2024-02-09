@@ -21,21 +21,15 @@ import pytest
 import pytest_asyncio
 from langchain_community.embeddings import FakeEmbeddings
 from langchain_core.documents import Document
-from langchain_google_vertexai import VertexAIEmbeddings
-from sqlalchemy import TEXT, VARCHAR, Column
 
-from langchain_google_cloud_sql_pg import CloudSQLVectorStore, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
 
-PROJECT_ID = os.environ.get("PROJECT_ID")
-INSTANCE = os.environ.get("INSTANCE_ID")
-DATABASE = os.environ.get("DATABASE_ID")
-REGION = os.environ.get("REGION")
-DEFAULT_TABLE = "test_table_vs"
-CUSTOM_TABLE = "test_table_custom_vs"
+DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
 
-class FakeEmbeddingsDimension(FakeEmbeddings):
+class FakeEmbeddingsWithDimension(FakeEmbeddings):
     """Fake embeddings functionality for testing."""
 
     size: int = VECTOR_SIZE
@@ -43,8 +37,7 @@ class FakeEmbeddingsDimension(FakeEmbeddings):
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Return simple embeddings."""
         return [
-            [float(1.0)] * (VECTOR_SIZE - 1) + [float(i)]
-            for i in range(len(texts))
+            [float(1.0)] * (VECTOR_SIZE - 1) + [float(i)] for i in range(len(texts))
         ]
 
     def embed_query(self, text: str = "default") -> List[float]:
@@ -52,29 +45,113 @@ class FakeEmbeddingsDimension(FakeEmbeddings):
         return [float(1.0)] * (VECTOR_SIZE - 1) + [float(0.0)]
 
 
+embeddings_service = FakeEmbeddingsWithDimension()
+
+texts = ["foo", "bar", "baz"]
+metadatas = [{"page": str(i)} for i in range(len(texts))]
+docs = [
+    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
+]
+embeddings = [embeddings_service.embed_query() for i in range(len(texts))]
+
+
+def get_env_var(key: str, desc: str) -> str:
+    v = os.environ.get(key)
+    if v is None:
+        raise ValueError(f"Must set env var {key} to: {desc}")
+    return v
+
+
 @pytest.mark.asyncio
 class TestVectorStore:
+    @pytest.fixture(scope="module")
+    def db_project(self) -> str:
+        return get_env_var("PROJECT_ID", "project id for google cloud")
 
-    @pytest_asyncio.fixture  # (scope="function")
-    async def engine(self):
-        assert PROJECT_ID
-        assert INSTANCE
-        assert DATABASE
-        assert REGION
+    @pytest.fixture(scope="module")
+    def db_region(self) -> str:
+        return get_env_var("REGION", "region for cloud sql instance")
+
+    @pytest.fixture(scope="module")
+    def db_instance(self) -> str:
+        return get_env_var("INSTANCE_ID", "instance for cloud sql")
+
+    @pytest.fixture(scope="module")
+    def db_name(self) -> str:
+        return get_env_var("DATABASE_ID", "instance for cloud sql")
+
+    @pytest_asyncio.fixture
+    async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgreSQLEngine.afrom_instance(
-            project_id=PROJECT_ID,
-            instance=INSTANCE,
-            region=REGION,
-            database=DATABASE,
+            project_id=db_project,
+            instance=db_instance,
+            region=db_region,
+            database=db_name,
         )
-        # await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         yield engine
-        # await engine.aexecute(f"DROP TABLE {DEFAULT_TABLE}")
+        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
 
-    async def test_init(self, engine):
+    @pytest_asyncio.fixture
+    def vs(self, engine):
         vs = CloudSQLVectorStore(
             engine,
-            embedding_service=FakeEmbeddingsDimension(),
+            embedding_service=FakeEmbeddingsWithDimension(),
             table_name=DEFAULT_TABLE,
         )
-        assert vs
+        yield vs
+
+    @pytest_asyncio.fixture
+    async def vs_custom(self, engine):
+        await engine.init_vectorstore_table(
+            CUSTOM_TABLE,
+            VECTOR_SIZE,
+            id_column="myid",
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadatas=[Column("page", "TEXT"), Column("source", "TEXT")],
+            metadata_json_column="mymeta",
+        )
+        vs = CloudSQLVectorStore(
+            engine,
+            embedding_service=FakeEmbeddingsWithDimension(),
+            table_name=CUSTOM_TABLE,
+            id_column="myid",
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadata_columns=["page", "source"],
+            metadata_json_column="mymeta",
+        )
+        yield vs
+
+    async def test_aadd_texts(self, engine, vs):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        await vs.aadd_texts(texts, ids=ids)
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        assert len(results) == 3
+
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        await vs.aadd_texts(texts, metadatas, ids)
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        assert len(results) == 6
+        await engine._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE}")
+
+    async def test_aadd_docs(self, engine, vs):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        await vs.aadd_documents(docs, ids=ids)
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        assert len(results) == 3
+
+    async def test_aadd_embedding(self, engine, vs):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        await vs.aadd_embeddings(texts, embeddings, metadatas, ids)
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        assert len(results) == 3
+
+    async def test_add_texts(self, engine, vs):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        vs.add_texts(texts, ids=ids)
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        assert len(results) == 3
+
+    # Need tests for overwrite_existing=True and store metadata=False

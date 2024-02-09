@@ -99,7 +99,7 @@ class PostgreSQLEngine:
         database: str,
     ) -> PostgreSQLEngine:
         # Running a loop in a background thread allows us to support
-        # async methods from non-async enviroments
+        # async methods from non-async environments
         loop = asyncio.new_event_loop()
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()
@@ -165,7 +165,7 @@ class PostgreSQLEngine:
 
         return result_fetch
 
-    def run_as_sync(self, coro: Awaitable[T]):  # TODO: add return type
+    def run_as_sync(self, coro: Awaitable[T]) -> T:
         if not self._loop:
             raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
