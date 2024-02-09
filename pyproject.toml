@@ -7,8 +7,10 @@ license = {file = "LICENSE"}
 requires-python = ">=3.8"
 dependencies = [
     "langchain==0.1.1",
-    "SQLAlchemy==2.0.7",
-    "cloud-sql-python-connector[asyncpg]==1.5.0"
+    "SQLAlchemy>=2.0.25",
+    "cloud-sql-python-connector[asyncpg]>=1.6.0",
+    "nest_asyncio",
+    "pgvector"
 ]
 
 [project.urls]
@@ -24,19 +26,20 @@ test = [
     "isort==5.13.2",
     "mypy==1.7.1",
     "pytest-asyncio==0.23.0",
-    "pytest==7.4.4"
+    "pytest==7.4.4",
+    "langchain_google_vertexai"
 ]
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-target-version = ['py38']
-
 [tool.isort]
 profile = "black"
 
 [tool.mypy]
-python_version = 3.8
+python_version = "3.11"
 warn_unused_configs = true
+exclude = [
+    "owlbot.py"
+]
