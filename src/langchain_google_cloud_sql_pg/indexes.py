@@ -20,7 +20,7 @@ class DistanceStrategy(enum.Enum):
     """Enumerator of the Distance strategies."""
 
     EUCLIDEAN = "l2"
-    COSINE = "cosine"
+    COSINE_DISTANCE = "cosine"
     INNER_PRODUCT = "inner"
 
 
