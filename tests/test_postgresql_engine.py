@@ -23,10 +23,6 @@ from langchain_community.embeddings import FakeEmbeddings
 
 from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine
 
-PROJECT_ID = os.environ.get("PROJECT_ID")
-INSTANCE = os.environ.get("INSTANCE_ID")
-DATABASE = os.environ.get("DATABASE_ID")
-REGION = os.environ.get("REGION")
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
@@ -40,7 +36,8 @@ class FakeEmbeddingsWithDimension(FakeEmbeddings):
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Return simple embeddings."""
         return [
-            [float(1.0)] * (VECTOR_SIZE - 1) + [float(i)] for i in range(len(texts))
+            [float(1.0)] * (VECTOR_SIZE - 1) + [float(i)]
+            for i in range(len(texts))
         ]
 
     def embed_query(self, text: str = "default") -> List[float]:
@@ -79,10 +76,10 @@ class TestEngineAsync:
     @pytest_asyncio.fixture
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgreSQLEngine.afrom_instance(
-            project_id=PROJECT_ID,
-            instance=INSTANCE,
-            region=REGION,
-            database=DATABASE,
+            project_id=db_project,
+            instance=db_instance,
+            region=db_region,
+            database=db_name,
         )
         yield engine
 
@@ -127,11 +124,11 @@ class TestEngineAsync:
 
         await engine._aexecute(f"DROP TABLE {CUSTOM_TABLE}")
 
-    def test_sync_engine(self):
+    def test_sync_engine(self, db_project, db_region, db_instance, db_name):
         engine = PostgreSQLEngine.from_instance(
-            project_id=PROJECT_ID,
-            instance=INSTANCE,
-            region=REGION,
-            database=DATABASE,
+            project_id=db_project,
+            instance=db_instance,
+            region=db_region,
+            database=db_name,
         )
         assert engine
