@@ -17,21 +17,22 @@ from __future__ import annotations
 
 # import requests
 # import sqlalchemy
-import asyncio
+import asyncio  # type: ignore
 from threading import Thread
 from typing import TYPE_CHECKING, Dict, List, Optional, Type
 
 import aiohttp
-import google.auth
-import google.auth.transport.requests
-import nest_asyncio
+import google.auth  # type: ignore
+import google.auth.transport.requests  # type: ignore
 from google.cloud.sql.connector import Connector, create_async_connector
 
 # from pgvector.asyncpg import register_vector
 from sqlalchemy import Column, text
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
-
-# nest_asyncio.apply()
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncEngine,
+    create_async_engine,
+)
 
 if TYPE_CHECKING:
     import asyncpg
@@ -109,7 +110,7 @@ class PostgreSQLEngine:
         region: str,
         instance: str,
         database: str,
-        project_id: str = None,
+        project_id: Optional[str] = None,
     ) -> PostgreSQLEngine:
         """Create PostgreSQLEngine connection to the postgres database in the CloudSQL instance.
         Args:
@@ -148,9 +149,7 @@ class PostgreSQLEngine:
                 conn = await connector.connect_async(
                     f"{self.project_id}:{self.region}:{self.instance}",
                     "asyncpg",
-                    # user=await _get_iam_principal_email(credentials),
-                    user="postgres",
-                    password="my-pg-pass",
+                    user=await _get_iam_principal_email(credentials),
                     enable_iam_auth=True,
                     db=self.database,
                 )
@@ -189,18 +188,12 @@ class PostgreSQLEngine:
         overwrite_existing: bool = False,
         store_metadata: bool = True,
     ) -> None:
-        # async with self.engine.connect() as conn:
-        # Enable pgvector
-        # await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await self._aexecute_update("CREATE EXTENSION IF NOT EXISTS vector")
         # Register the vector type
         # await register_vector(conn)
 
         if overwrite_existing:
             await self._aexecute_update(f"DROP TABLE {table_name}")
-            # await conn.execute(
-            #     text(f"TRUNCATE TABLE {table_name} RESET IDENTITY")
-            # )  # TODO?
 
         query = f"""CREATE TABLE IF NOT EXISTS {table_name}(
             {id_column} UUID PRIMARY KEY,

@@ -20,13 +20,12 @@ import json
 import uuid
 from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
 
-import nest_asyncio
+import nest_asyncio  # type: ignore
 import numpy as np
 from langchain_community.vectorstores.utils import maximal_marginal_relevance
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
-from pgvector.sqlalchemy import Vector
 from sqlalchemy import text
 
 from .indexes import (
@@ -218,7 +217,10 @@ class CloudSQLVectorStore(VectorStore):
     #     )
 
     async def aadd_documents(
-        self, documents: List[Document], ids: List[str] = None, **kwargs: Any
+        self,
+        documents: List[Document],
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
     ) -> List[str]:
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
@@ -349,7 +351,7 @@ class CloudSQLVectorStore(VectorStore):
         self,
         embedding: List[float],
         k: int = 4,
-        filter: str = None,
+        filter: Optional[str] = None,
     ) -> List[Any]:
         k = self.k if self.k else k
         if self.distance_strategy == DistanceStrategy.EUCLIDEAN:
@@ -371,7 +373,7 @@ class CloudSQLVectorStore(VectorStore):
         self,
         query: str,
         k: int = 4,
-        filter: str = None,
+        filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
         embedding = self.embedding_service.embed_query(text=query)
@@ -384,7 +386,7 @@ class CloudSQLVectorStore(VectorStore):
         self,
         query: str,
         k: int = 4,
-        filter: str = None,
+        filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
         return self.loop.create_task(
@@ -395,7 +397,7 @@ class CloudSQLVectorStore(VectorStore):
         self,
         query: str,
         k: int = 4,
-        filter: str = None,
+        filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
         embedding = self.embedding_service.embed_query(query)
@@ -417,7 +419,7 @@ class CloudSQLVectorStore(VectorStore):
         self,
         embedding: List[float],
         k: int = 4,
-        filter: str = None,
+        filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
         docs_and_scores = await self.asimilarity_search_with_score_by_vector(
@@ -439,7 +441,7 @@ class CloudSQLVectorStore(VectorStore):
         self,
         embedding: List[float],
         k: int = 4,
-        filter: str = None,
+        filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
         results = await self.__query_collection(embedding=embedding, k=k, filter=filter)
@@ -484,7 +486,7 @@ class CloudSQLVectorStore(VectorStore):
         k: int = 4,
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
-        filter: str = None,
+        filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
         embedding = self.embedding_service.embed_query(text=query)
@@ -519,7 +521,7 @@ class CloudSQLVectorStore(VectorStore):
         k: int = 4,
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
-        filter: str = None,
+        filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
         """Return docs selected using the maximal marginal relevance."""
@@ -542,7 +544,7 @@ class CloudSQLVectorStore(VectorStore):
         k: int = 4,
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
-        filter: str = None,
+        filter: Optional[str] = None,
     ) -> List[Tuple[Document, float]]:
         results = await self.__query_collection(
             embedding=embedding, k=fetch_k, filter=filter
