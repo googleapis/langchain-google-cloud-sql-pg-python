@@ -9,8 +9,7 @@ dependencies = [
     "langchain==0.1.1",
     "SQLAlchemy>=2.0.25",
     "cloud-sql-python-connector[asyncpg]>=1.6.0",
-    "nest_asyncio",
-    "pgvector"
+    "pgvector>=0.2.5"
 ]
 
 [project.urls]
