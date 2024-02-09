@@ -178,7 +178,7 @@ class PostgreSQLEngine:
         if overwrite_existing:
             await self.aexecute(f"DROP TABLE IF EXISTS {table_name}")
 
-        query = f"""CREATE TABLE IF NOT EXISTS {table_name}(
+        query = f"""CREATE TABLE {table_name}(
             {id_column} UUID PRIMARY KEY,
             {content_column} TEXT NOT NULL,
             {embedding_column} vector({vector_size}) NOT NULL"""
