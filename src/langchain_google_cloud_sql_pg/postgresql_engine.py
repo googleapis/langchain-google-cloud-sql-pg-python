@@ -147,8 +147,9 @@ class PostgreSQLEngine:
             await conn.execute(text(query))
             await conn.commit()
 
-    async def afetch(self, query: str):
+    async def _afetch(self, query: str):
         async with self._engine.connect() as conn:
+            """ Fetch results from a SQL query."""
             result = await conn.execute(text(query))
             result_map = result.mappings()
             result_fetch = result_map.fetchall()
