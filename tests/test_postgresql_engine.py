@@ -20,8 +20,6 @@ from typing import List
 import pytest
 import pytest_asyncio
 from langchain_community.embeddings import FakeEmbeddings
-from langchain_core.documents import Document
-from langchain_google_vertexai import VertexAIEmbeddings
 
 from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine
 
@@ -42,8 +40,7 @@ class FakeEmbeddingsWithDimension(FakeEmbeddings):
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Return simple embeddings."""
         return [
-            [float(1.0)] * (VECTOR_SIZE - 1) + [float(i)]
-            for i in range(len(texts))
+            [float(1.0)] * (VECTOR_SIZE - 1) + [float(i)] for i in range(len(texts))
         ]
 
     def embed_query(self, text: str = "default") -> List[float]:
