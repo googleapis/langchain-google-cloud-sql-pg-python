@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from langchain_google_cloud_sql_pg.cloudsql_vectorstore import CloudSQLVectorStore
+from langchain_google_cloud_sql_pg.cloudsql_vectorstore import (
+    CloudSQLVectorStore,
+)
 from langchain_google_cloud_sql_pg.postgresql_engine import PostgreSQLEngine
 
 __all__ = ["PostgreSQLEngine", "CloudSQLVectorStore"]

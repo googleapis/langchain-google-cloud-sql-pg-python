@@ -43,7 +43,7 @@ class HNSWIndex:
     def __init__(
         self,
         name: str = "langchainhnsw",
-        m: int = 16,  # TODO!
+        m: int = 16,
         ef_construction: int = 64,
         partial_indexes: List = [],
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
