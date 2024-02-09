@@ -52,8 +52,7 @@ class FakeEmbeddingsWithAdaDimension(FakeEmbeddings):
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Return simple embeddings."""
         return [
-            [float(1.0)] * (ADA_TOKEN_COUNT - 1) + [float(i)]
-            for i in range(len(texts))
+            [float(1.0)] * (ADA_TOKEN_COUNT - 1) + [float(i)] for i in range(len(texts))
         ]
 
     def embed_query(self, text: str = "default") -> List[float]:
@@ -233,9 +232,7 @@ class TestAsync:
             metadata_columns=["page"],
         )
         output = await vs.asimilarity_search_with_score("foo", k=1)
-        assert output == [
-            (Document(page_content="foo", metadata={"page": "0"}), 0.0)
-        ]
+        assert output == [(Document(page_content="foo", metadata={"page": "0"}), 0.0)]
 
     async def test_with_filter_match(self, engine_custom) -> None:
         """Test end to end construction and search."""
@@ -249,12 +246,8 @@ class TestAsync:
             engine=engine_custom,
             metadata_columns=["page"],
         )
-        output = await vs.asimilarity_search_with_score(
-            "foo", k=1, filter="page = '0'"
-        )
-        assert output == [
-            (Document(page_content="foo", metadata={"page": "0"}), 0.0)
-        ]
+        output = await vs.asimilarity_search_with_score("foo", k=1, filter="page = '0'")
+        assert output == [(Document(page_content="foo", metadata={"page": "0"}), 0.0)]
 
     async def test_with_filter_distant_match(
         self,
@@ -271,9 +264,7 @@ class TestAsync:
             engine=engine_custom,
             metadata_columns=["page"],
         )
-        output = await vs.asimilarity_search_with_score(
-            "foo", k=1, filter="page = '2'"
-        )
+        output = await vs.asimilarity_search_with_score("foo", k=1, filter="page = '2'")
         assert output == [
             (
                 Document(page_content="baz", metadata={"page": "2"}),
@@ -296,9 +287,7 @@ class TestAsync:
             engine=engine_custom,
             metadata_columns=["page"],
         )
-        output = await vs.asimilarity_search_with_score(
-            "foo", k=1, filter="page = '5'"
-        )
+        output = await vs.asimilarity_search_with_score("foo", k=1, filter="page = '5'")
         assert output == []
 
     async def test_relevance_score(self, engine_custom) -> None:
@@ -371,9 +360,7 @@ class TestAsync:
             embedding_service=embeddings_service,
             engine=engine_custom,
         )
-        output = await vs.amax_marginal_relevance_search(
-            "coffee", k=1, fetch_k=3
-        )
+        output = await vs.amax_marginal_relevance_search("coffee", k=1, fetch_k=3)
         assert "coffee" in output[0].page_content
 
 
@@ -405,9 +392,7 @@ class TestIndex:
         await vs.aapply_index(index)
 
     async def test_applyindex_l2(self, vs) -> None:
-        index = HNSWIndex(
-            name="hnswl2", distance_strategy=DistanceStrategy.EUCLIDEAN
-        )
+        index = HNSWIndex(name="hnswl2", distance_strategy=DistanceStrategy.EUCLIDEAN)
         await vs.aapply_index(index)
 
     async def test_applyindex_ip(self, vs) -> None:

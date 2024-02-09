@@ -129,9 +129,7 @@ class CloudSQLVectorStore(VectorStore):
             f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{self.table_name}'"
         )
         if self.overwrite_existing:
-            await self.engine._aexecute_update(
-                f"TRUNCATE TABLE {self.table_name}"
-            )
+            await self.engine._aexecute_update(f"TRUNCATE TABLE {self.table_name}")
         # async with self.engine.connect() as conn:
         results = await self.engine._aexecute_fetch(stmt)
         # Get field type information
@@ -142,9 +140,7 @@ class CloudSQLVectorStore(VectorStore):
         if self.id_column not in columns:
             raise ValueError(f"Id column, {self.id_column}, does not exist.")
         if self.content_column not in columns:
-            raise ValueError(
-                f"Content column, {self.content_column}, does not exist."
-            )
+            raise ValueError(f"Content column, {self.content_column}, does not exist.")
         if self.embedding_column not in columns:
             raise ValueError(
                 f"Embedding column, {self.embedding_column}, does not exist."
@@ -189,9 +185,7 @@ class CloudSQLVectorStore(VectorStore):
             ids = [str(uuid.uuid4()) for _ in texts]
         if not metadatas:
             metadatas = [{} for _ in texts]
-        for id, content, embedding, metadata in zip(
-            ids, texts, embeddings, metadatas
-        ):
+        for id, content, embedding, metadata in zip(ids, texts, embeddings, metadatas):
             metadata_col_names = (
                 ", " + ", ".join(self.metadata_columns)
                 if len(self.metadata_columns) > 0
@@ -205,9 +199,7 @@ class CloudSQLVectorStore(VectorStore):
                 del extra[metadata_column]
 
             insert_stmt += (
-                f", {self.metadata_json_column})"
-                if self.store_metadata
-                else ")"
+                f", {self.metadata_json_column})" if self.store_metadata else ")"
             )
             values_stmt += f",'{extra}')" if self.store_metadata else ")"
             query = insert_stmt + values_stmt
@@ -411,7 +403,6 @@ class CloudSQLVectorStore(VectorStore):
         filter: str = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
-
         embedding = self.embedding_service.embed_query(query)
         docs = await self.asimilarity_search_with_score_by_vector(
             embedding=embedding, k=k, filter=filter
@@ -456,9 +447,7 @@ class CloudSQLVectorStore(VectorStore):
         filter: str = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
-        results = await self.__query_collection(
-            embedding=embedding, k=k, filter=filter
-        )
+        results = await self.__query_collection(embedding=embedding, k=k, filter=filter)
 
         documents_with_scores = []
         for row in results:
@@ -567,9 +556,7 @@ class CloudSQLVectorStore(VectorStore):
         k = self.k if self.k else k
         fetch_k = self.fetch_k if self.fetch_k else fetch_k
         lambda_mult = self.lambda_mult if self.lambda_mult else lambda_mult
-        embedding_list = [
-            json.loads(row[self.embedding_column]) for row in results
-        ]
+        embedding_list = [json.loads(row[self.embedding_column]) for row in results]
         mmr_selected = maximal_marginal_relevance(
             np.array(embedding, dtype=np.float32),
             embedding_list,
@@ -596,9 +583,7 @@ class CloudSQLVectorStore(VectorStore):
                 )
             )
 
-        return [
-            r for i, r in enumerate(documents_with_scores) if i in mmr_selected
-        ]
+        return [r for i, r in enumerate(documents_with_scores) if i in mmr_selected]
 
     def _select_relevance_score_fn(self) -> Callable[[float], float]:
         if self.distance_strategy == DistanceStrategy.COSINE:
@@ -619,13 +604,10 @@ class CloudSQLVectorStore(VectorStore):
         index: Union[HNSWIndex, IVFFlatIndex, BruteForce],
         concurrently=False,
     ) -> None:
-
         if isinstance(index, BruteForce):
             return None
 
-        filter = (
-            f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
-        )
+        filter = f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
         params = "WITH " + index.index_options()
         concurrently = "CONCURRENTLY" if concurrently else ""
 

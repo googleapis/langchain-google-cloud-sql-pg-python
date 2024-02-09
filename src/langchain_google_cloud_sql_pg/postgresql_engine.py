@@ -29,11 +29,7 @@ from google.cloud.sql.connector import Connector, create_async_connector
 
 # from pgvector.asyncpg import register_vector
 from sqlalchemy import Column, text
-from sqlalchemy.ext.asyncio import (
-    AsyncConnection,
-    AsyncEngine,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
 # nest_asyncio.apply()
 
@@ -134,11 +130,9 @@ class PostgreSQLEngine:
 
     @classmethod
     def from_engine(cls, engine: AsyncEngine) -> PostgreSQLEngine:
-
         return cls(engine=engine, key=PostgreSQLEngine.__create_key)
 
     async def _engine(self) -> AsyncEngine:
-
         if self.engine is not None:
             return self.engine
 
