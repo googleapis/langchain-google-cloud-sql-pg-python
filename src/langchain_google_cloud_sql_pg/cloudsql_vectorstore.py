@@ -52,7 +52,7 @@ class CloudSQLVectorStore(VectorStore):
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
-        ignore_metadata_columns: List[str] = None,
+        ignore_metadata_columns: Optional[List[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         index_query_options: Optional[
@@ -60,10 +60,10 @@ class CloudSQLVectorStore(VectorStore):
         ] = None,
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
         overwrite_existing: bool = False,
-        k: int = None,
-        score_threshold: float = None,
-        fetch_k: int = None,
-        lambda_mult: float = None,
+        k: Optional[int] = None,
+        score_threshold: Optional[float] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
     ):
         """_summary_
 
@@ -155,7 +155,6 @@ class CloudSQLVectorStore(VectorStore):
         # if column_types[content_column] is not "String":
         #     raise ValueError(f"Content column, {content_column}, does not exist.")
         if self.metadata_json_column in columns:
-            print("found")
             self.store_metadata = True
 
         all_columns = columns  # .keys()
@@ -166,7 +165,6 @@ class CloudSQLVectorStore(VectorStore):
             del all_columns[self.id_column]
             del all_columns[self.content_column]
             del all_columns[self.embedding_column]
-            # print("key", self.metadata_columns)
             self.metadata_columns = [k for k, v in all_columns.keys()]
 
     @property
@@ -203,9 +201,6 @@ class CloudSQLVectorStore(VectorStore):
             )
             values_stmt += f",'{extra}')" if self.store_metadata else ")"
             query = insert_stmt + values_stmt
-            print(query)
-            print(extra)
-            print(self.metadata_columns)
             await self.engine._aexecute_update(query)
 
         return ids
