@@ -33,12 +33,12 @@ test = [
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
+[tool.black]
+target-version = ['py38']
+
 [tool.isort]
 profile = "black"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = 3.8
 warn_unused_configs = true
-exclude = [
-    "owlbot.py"
-]
