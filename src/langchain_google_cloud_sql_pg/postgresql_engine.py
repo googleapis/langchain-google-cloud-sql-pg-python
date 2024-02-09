@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from threading import Thread
 from typing import TYPE_CHECKING, Awaitable, Dict, List, Optional, TypeVar
 
@@ -22,7 +23,7 @@ import aiohttp
 import google.auth  # type: ignore
 import google.auth.transport.requests  # type: ignore
 from google.cloud.sql.connector import Connector, create_async_connector
-from sqlalchemy import Column, text
+from sqlalchemy import text  # Column,
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 if TYPE_CHECKING:
@@ -67,6 +68,13 @@ async def _get_iam_principal_email(
     return email
 
 
+@dataclass
+class Column:
+    name: str
+    data_type: str
+    nullable: bool = True
+
+
 class PostgreSQLEngine:
     """A class for managing connections to a Cloud SQL for Postgres database."""
 
@@ -90,7 +98,7 @@ class PostgreSQLEngine:
         instance: str,
         database: str,
     ) -> PostgreSQLEngine:
-        # Running a loop in a background thread allows us to support 
+        # Running a loop in a background thread allows us to support
         # async methods from non-async enviroments
         loop = asyncio.new_event_loop()
         thread = Thread(target=loop.run_forever, daemon=True)
@@ -143,14 +151,14 @@ class PostgreSQLEngine:
         return await cls._create(project_id, region, instance, database)
 
     async def _aexecute(self, query: str):
-        """Execute a SQL query. """
+        """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text(query))
             await conn.commit()
 
     async def _afetch(self, query: str):
         async with self._engine.connect() as conn:
-            """ Fetch results from a SQL query."""
+            """Fetch results from a SQL query."""
             result = await conn.execute(text(query))
             result_map = result.mappings()
             result_fetch = result_map.fetchall()
@@ -162,7 +170,7 @@ class PostgreSQLEngine:
             raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
-    async def ainit_vectorstore_table(
+    async def init_vectorstore_table(
         self,
         table_name: str,
         vector_size: int,
@@ -174,21 +182,21 @@ class PostgreSQLEngine:
         overwrite_existing: bool = False,
         store_metadata: bool = True,
     ) -> None:
-        await self.aexecute("CREATE EXTENSION IF NOT EXISTS vector")
+        await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
 
         if overwrite_existing:
-            await self.aexecute(f"DROP TABLE IF EXISTS {table_name}")
+            await self._aexecute(f"DROP TABLE IF EXISTS {table_name}")
 
         query = f"""CREATE TABLE {table_name}(
             {id_column} UUID PRIMARY KEY,
             {content_column} TEXT NOT NULL,
             {embedding_column} vector({vector_size}) NOT NULL"""
         for column in metadata_columns:
-            query += f",\n{column.name} {column.type}" + (
+            query += f",\n{column.name} {column.data_type}" + (
                 "NOT NULL" if not column.nullable else ""
             )
         if store_metadata:
-            query += ",\n{self.langchain_metadata} JSON"
+            query += f",\n{metadata_json_columns} JSON"
         query += "\n);"
 
-        await self.aexecute(query)
+        await self._aexecute(query)

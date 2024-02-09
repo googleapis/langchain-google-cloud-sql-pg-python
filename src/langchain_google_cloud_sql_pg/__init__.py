@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from langchain_google_cloud_sql_pg.postgresql_engine import PostgreSQLEngine
+from langchain_google_cloud_sql_pg.postgresql_engine import (
+    Column,
+    PostgreSQLEngine,
+)
 
-__all__ = ["PostgreSQLEngine"]
+__all__ = ["PostgreSQLEngine", "Column"]
