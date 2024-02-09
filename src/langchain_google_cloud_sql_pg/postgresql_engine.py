@@ -142,7 +142,8 @@ class PostgreSQLEngine:
     ) -> PostgreSQLEngine:
         return await cls._create(project_id, region, instance, database)
 
-    async def aexecute(self, query: str):
+    async def _aexecute(self, query: str):
+        """Execute a SQL query. """
         async with self._engine.connect() as conn:
             await conn.execute(text(query))
             await conn.commit()
