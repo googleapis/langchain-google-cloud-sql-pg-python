@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import asyncio
 from threading import Thread
-from typing import TYPE_CHECKING, Dict, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Awaitable, Dict, List, Optional, TypeVar
 
 import aiohttp
-import asyncpg
-import google.auth
-import google.auth.transport.requests
-import requests
+import google.auth  # type: ignore
+import google.auth.transport.requests  # type: ignore
 from google.cloud.sql.connector import Connector, create_async_connector
 from sqlalchemy import Column, text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+
+if TYPE_CHECKING:
+    import asyncpg  # type: ignore
+    import google.auth.credentials  # type: ignore
 
 T = TypeVar("T")
 
@@ -137,7 +139,7 @@ class PostgreSQLEngine:
 
         return result_fetch
 
-    def run_as_sync(self, coro: asyncio.Awaitable[T]):  # TODO: add return type
+    def run_as_sync(self, coro: Awaitable[T]):  # TODO: add return type
         if not self._loop:
             raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()

@@ -40,7 +40,11 @@ embeddings_service = VertexAIEmbeddings()
 @pytest.mark.asyncio
 class TestEngineAsync:
     @pytest_asyncio.fixture
-    async def engine(self) -> None:
+    async def engine(self):
+        assert PROJECT_ID
+        assert INSTANCE
+        assert DATABASE
+        assert REGION
         engine = await PostgreSQLEngine.afrom_instance(
             project_id=PROJECT_ID,
             instance=INSTANCE,
@@ -91,7 +95,11 @@ class TestEngineAsync:
 
 class TestEngineSync:
     @pytest_asyncio.fixture
-    def engine(self) -> None:
+    def engine(self):
+        assert PROJECT_ID
+        assert INSTANCE
+        assert DATABASE
+        assert REGION
         engine = PostgreSQLEngine.from_instance(
             project_id=PROJECT_ID,
             instance=INSTANCE,
