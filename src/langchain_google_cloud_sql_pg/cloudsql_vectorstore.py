@@ -136,7 +136,7 @@ class CloudSQLVectorStore(VectorStore):
     def embeddings(self) -> Embeddings:
         return self.embedding_service
 
-    async def aadd_embeddings(
+    async def _aadd_embeddings(
         self,
         texts: Iterable[str],
         embeddings: List[List[float]],
@@ -159,8 +159,11 @@ class CloudSQLVectorStore(VectorStore):
             values_stmt = f" VALUES ('{id}','{content}','{embedding}'"
             extra = metadata
             for metadata_column in self.metadata_columns:
-                values_stmt += f",'{metadata[metadata_column]}'"
-                del extra[metadata_column]
+                if metadata_column in metadata:
+                    values_stmt += f",'{metadata[metadata_column]}'"
+                    del extra[metadata_column]
+                else:
+                    values_stmt += ",null"
 
             insert_stmt += (
                 f", {self.metadata_json_column})" if self.store_metadata else ")"
@@ -179,7 +182,7 @@ class CloudSQLVectorStore(VectorStore):
         **kwargs: Any,
     ) -> List[str]:
         embeddings = self.embedding_service.embed_documents(list(texts))
-        ids = await self.aadd_embeddings(
+        ids = await self._aadd_embeddings(
             texts, embeddings, metadatas=metadatas, ids=ids, **kwargs
         )
         return ids
@@ -205,10 +208,49 @@ class CloudSQLVectorStore(VectorStore):
         try:
             loop = asyncio.get_running_loop()
             # loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.aadd_texts(texts, metadatas, ids))
+            return loop.run_until_complete(self.aadd_texts(texts, metadatas, ids))
         except RuntimeError:
-            self.engine.run_as_sync(self.aadd_texts(texts, metadatas, ids))
-        return []
+            return self.engine.run_as_sync(self.aadd_texts(texts, metadatas, ids))
+
+    def add_documents(
+        self,
+        documents: List[Document],
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        try:
+            loop = asyncio.get_running_loop()
+            # loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.aadd_documents(documents, ids))
+        except RuntimeError:
+            return self.engine.run_as_sync(self.aadd_documents(documents, ids))
+
+    async def adelete(
+        self,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> Optional[bool]:
+        if ids:
+            id_list = ", ".join([f"'{id}'" for id in ids])
+            query = (
+                f"DELETE FROM {self.table_name} WHERE {self.id_column} in ({id_list})"
+            )
+            await self.engine._aexecute(query)
+            return True
+        else:
+            return False
+
+    def delete(
+        self,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> Optional[bool]:
+        try:
+            loop = asyncio.get_running_loop()
+            # loop = asyncio.get_event_loop()
+            return loop.run_until_complete(self.adelete(ids))
+        except RuntimeError:
+            return self.engine.run_as_sync(self.adelete(ids))
 
     @classmethod
     def from_texts(cls):

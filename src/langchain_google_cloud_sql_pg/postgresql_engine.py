@@ -177,7 +177,7 @@ class PostgreSQLEngine:
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[Column] = [],
-        metadata_json_columns: str = "langchain_metadata",
+        metadata_json_column: str = "langchain_metadata",
         id_column: str = "langchain_id",
         overwrite_existing: bool = False,
         store_metadata: bool = True,
@@ -196,7 +196,7 @@ class PostgreSQLEngine:
                 "NOT NULL" if not column.nullable else ""
             )
         if store_metadata:
-            query += f",\n{metadata_json_columns} JSON"
+            query += f",\n{metadata_json_column} JSON"
         query += "\n);"
 
         await self._aexecute(query)
