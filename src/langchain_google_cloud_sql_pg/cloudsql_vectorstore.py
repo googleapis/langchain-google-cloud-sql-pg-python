@@ -253,8 +253,149 @@ class CloudSQLVectorStore(VectorStore):
             return self.engine.run_as_sync(self.adelete(ids))
 
     @classmethod
-    def from_texts(cls):
-        pass
+    async def afrom_texts(
+        cls: Type[CloudSQLVectorStore],
+        texts: List[str],
+        embedding: Embeddings,
+        engine: PostgreSQLEngine,
+        table_name: str,
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        ignore_metadata_columns: Optional[List[str]] = None,
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+        overwrite_existing: bool = False,
+        **kwargs: Any,
+    ) -> CloudSQLVectorStore:  # type: ignore[override]
+        vs = cls(
+            engine,
+            embedding,
+            table_name,
+            content_column=content_column,
+            embedding_column=embedding_column,
+            metadata_columns=metadata_columns,
+            ignore_metadata_columns=ignore_metadata_columns,
+            metadata_json_column=metadata_json_column,
+            id_column=id_column,
+            overwrite_existing=overwrite_existing,
+        )
+        await vs.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
+        return vs
+
+    @classmethod
+    async def afrom_documents(
+        cls: Type[CloudSQLVectorStore],
+        documents: List[Document],
+        embedding: Embeddings,
+        engine: PostgreSQLEngine,
+        table_name: str,
+        ids: Optional[List[str]] = None,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        ignore_metadata_columns: Optional[List[str]] = None,
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+        overwrite_existing: bool = False,
+        **kwargs: Any,
+    ) -> CloudSQLVectorStore:  # type: ignore[override]
+        vs = cls(
+            engine,
+            embedding,
+            table_name,
+            content_column=content_column,
+            embedding_column=embedding_column,
+            metadata_columns=metadata_columns,
+            ignore_metadata_columns=ignore_metadata_columns,
+            metadata_json_column=metadata_json_column,
+            id_column=id_column,
+            overwrite_existing=overwrite_existing,
+        )
+        texts = [doc.page_content for doc in documents]
+        metadatas = [doc.metadata for doc in documents]
+        await vs.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
+        return vs
+
+    @classmethod
+    def from_texts(
+        cls: Type[CloudSQLVectorStore],
+        texts: List[str],
+        embedding: Embeddings,
+        engine: PostgreSQLEngine,
+        table_name: str,
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        ignore_metadata_columns: Optional[List[str]] = None,
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+        overwrite_existing: bool = False,
+        **kwargs: Any,
+    ):
+        coro = cls.afrom_texts(
+            texts,
+            embedding,
+            engine,
+            table_name,
+            metadatas=metadatas,
+            content_column=content_column,
+            embedding_column=embedding_column,
+            metadata_columns=metadata_columns,
+            ignore_metadata_columns=ignore_metadata_columns,
+            metadata_json_column=metadata_json_column,
+            id_column=id_column,
+            overwrite_existing=overwrite_existing,
+            ids=ids,
+        )
+        # try:
+        loop = asyncio.get_running_loop()
+        # loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coro)
+        # except RuntimeError:
+        #     return cls.engine.run_as_sync(coro)
+
+    @classmethod
+    def from_documents(
+        cls: Type[CloudSQLVectorStore],
+        documents: List[Document],
+        embedding: Embeddings,
+        engine: PostgreSQLEngine,
+        table_name: str,
+        ids: Optional[List[str]] = None,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        ignore_metadata_columns: Optional[List[str]] = None,
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+        overwrite_existing: bool = False,
+        **kwargs: Any,
+    ) -> CloudSQLVectorStore:
+        coro = cls.afrom_documents(
+            documents,
+            embedding,
+            engine,
+            table_name,
+            content_column=content_column,
+            embedding_column=embedding_column,
+            metadata_columns=metadata_columns,
+            ignore_metadata_columns=ignore_metadata_columns,
+            metadata_json_column=metadata_json_column,
+            id_column=id_column,
+            overwrite_existing=overwrite_existing,
+            ids=ids,
+        )
+        # try:
+        loop = asyncio.get_running_loop()
+        # loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coro)
+        # except RuntimeError:
+        #     return cls.engine.run_as_sync(coro)
 
     def similarity_search(
         self, query: str, k: int = 4, **kwargs: Any
