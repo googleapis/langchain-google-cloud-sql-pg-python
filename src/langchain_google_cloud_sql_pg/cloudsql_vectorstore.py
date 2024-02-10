@@ -27,6 +27,13 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 from sqlalchemy import text
 
+from .indexes import (
+    DEFAULT_INDEX_NAME,
+    BruteForce,
+    DistanceStrategy,
+    HNSWIndex,
+    IVFFlatIndex,
+)
 from .postgresql_engine import PostgreSQLEngine
 
 nest_asyncio.apply()
@@ -101,7 +108,9 @@ class CloudSQLVectorStore(VectorStore):
         if self.id_column not in columns:
             raise ValueError(f"Id column, {self.id_column}, does not exist.")
         if self.content_column not in columns:
-            raise ValueError(f"Content column, {self.content_column}, does not exist.")
+            raise ValueError(
+                f"Content column, {self.content_column}, does not exist."
+            )
         content_type = columns[self.content_column]
         if content_type != "text" and "char" not in content_type:
             raise ValueError(
@@ -149,7 +158,9 @@ class CloudSQLVectorStore(VectorStore):
         if not metadatas:
             metadatas = [{} for _ in texts]
         # Insert embeddings
-        for id, content, embedding, metadata in zip(ids, texts, embeddings, metadatas):
+        for id, content, embedding, metadata in zip(
+            ids, texts, embeddings, metadatas
+        ):
             metadata_col_names = (
                 ", " + ", ".join(self.metadata_columns)
                 if len(self.metadata_columns) > 0
@@ -166,9 +177,13 @@ class CloudSQLVectorStore(VectorStore):
                     values_stmt += ",null"
 
             insert_stmt += (
-                f", {self.metadata_json_column})" if self.store_metadata else ")"
+                f", {self.metadata_json_column})"
+                if self.store_metadata
+                else ")"
             )
-            values_stmt += f",'{json.dumps(extra)}')" if self.store_metadata else ")"
+            values_stmt += (
+                f",'{json.dumps(extra)}')" if self.store_metadata else ")"
+            )
             query = insert_stmt + values_stmt
             await self.engine._aexecute(query)
 
@@ -195,7 +210,9 @@ class CloudSQLVectorStore(VectorStore):
     ) -> List[str]:
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
-        ids = await self.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
+        ids = await self.aadd_texts(
+            texts, metadatas=metadatas, ids=ids, **kwargs
+        )
         return ids
 
     def add_texts(
@@ -208,9 +225,13 @@ class CloudSQLVectorStore(VectorStore):
         try:
             loop = asyncio.get_running_loop()
             # loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.aadd_texts(texts, metadatas, ids))
+            return loop.run_until_complete(
+                self.aadd_texts(texts, metadatas, ids)
+            )
         except RuntimeError:
-            return self.engine.run_as_sync(self.aadd_texts(texts, metadatas, ids))
+            return self.engine.run_as_sync(
+                self.aadd_texts(texts, metadatas, ids)
+            )
 
     def add_documents(
         self,
@@ -232,9 +253,7 @@ class CloudSQLVectorStore(VectorStore):
     ) -> Optional[bool]:
         if ids:
             id_list = ", ".join([f"'{id}'" for id in ids])
-            query = (
-                f"DELETE FROM {self.table_name} WHERE {self.id_column} in ({id_list})"
-            )
+            query = f"DELETE FROM {self.table_name} WHERE {self.id_column} in ({id_list})"
             await self.engine._aexecute(query)
             return True
         else:
@@ -260,3 +279,55 @@ class CloudSQLVectorStore(VectorStore):
         self, query: str, k: int = 4, **kwargs: Any
     ) -> List[Document]:
         return []
+
+    async def aapply_vector_index(
+        self,
+        index: Union[HNSWIndex, IVFFlatIndex, BruteForce],
+        name: Optional[str] = None,
+        concurrently=False,
+    ) -> None:
+        if isinstance(index, BruteForce):
+            return None
+
+        filter = (
+            f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
+        )
+        params = "WITH " + index.index_options()
+        concurrently = "CONCURRENTLY" if concurrently else ""
+
+        if index.distance_strategy == DistanceStrategy.EUCLIDEAN:
+            function = "vector_l2_ops"
+        elif index.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
+            function = "vector_cosine_ops"
+        else:
+            function = "vector_ip_ops"
+
+        name = name if name else index.name
+        # Concurrently errors
+        stmt = f"CREATE INDEX  {name} ON {self.table_name} USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};"
+        print(stmt)
+        await self.engine._aexecute(stmt)
+
+    async def areindex(self, index_name: str = DEFAULT_INDEX_NAME) -> None:
+        query = f"REINDEX INDEX {index_name};"
+        print(query)
+        await self.engine._aexecute(query)
+
+    async def adrop_vector_index(
+        self,
+        index_name: str = DEFAULT_INDEX_NAME,
+    ) -> None:
+        query = f"DROP INDEX IF EXISTS {index_name};"
+        await self.engine._aexecute(query)
+
+    async def is_valid_index(
+        self,
+        index_name: str = DEFAULT_INDEX_NAME,
+    ) -> bool:
+        query = f"""
+        SELECT tablename, indexname
+        FROM pg_indexes
+        WHERE tablename = '{self.table_name}' AND indexname = '{index_name}';
+        """
+        results = await self.engine._afetch(query)
+        return bool(len(results) == 1)

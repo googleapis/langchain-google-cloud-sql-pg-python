@@ -24,7 +24,8 @@ class DistanceStrategy(enum.Enum):
     INNER_PRODUCT = "inner"
 
 
-DEFAULT_DISTANCE_STRATEGY = DistanceStrategy.COSINE
+DEFAULT_DISTANCE_STRATEGY = DistanceStrategy.COSINE_DISTANCE
+DEFAULT_INDEX_NAME = "langchainvectorindex"
 
 
 class BruteForce:
@@ -42,7 +43,7 @@ class HNSWIndex:
 
     def __init__(
         self,
-        name: str = "langchainhnsw",
+        name: str = DEFAULT_INDEX_NAME,
         m: int = 16,
         ef_construction: int = 64,
         partial_indexes: List = [],
@@ -68,7 +69,7 @@ class IVFFlatIndex:
 
     def __init__(
         self,
-        name: str = "langchainivfflat",
+        name: str = DEFAULT_INDEX_NAME,
         lists: int = 1,
         partial_indexes: List = [],
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
