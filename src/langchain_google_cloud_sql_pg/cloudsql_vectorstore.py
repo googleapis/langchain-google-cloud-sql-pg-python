@@ -76,12 +76,12 @@ class CloudSQLVectorStore(VectorStore):
             raise ValueError(
                 "Can not use both metadata_columns and ignore_metadata_columns."
             )
-        # try:
-        #     # loop = asyncio.get_running_loop()
-        #     loop = asyncio.get_event_loop()
-        #     loop.run_until_complete(self.__post_init_async__())
-        # except RuntimeError:
-        self.run_as_sync(self.__post_init_async__())
+        try:
+            # loop = asyncio.get_running_loop()
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.__post_init_async__())
+        except RuntimeError:
+            self.engine.run_as_sync(self.__post_init_async__())
 
     async def __post_init_async__(self) -> None:
         if self.overwrite_existing:
