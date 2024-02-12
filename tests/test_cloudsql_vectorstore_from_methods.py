@@ -22,11 +22,7 @@ import pytest_asyncio
 from langchain_community.embeddings import FakeEmbeddings
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import (
-    CloudSQLVectorStore,
-    Column,
-    PostgreSQLEngine,
-)
+from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
