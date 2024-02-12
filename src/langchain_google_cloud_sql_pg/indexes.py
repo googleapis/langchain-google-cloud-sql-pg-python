@@ -63,6 +63,9 @@ class HNSWIndex:
         def __init__(self, ef_search: Optional[int] = None):
             self.ef_search = ef_search
 
+        def to_string(self) -> str:
+            return f"hnsw.ef_search = {self.ef_search}"
+
 
 class IVFFlatIndex:
     index_type = "ivfflat"
@@ -86,3 +89,6 @@ class IVFFlatIndex:
     class QueryOptions:
         def __init__(self, probes: Optional[int] = None):
             self.probes = probes
+
+        def to_string(self) -> str:
+            return f"ivfflat.probes = {self.probes}"

@@ -26,7 +26,12 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
-from .indexes import DEFAULT_DISTANCE_STRATEGY, DistanceStrategy
+from .indexes import (
+    DEFAULT_DISTANCE_STRATEGY,
+    DistanceStrategy,
+    HNSWIndex,
+    IVFFlatIndex,
+)
 from .postgresql_engine import PostgreSQLEngine
 
 nest_asyncio.apply()
@@ -52,6 +57,9 @@ class CloudSQLVectorStore(VectorStore):
         score_threshold: Optional[float] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
+        index_query_options: Optional[
+            HNSWIndex.QueryOptions | IVFFlatIndex.QueryOptions
+        ] = None,
     ):
         """_summary_
 
@@ -84,6 +92,7 @@ class CloudSQLVectorStore(VectorStore):
         self.score_threshold = score_threshold
         self.fetch_k = fetch_k
         self.lambda_mult = lambda_mult
+        self.index_query_options = index_query_options
 
         if metadata_columns and ignore_metadata_columns:
             raise ValueError(
@@ -110,9 +119,7 @@ class CloudSQLVectorStore(VectorStore):
         if self.id_column not in columns:
             raise ValueError(f"Id column, {self.id_column}, does not exist.")
         if self.content_column not in columns:
-            raise ValueError(
-                f"Content column, {self.content_column}, does not exist."
-            )
+            raise ValueError(f"Content column, {self.content_column}, does not exist.")
         content_type = columns[self.content_column]
         if content_type != "text" and "char" not in content_type:
             raise ValueError(
@@ -162,9 +169,7 @@ class CloudSQLVectorStore(VectorStore):
         if not metadatas:
             metadatas = [{} for _ in texts]
         # Insert embeddings
-        for id, content, embedding, metadata in zip(
-            ids, texts, embeddings, metadatas
-        ):
+        for id, content, embedding, metadata in zip(ids, texts, embeddings, metadatas):
             metadata_col_names = (
                 ", " + ", ".join(self.metadata_columns)
                 if len(self.metadata_columns) > 0
@@ -181,13 +186,9 @@ class CloudSQLVectorStore(VectorStore):
                     values_stmt += ",null"
 
             insert_stmt += (
-                f", {self.metadata_json_column})"
-                if self.store_metadata
-                else ")"
+                f", {self.metadata_json_column})" if self.store_metadata else ")"
             )
-            values_stmt += (
-                f",'{json.dumps(extra)}')" if self.store_metadata else ")"
-            )
+            values_stmt += f",'{json.dumps(extra)}')" if self.store_metadata else ")"
             query = insert_stmt + values_stmt
             await self.engine._aexecute(query)
 
@@ -214,9 +215,7 @@ class CloudSQLVectorStore(VectorStore):
     ) -> List[str]:
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
-        ids = await self.aadd_texts(
-            texts, metadatas=metadatas, ids=ids, **kwargs
-        )
+        ids = await self.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
         return ids
 
     def add_texts(
@@ -300,6 +299,12 @@ class CloudSQLVectorStore(VectorStore):
 
         filter = f"WHERE {filter}" if filter else ""
         stmt = f"SELECT *, {vector_function}({self.embedding_column}, '{embedding}') as distance FROM {self.table_name} {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
+        if self.index_query_options:
+            stmt = (
+                f"BEGIN; SET LOCAL {self.index_query_options.to_string()};\n"
+                + stmt
+                + "\nCOMMIT;"
+            )
         results = await self.engine._afetch(stmt)
         return results
 
@@ -444,9 +449,7 @@ class CloudSQLVectorStore(VectorStore):
         k = self.k if self.k else k
         fetch_k = self.fetch_k if self.fetch_k else fetch_k
         lambda_mult = self.lambda_mult if self.lambda_mult else lambda_mult
-        embedding_list = [
-            json.loads(row[self.embedding_column]) for row in results
-        ]
+        embedding_list = [json.loads(row[self.embedding_column]) for row in results]
         mmr_selected = maximal_marginal_relevance(
             np.array(embedding, dtype=np.float32),
             embedding_list,
@@ -473,9 +476,7 @@ class CloudSQLVectorStore(VectorStore):
                 )
             )
 
-        return [
-            r for i, r in enumerate(documents_with_scores) if i in mmr_selected
-        ]
+        return [r for i, r in enumerate(documents_with_scores) if i in mmr_selected]
 
     def _select_relevance_score_fn(self) -> Callable[[float], float]:
         if self.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
@@ -490,3 +491,92 @@ class CloudSQLVectorStore(VectorStore):
                 f" for distance_strategy of {self.distance_strategy}."
                 "Consider providing relevance_score_fn to PGVector constructor."
             )
+
+    def similarity_search_with_score(
+        self,
+        query: str,
+        k: int = 4,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        coro = self.asimilarity_search_with_score(query, k, filter=filter, **kwargs)
+        return self.run_as_sync(coro)
+
+    def similarity_search_by_vector(
+        self,
+        embedding: List[float],
+        k: int = 4,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        coro = self.asimilarity_search_by_vector(embedding, k, filter=filter, **kwargs)
+        return self.run_as_sync(coro)
+
+    def similarity_search_with_score_by_vector(
+        self,
+        embedding: List[float],
+        k: int = 4,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        coro = self.asimilarity_search_with_score_by_vector(
+            embedding, k, filter=filter, **kwargs
+        )
+        return self.run_as_sync(coro)
+
+    def max_marginal_relevance_search(
+        self,
+        query: str,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        coro = self.amax_marginal_relevance_search(
+            query,
+            k,
+            filter=filter,
+            fetch_k=fetch_k,
+            lambda_mult=lambda_mult,
+            **kwargs,
+        )
+        return self.run_as_sync(coro)
+
+    def max_marginal_relevance_search_by_vector(
+        self,
+        embedding: List[float],
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        coro = self.amax_marginal_relevance_search_by_vector(
+            embedding,
+            k,
+            filter=filter,
+            fetch_k=fetch_k,
+            lambda_mult=lambda_mult,
+            **kwargs,
+        )
+        return self.run_as_sync(coro)
+
+    def max_marginal_relevance_search_with_score_by_vector(
+        self,
+        embedding: List[float],
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        coro = self.amax_marginal_relevance_search_with_score_by_vector(
+            embedding,
+            k,
+            filter=filter,
+            fetch_k=fetch_k,
+            lambda_mult=lambda_mult,
+            **kwargs,
+        )
+        return self.run_as_sync(coro)

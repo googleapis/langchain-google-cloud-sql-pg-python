@@ -20,26 +20,20 @@ import pytest_asyncio
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import (
-    CloudSQLVectorStore,
-    Column,
-    PostgreSQLEngine,
-)
+from langchain_google_cloud_sql_pg import CloudSQLVectorStore, PostgreSQLEngine
+from langchain_google_cloud_sql_pg.indexes import HNSWIndex, IVFFlatIndex
 
-DEFAULT_TABLE = "test_table1234"  # + str(uuid.uuid4()).replace("-", "_")
-# CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz", "boo"]
 ids = [str(uuid.uuid4()) for i in range(len(texts))]
-metadatas = [
-    {"page": str(i), "source": "google.com"} for i in range(len(texts))
-]
+metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
 docs = [
-    Document(page_content=texts[i], metadata=metadatas[i])
-    for i in range(len(texts))
+    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
 ]
 
 embeddings = [embeddings_service.embed_query("foo") for i in range(len(texts))]
@@ -70,7 +64,7 @@ class TestVectorStoreSearch:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
-    @pytest_asyncio.fixture
+    @pytest_asyncio.fixture(scope="module")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgreSQLEngine.afrom_instance(
             project_id=db_project,
@@ -78,9 +72,9 @@ class TestVectorStoreSearch:
             region=db_region,
             database=db_name,
         )
-        # await engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        # await engine.init_vectorstore_table(CUSTOM_TABLE, VECTOR_SIZE)
         yield engine
-        # await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
 
     @pytest_asyncio.fixture
     async def vs(self, engine):
@@ -89,22 +83,26 @@ class TestVectorStoreSearch:
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
         )
-        # await vs.aadd_texts(texts, ids=ids)
         yield vs
+        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+
+    # @pytest_asyncio.fixture
+    # async def vs_custom(self, engine):
+    #     vs_custom = CloudSQLVectorStore(
+    #         engine,
+    #         embedding_service=embeddings_service,
+    #         table_name=CUSTOM_TABLE,
+    #         index_query_options=HNSWIndex.QueryOptions(ef_search=1),
+    #     )
+    #     yield vs_custom
+    #     await engine._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
 
     async def test_asimilarity_search(self, vs):
         results = await vs.asimilarity_search("foo", k=1)
         assert len(results) == 1
         assert results == [Document(page_content="foo")]
-        results = await vs.asimilarity_search(
-            "foo", k=1, filter="content = 'bar'"
-        )
+        results = await vs.asimilarity_search("foo", k=1, filter="content = 'bar'")
         assert results == [Document(page_content="bar")]
-
-    # def test_similarity_search(self, vs):
-    #     results = vs.similarity_search("foo", k=1)
-    #     assert len(results) == 1
-    #     assert results[0] == Document(page_content="foo")
 
     async def test_asimilarity_search_score(self, vs):
         results = await vs.asimilarity_search_with_score("foo")
@@ -145,3 +143,52 @@ class TestVectorStoreSearch:
             embedding, lambda_mult=0.75, fetch_k=10
         )
         assert results[0][0] == Document(page_content="bar")
+
+    # def test_similarity_search(self, vs_custom):
+    #     results = vs_custom.similarity_search("foo", k=1)
+    #     assert len(results) == 1
+    #     assert results == [Document(page_content="foo")]
+    #     results = vs_custom.similarity_search(
+    #         "foo", k=1, filter="content = 'bar'"
+    #     )
+    #     assert results == [Document(page_content="bar")]
+
+    # def test_similarity_search_score(self, vs_custom):
+    #     results = vs_custom.similarity_search_with_score("foo")
+    #     assert len(results) == 4
+    #     assert results[0][0] == Document(page_content="foo")
+    #     assert results[0][1] == 0
+
+    # def test_similarity_search_by_vector(self, vs_custom):
+    #     embedding = embeddings_service.embed_query("foo")
+    #     results = vs_custom.similarity_search_by_vector(embedding)
+    #     assert len(results) == 4
+    #     assert results[0] == Document(page_content="foo")
+    #     results = vs_custom.similarity_search_with_score_by_vector(embedding)
+    #     assert results[0][0] == Document(page_content="foo")
+    #     assert results[0][1] == 0
+
+    # def test_max_marginal_relevance_search(self, vs_custom):
+    #     results = vs_custom.max_marginal_relevance_search("bar")
+    #     assert results[0] == Document(page_content="bar")
+    #     results = vs_custom.max_marginal_relevance_search(
+    #         "bar", filter="content = 'boo'"
+    #     )
+    #     assert results[0] == Document(page_content="boo")
+
+    # def test_max_marginal_relevance_search_vector(self, vs_custom):
+    #     embedding = embeddings_service.embed_query("bar")
+    #     results = vs_custom.max_marginal_relevance_search_by_vector(embedding)
+    #     assert results[0] == Document(page_content="bar")
+
+    # def test_max_marginal_relevance_search_vector_score(self, vs_custom):
+    #     embedding = embeddings_service.embed_query("bar")
+    #     results = vs_custom.max_marginal_relevance_search_with_score_by_vector(
+    #         embedding
+    #     )
+    #     assert results[0][0] == Document(page_content="bar")
+
+    #     results = vs_custom.max_marginal_relevance_search_with_score_by_vector(
+    #         embedding, lambda_mult=0.75, fetch_k=10
+    #     )
+    #     assert results[0][0] == Document(page_content="bar")
