@@ -26,7 +26,7 @@ from langchain_core.vectorstores import VectorStore
 
 from .postgresql_engine import PostgreSQLEngine
 
-nest_asyncio.apply()
+# nest_asyncio.apply()
 
 
 class CloudSQLVectorStore(VectorStore):
