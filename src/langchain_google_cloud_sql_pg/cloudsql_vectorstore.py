@@ -19,14 +19,11 @@ import asyncio
 import json
 from typing import Any, Awaitable, Iterable, List, Optional
 
-import nest_asyncio  # type: ignore
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
 from .postgresql_engine import PostgreSQLEngine
-
-# nest_asyncio.apply()
 
 
 class CloudSQLVectorStore(VectorStore):
@@ -43,22 +40,20 @@ class CloudSQLVectorStore(VectorStore):
         ignore_metadata_columns: Optional[List[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
-        overwrite_existing: bool = False,
     ):
-        """_summary_
-
+        """Constructor for CloudSQLVectorStore.
         Args:
-            engine (PostgreSQLEngine): _description_
-            embedding_service (Embeddings): _description_
-            table_name (str): _description_
-            content_column (str): _description_
-            embedding_column (str): _description_
-            metadata_columns (List[str]): _description_
-            ignore_metadata_columns (List[str]): _description_
-            id_column (str): _description_
-            metadata_json_column (str): _description_
-            index_query_options (_type_): _description_
-            distance_strategy (DistanceStrategy, optional): _description_. Defaults to DEFAULT_DISTANCE_STRATEGY.
+            engine (PostgreSQLEngine): AsyncEngine with pool connection to the postgres database. Required.
+            embedding_service (Embeddings): Text embedding model to use.
+            table_name (str): Name of the existing table or the table to be created.
+            id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
+            content_column (str): Column that represent a Document’s page_content. Defaults to "content".
+            embedding_column (str): Column for embedding vectors.
+                              The embedding is generated from the document value. Defaults to "embedding".
+            metadata_columns (List[str]): Column(s) that represent a document's metadata.
+            ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document’s metadata.
+                                     Can not be used with metadata_columns. Defaults to None.
+            metadata_json_column (str): Column to store metadata as JSON. Defaulst to "langchain_metadata".
         """
         self.engine = engine
         self.embedding_service = embedding_service
@@ -69,7 +64,6 @@ class CloudSQLVectorStore(VectorStore):
         self.ignore_metadata_columns = ignore_metadata_columns
         self.id_column = id_column
         self.metadata_json_column = metadata_json_column
-        self.overwrite_existing = overwrite_existing
         self.store_metadata = False
 
         if metadata_columns and ignore_metadata_columns:
@@ -77,16 +71,17 @@ class CloudSQLVectorStore(VectorStore):
                 "Can not use both metadata_columns and ignore_metadata_columns."
             )
         try:
-            # loop = asyncio.get_running_loop()
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.__post_init_async__())
+            loop = asyncio.get_running_loop()
+            # loop = asyncio.get_event_loop()
+            # loop.run_until_complete(self.__post_init_async__())
+            coro = self.__post_init_async__()
+            # # asyncio.create_task(coro)
+            asyncio.ensure_future(coro)
+            # # asyncio.run_coroutine_threadsafe(coro, loop)
         except RuntimeError:
             self.engine.run_as_sync(self.__post_init_async__())
 
     async def __post_init_async__(self) -> None:
-        if self.overwrite_existing:
-            await self.engine._aexecute(f"TRUNCATE TABLE {self.table_name}")
-
         # Get field type information
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{self.table_name}'"
         results = await self.engine._afetch(stmt)
@@ -204,14 +199,7 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        # try:
-        #     loop = asyncio.get_running_loop()
-        #     # loop = asyncio.get_event_loop()
-        #     return loop.run_until_complete(
-        #         self.aadd_texts(texts, metadatas, ids)
-        #     )
-        # except RuntimeError:
-        return self.run_as_sync(self.aadd_texts(texts, metadatas, ids))
+        return self.run_as_sync(self.aadd_texts(texts, metadatas, ids, **kwargs))
 
     def add_documents(
         self,
@@ -219,13 +207,7 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        # try:
-        #     loop = asyncio.get_running_loop()
-        #     # loop = asyncio.get_event_loop()
-        #     return loop.run_until_complete(self.aadd_documents(documents, ids))
-        # except RuntimeError:
-        #     return self.engine
-        return self.run_as_sync(self.aadd_documents(documents, ids))
+        return self.run_as_sync(self.aadd_documents(documents, ids, **kwargs))
 
     async def adelete(
         self,
@@ -245,13 +227,17 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
-        return self.run_as_sync(self.adelete(ids))
+        return self.run_as_sync(self.adelete(ids, **kwargs))
 
     def run_as_sync(self, coro: Awaitable) -> Any:
         try:
             loop = asyncio.get_running_loop()
             # loop = asyncio.get_event_loop()
-            return loop.run_until_complete(coro)
+            # return
+            loop.run_until_complete(coro)
+            # asyncio.ensure_future(coro)
+            # asyncio.run_coroutine_threadsafe(coro, loop)
+            # loop.run_in_executor(self.engine._thread, coro)
         except RuntimeError:
             return self.engine.run_as_sync(coro)
 

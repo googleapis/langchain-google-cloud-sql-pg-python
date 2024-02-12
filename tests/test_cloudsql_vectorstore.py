@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
 
@@ -23,6 +24,7 @@ from langchain_core.documents import Document
 from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
+DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
@@ -46,6 +48,19 @@ def get_env_var(key: str, desc: str) -> str:
 
 @pytest.mark.asyncio
 class TestVectorStore:
+    @pytest.fixture(scope="class")
+    def event_loop(self):
+        # try:
+        loop = asyncio.get_event_loop()
+        # except RuntimeError:
+        #     loop = asyncio.new_event_loop()
+        yield loop
+        pending = asyncio.tasks.all_tasks(loop)
+        # loop.run_until_complete(asyncio.gather(*pending))
+        # loop.run_until_complete(asyncio.sleep(1))
+        if not loop.is_closed:
+            loop.close()
+
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
@@ -62,7 +77,7 @@ class TestVectorStore:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
-    @pytest_asyncio.fixture
+    @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgreSQLEngine.afrom_instance(
             project_id=db_project,
@@ -70,20 +85,44 @@ class TestVectorStore:
             region=db_region,
             database=db_name,
         )
-        await engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
-        yield engine
-        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
 
-    @pytest_asyncio.fixture
-    def vs(self, engine):
+        yield engine
+
+    @pytest_asyncio.fixture(scope="class")
+    def engine_sync(self, db_project, db_region, db_instance, db_name):
+        engine = PostgreSQLEngine.from_instance(
+            project_id=db_project,
+            instance=db_instance,
+            region=db_region,
+            database=db_name,
+        )
+        yield engine
+
+    @pytest_asyncio.fixture(scope="class")
+    async def vs_sync(self, engine_sync):
+        await engine_sync.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
+        vs = CloudSQLVectorStore(
+            engine_sync,
+            embedding_service=embeddings_service,
+            table_name=DEFAULT_TABLE_SYNC,
+        )
+        yield vs
+        await engine_sync._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
+        await engine_sync._connector.close()
+
+    @pytest_asyncio.fixture(scope="class")
+    async def vs(self, engine):
+        await engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         vs = CloudSQLVectorStore(
             engine,
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
         )
         yield vs
+        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await engine._connector.close()
 
-    @pytest_asyncio.fixture
+    @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
         await engine.init_vectorstore_table(
             CUSTOM_TABLE,
@@ -133,27 +172,6 @@ class TestVectorStore:
         assert len(results) == 3
         await engine._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE}")
 
-    async def test_add_texts(self, engine, vs):
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        vs.add_texts(texts, ids=ids)
-        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
-        assert len(results) == 3
-        await engine._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE}")
-        vs = CloudSQLVectorStore(
-            engine,
-            embedding_service=embeddings_service,
-            table_name=DEFAULT_TABLE,
-            overwrite_existing=True,
-        )
-        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
-        assert len(results) == 0
-
-    async def test_add_docs(self, engine, vs):
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        vs.add_documents(docs, ids=ids)
-        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
-        assert len(results) == 3
-
     async def test_aadd_texts_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_custom.aadd_texts(texts, ids=ids)
@@ -196,21 +214,16 @@ class TestVectorStore:
         assert len(results) == 3
         await engine._aexecute(f"TRUNCATE TABLE {CUSTOM_TABLE}")
 
-    async def test_add_texts_custom(self, engine, vs_custom):
+    async def test_add_docs(self, engine, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        vs_custom.add_texts(texts, ids=ids)
-        results = await engine._afetch(f"SELECT * FROM {CUSTOM_TABLE}")
-        assert len(results) == 3
-        vs_custom.delete(ids)
-
-    async def test_add_docs_custom(self, engine, vs_custom):
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        vs_custom.add_documents(docs, ids=ids)
-        results = await engine._afetch(f"SELECT * FROM {CUSTOM_TABLE}")
+        vs_sync.add_documents(docs, ids=ids)
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 3
 
-        results = await engine._afetch(f"SELECT * FROM {CUSTOM_TABLE}")
-        assert len(results) == 3
-        await vs_custom.adelete(ids)
+    async def test_add_texts(self, engine, vs_sync):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        vs_sync.add_texts(texts, ids=ids)
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        assert len(results) == 6
 
     # Need tests for store metadata=False

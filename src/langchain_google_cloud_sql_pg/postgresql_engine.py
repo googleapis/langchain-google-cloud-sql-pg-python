@@ -103,7 +103,9 @@ class PostgreSQLEngine:
         loop = asyncio.new_event_loop()
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()
-        coro = cls.afrom_instance(project_id, region, instance, database)
+        coro = cls._create(
+            project_id, region, instance, database, loop=loop, thread=thread
+        )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
     @classmethod
