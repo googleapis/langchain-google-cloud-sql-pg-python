@@ -253,7 +253,7 @@ class CloudSQLVectorStore(VectorStore):
             return self.engine.run_as_sync(self.adelete(ids))
 
     @classmethod
-    async def afrom_texts(
+    async def afrom_texts(  # type: ignore[override]
         cls: Type[CloudSQLVectorStore],
         texts: List[str],
         embedding: Embeddings,
@@ -269,7 +269,7 @@ class CloudSQLVectorStore(VectorStore):
         metadata_json_column: str = "langchain_metadata",
         overwrite_existing: bool = False,
         **kwargs: Any,
-    ) -> CloudSQLVectorStore:  # type: ignore[override]
+    ) -> CloudSQLVectorStore:
         vs = cls(
             engine,
             embedding,
@@ -286,7 +286,7 @@ class CloudSQLVectorStore(VectorStore):
         return vs
 
     @classmethod
-    async def afrom_documents(
+    async def afrom_documents(  # type: ignore[override]
         cls: Type[CloudSQLVectorStore],
         documents: List[Document],
         embedding: Embeddings,
@@ -301,7 +301,7 @@ class CloudSQLVectorStore(VectorStore):
         metadata_json_column: str = "langchain_metadata",
         overwrite_existing: bool = False,
         **kwargs: Any,
-    ) -> CloudSQLVectorStore:  # type: ignore[override]
+    ) -> CloudSQLVectorStore:
         vs = cls(
             engine,
             embedding,
@@ -320,7 +320,7 @@ class CloudSQLVectorStore(VectorStore):
         return vs
 
     @classmethod
-    def from_texts(
+    def from_texts(  # type: ignore[override]
         cls: Type[CloudSQLVectorStore],
         texts: List[str],
         embedding: Embeddings,
@@ -336,7 +336,7 @@ class CloudSQLVectorStore(VectorStore):
         metadata_json_column: str = "langchain_metadata",
         overwrite_existing: bool = False,
         **kwargs: Any,
-    ):
+    ) -> CloudSQLVectorStore:
         coro = cls.afrom_texts(
             texts,
             embedding,
@@ -360,7 +360,7 @@ class CloudSQLVectorStore(VectorStore):
         #     return cls.engine.run_as_sync(coro)
 
     @classmethod
-    def from_documents(
+    def from_documents(  # type: ignore[override]
         cls: Type[CloudSQLVectorStore],
         documents: List[Document],
         embedding: Embeddings,
