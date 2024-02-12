@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
 import uuid
-from typing import List
 
 import pytest
 import pytest_asyncio
-from langchain_community.embeddings import FakeEmbeddings
+from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
 from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
@@ -28,24 +26,7 @@ DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
-
-class FakeEmbeddingsWithDimension(FakeEmbeddings):
-    """Fake embeddings functionality for testing."""
-
-    size: int = VECTOR_SIZE
-
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Return simple embeddings."""
-        return [
-            [float(1.0)] * (VECTOR_SIZE - 1) + [float(i)] for i in range(len(texts))
-        ]
-
-    def embed_query(self, text: str = "default") -> List[float]:
-        """Return simple embeddings."""
-        return [float(1.0)] * (VECTOR_SIZE - 1) + [float(0.0)]
-
-
-embeddings_service = FakeEmbeddingsWithDimension()
+embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz"]
 metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
@@ -53,7 +34,7 @@ docs = [
     Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
 ]
 
-embeddings = [embeddings_service.embed_query() for i in range(len(texts))]
+embeddings = [embeddings_service.embed_query("foo") for i in range(len(texts))]
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -97,7 +78,7 @@ class TestVectorStore:
     def vs(self, engine):
         vs = CloudSQLVectorStore(
             engine,
-            embedding_service=FakeEmbeddingsWithDimension(),
+            embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
         )
         yield vs
@@ -115,7 +96,7 @@ class TestVectorStore:
         )
         vs = CloudSQLVectorStore(
             engine,
-            embedding_service=FakeEmbeddingsWithDimension(),
+            embedding_service=embeddings_service,
             table_name=CUSTOM_TABLE,
             id_column="myid",
             content_column="mycontent",
@@ -160,7 +141,7 @@ class TestVectorStore:
         await engine._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE}")
         vs = CloudSQLVectorStore(
             engine,
-            embedding_service=FakeEmbeddingsWithDimension(),
+            embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
             overwrite_existing=True,
         )

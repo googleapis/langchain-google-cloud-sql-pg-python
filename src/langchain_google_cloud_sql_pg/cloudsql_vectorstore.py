@@ -17,15 +17,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
+from typing import Any, Awaitable, Iterable, List, Optional
 
 import nest_asyncio  # type: ignore
-import numpy as np
-from langchain_community.vectorstores.utils import maximal_marginal_relevance
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
-from sqlalchemy import text
 
 from .postgresql_engine import PostgreSQLEngine
 
@@ -79,12 +76,12 @@ class CloudSQLVectorStore(VectorStore):
             raise ValueError(
                 "Can not use both metadata_columns and ignore_metadata_columns."
             )
-        try:
-            # loop = asyncio.get_running_loop()
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.__post_init_async__())
-        except RuntimeError:
-            self.engine.run_as_sync(self.__post_init_async__())
+        # try:
+        #     # loop = asyncio.get_running_loop()
+        #     loop = asyncio.get_event_loop()
+        #     loop.run_until_complete(self.__post_init_async__())
+        # except RuntimeError:
+        self.run_as_sync(self.__post_init_async__())
 
     async def __post_init_async__(self) -> None:
         if self.overwrite_existing:
@@ -115,13 +112,15 @@ class CloudSQLVectorStore(VectorStore):
             raise ValueError(
                 f"Embedding column, {self.embedding_column}, is not type Vector."
             )
+        if self.metadata_json_column in columns:
+            self.store_metadata = True
+
+        # If using metadata_columns check to make sure column exists
         for column in self.metadata_columns:
             if column not in columns:
                 raise ValueError(f"Metadata column, {column}, does not exist.")
 
-        if self.metadata_json_column in columns:
-            self.store_metadata = True
-
+        # If using ignore_metadata_columns, filter out known columns and set known metadata columns
         all_columns = columns
         if self.ignore_metadata_columns:
             for column in self.ignore_metadata_columns:
@@ -130,7 +129,7 @@ class CloudSQLVectorStore(VectorStore):
             del all_columns[self.id_column]
             del all_columns[self.content_column]
             del all_columns[self.embedding_column]
-            self.metadata_columns = [k for k, v in all_columns.keys()]
+            self.metadata_columns = [k for k, _ in all_columns.keys()]
 
     @property
     def embeddings(self) -> Embeddings:
@@ -205,12 +204,14 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        try:
-            loop = asyncio.get_running_loop()
-            # loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.aadd_texts(texts, metadatas, ids))
-        except RuntimeError:
-            return self.engine.run_as_sync(self.aadd_texts(texts, metadatas, ids))
+        # try:
+        #     loop = asyncio.get_running_loop()
+        #     # loop = asyncio.get_event_loop()
+        #     return loop.run_until_complete(
+        #         self.aadd_texts(texts, metadatas, ids)
+        #     )
+        # except RuntimeError:
+        return self.run_as_sync(self.aadd_texts(texts, metadatas, ids))
 
     def add_documents(
         self,
@@ -218,39 +219,41 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        try:
-            loop = asyncio.get_running_loop()
-            # loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.aadd_documents(documents, ids))
-        except RuntimeError:
-            return self.engine.run_as_sync(self.aadd_documents(documents, ids))
+        # try:
+        #     loop = asyncio.get_running_loop()
+        #     # loop = asyncio.get_event_loop()
+        #     return loop.run_until_complete(self.aadd_documents(documents, ids))
+        # except RuntimeError:
+        #     return self.engine
+        return self.run_as_sync(self.aadd_documents(documents, ids))
 
     async def adelete(
         self,
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
-        if ids:
-            id_list = ", ".join([f"'{id}'" for id in ids])
-            query = (
-                f"DELETE FROM {self.table_name} WHERE {self.id_column} in ({id_list})"
-            )
-            await self.engine._aexecute(query)
-            return True
-        else:
+        if not ids:
             return False
+
+        id_list = ", ".join([f"'{id}'" for id in ids])
+        query = f"DELETE FROM {self.table_name} WHERE {self.id_column} in ({id_list})"
+        await self.engine._aexecute(query)
+        return True
 
     def delete(
         self,
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
+        return self.run_as_sync(self.adelete(ids))
+
+    def run_as_sync(self, coro: Awaitable) -> Any:
         try:
             loop = asyncio.get_running_loop()
             # loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.adelete(ids))
+            return loop.run_until_complete(coro)
         except RuntimeError:
-            return self.engine.run_as_sync(self.adelete(ids))
+            return self.engine.run_as_sync(coro)
 
     @classmethod
     def from_texts(cls):
