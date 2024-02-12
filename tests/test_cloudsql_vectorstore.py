@@ -46,21 +46,8 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="class")
 class TestVectorStore:
-    @pytest.fixture(scope="class")
-    def event_loop(self):
-        # try:
-        loop = asyncio.get_event_loop()
-        # except RuntimeError:
-        #     loop = asyncio.new_event_loop()
-        yield loop
-        pending = asyncio.tasks.all_tasks(loop)
-        # loop.run_until_complete(asyncio.gather(*pending))
-        # loop.run_until_complete(asyncio.sleep(1))
-        if not loop.is_closed:
-            loop.close()
-
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
@@ -108,7 +95,8 @@ class TestVectorStore:
         )
         yield vs
         await engine_sync._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
-        await engine_sync._connector.close()
+        await engine_sync._connector.close_async()
+        await engine_sync._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
@@ -120,7 +108,8 @@ class TestVectorStore:
         )
         yield vs
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine._connector.close()
+        await engine._connector.close_async()
+        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
@@ -223,6 +212,7 @@ class TestVectorStore:
     async def test_add_texts(self, engine, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_texts(texts, ids=ids)
+        await asyncio.sleep(5)
         results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 6
 

@@ -72,12 +72,8 @@ class CloudSQLVectorStore(VectorStore):
             )
         try:
             loop = asyncio.get_running_loop()
-            # loop = asyncio.get_event_loop()
-            # loop.run_until_complete(self.__post_init_async__())
             coro = self.__post_init_async__()
-            # # asyncio.create_task(coro)
             asyncio.ensure_future(coro)
-            # # asyncio.run_coroutine_threadsafe(coro, loop)
         except RuntimeError:
             self.engine.run_as_sync(self.__post_init_async__())
 
@@ -232,12 +228,7 @@ class CloudSQLVectorStore(VectorStore):
     def run_as_sync(self, coro: Awaitable) -> Any:
         try:
             loop = asyncio.get_running_loop()
-            # loop = asyncio.get_event_loop()
-            # return
-            loop.run_until_complete(coro)
-            # asyncio.ensure_future(coro)
-            # asyncio.run_coroutine_threadsafe(coro, loop)
-            # loop.run_in_executor(self.engine._thread, coro)
+            asyncio.ensure_future(coro)
         except RuntimeError:
             return self.engine.run_as_sync(coro)
 
