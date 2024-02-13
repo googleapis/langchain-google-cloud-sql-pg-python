@@ -318,7 +318,6 @@ class CloudSQLVectorStore(VectorStore):
     ) -> Optional[bool]:
         return self.engine.run_as_sync(self.adelete(ids, **kwargs))
 
-
     @classmethod
     async def afrom_texts(  # type: ignore[override]
         cls: Type[CloudSQLVectorStore],
@@ -415,7 +414,6 @@ class CloudSQLVectorStore(VectorStore):
             **kwargs,
         )
         return engine.run_as_sync(coro)
-
 
     @classmethod
     def from_documents(  # type: ignore[override]
