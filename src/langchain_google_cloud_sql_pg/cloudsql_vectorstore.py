@@ -26,8 +26,8 @@ from .indexes import (
     DEFAULT_DISTANCE_STRATEGY,
     DEFAULT_INDEX_NAME,
     BaseIndex,
-    BruteForce,
     DistanceStrategy,
+    ExactNearestNeighbor,
 )
 from .postgresql_engine import PostgreSQLEngine
 
@@ -304,29 +304,23 @@ class CloudSQLVectorStore(VectorStore):
         name: Optional[str] = None,
         concurrently=False,
     ) -> None:
-        if isinstance(index, BruteForce):
+        if isinstance(index, ExactNearestNeighbor):
             return None
 
         filter = f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
         params = "WITH " + index.index_options()
-        concurrently = "CONCURRENTLY" if concurrently else ""
+        function = index.distance_strategy.index_function
+        name = name or index.name
+        concurrently = ""
+        if concurrently:
+            concurrently = "CONCURRENTLY"
+            await self.engine._aexecute("COMMIT")
 
-        if index.distance_strategy == DistanceStrategy.EUCLIDEAN:
-            function = "vector_l2_ops"
-        elif index.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
-            function = "vector_cosine_ops"
-        else:
-            function = "vector_ip_ops"
-
-        name = name if name else index.name
-        # Concurrently errors
-        stmt = f"CREATE INDEX  {name} ON {self.table_name} USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};"
-        print(stmt)
+        stmt = f"CREATE INDEX {concurrently} {name} ON {self.table_name} USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};"
         await self.engine._aexecute(stmt)
 
     async def areindex(self, index_name: str = DEFAULT_INDEX_NAME) -> None:
         query = f"REINDEX INDEX {index_name};"
-        print(query)
         await self.engine._aexecute(query)
 
     async def adrop_vector_index(

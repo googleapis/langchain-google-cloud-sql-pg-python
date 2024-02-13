@@ -25,7 +25,6 @@ from langchain_core.documents import Document
 from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
 from langchain_google_cloud_sql_pg.indexes import (
     DEFAULT_INDEX_NAME,
-    BruteForce,
     DistanceStrategy,
     HNSWIndex,
     IVFFlatIndex,
