@@ -29,7 +29,6 @@ class CloudSQLVectorStore(VectorStore):
     """Google Cloud SQL for PostgreSQL Vector Store class"""
 
     __create_key = object()
-    __store_metadata: Optional[bool]
 
     def __init__(
         self,
@@ -41,8 +40,7 @@ class CloudSQLVectorStore(VectorStore):
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
         id_column: str = "langchain_id",
-        metadata_json_column: str = "langchain_metadata",
-        store_metadata: Optional[bool] = True,
+        metadata_json_column: Optional[str] = "langchain_metadata",
     ):
         if key != CloudSQLVectorStore.__create_key:
             raise Exception(
@@ -57,7 +55,6 @@ class CloudSQLVectorStore(VectorStore):
         self.metadata_columns = metadata_columns
         self.id_column = id_column
         self.metadata_json_column = metadata_json_column
-        self.__store_metadata = store_metadata
 
     @classmethod
     async def create(
@@ -113,9 +110,10 @@ class CloudSQLVectorStore(VectorStore):
             raise ValueError(
                 f"Embedding column, {embedding_column}, is not type Vector."
             )
-        store_metadata = None
-        if metadata_json_column in columns:
-            store_metadata = True
+
+        metadata_json_column = (
+            None if metadata_json_column not in columns else metadata_json_column
+        )
 
         # If using metadata_columns check to make sure column exists
         for column in metadata_columns:
@@ -143,7 +141,6 @@ class CloudSQLVectorStore(VectorStore):
             metadata_columns,
             id_column,
             metadata_json_column,
-            store_metadata,
         )
 
     @classmethod
@@ -206,9 +203,11 @@ class CloudSQLVectorStore(VectorStore):
                     values_stmt += ",null"
 
             insert_stmt += (
-                f", {self.metadata_json_column})" if self.__store_metadata else ")"
+                f", {self.metadata_json_column})" if self.metadata_json_column else ")"
             )
-            values_stmt += f",'{json.dumps(extra)}')" if self.__store_metadata else ")"
+            values_stmt += (
+                f",'{json.dumps(extra)}')" if self.metadata_json_column else ")"
+            )
             query = insert_stmt + values_stmt
             await self.engine._aexecute(query)
 
