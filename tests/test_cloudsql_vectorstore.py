@@ -47,37 +47,20 @@ def get_env_var(key: str, desc: str) -> str:
 
 @pytest.mark.asyncio(scope="class")
 class TestVectorStore:
-    # @pytest.fixture(scope="class")
-    # def event_loop(self):
-    #     # try:
-    #     loop = asyncio.get_event_loop()
-    #     # except RuntimeError:
-    #     #     loop = asyncio.new_event_loop()
-    #     yield loop
-    #     pending = asyncio.tasks.all_tasks(loop)
-    #     # loop.run_until_complete(asyncio.gather(*pending))
-    #     # loop.run_until_complete(asyncio.sleep(1))
-    #     if not loop.is_closed:
-    #         loop.close()
-
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
-        return "langchain-cloud-sql-testing"
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
     @pytest.fixture(scope="module")
     def db_region(self) -> str:
-        return "us-central1"
         return get_env_var("REGION", "region for cloud sql instance")
 
     @pytest.fixture(scope="module")
     def db_instance(self) -> str:
-        return "my-postgres-instance"
         return get_env_var("INSTANCE_ID", "instance for cloud sql")
 
     @pytest.fixture(scope="module")
     def db_name(self) -> str:
-        return "test-database"
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
     @pytest_asyncio.fixture(scope="class")

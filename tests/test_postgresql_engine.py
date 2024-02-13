@@ -19,7 +19,7 @@ from typing import List
 
 import pytest
 import pytest_asyncio
-from langchain_community.embeddings import FakeEmbeddings
+from langchain_community.embeddings import DeterministicFakeEmbedding
 
 from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine
 
@@ -27,24 +27,7 @@ DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
-
-class FakeEmbeddingsWithDimension(FakeEmbeddings):
-    """Fake embeddings functionality for testing."""
-
-    size: int = VECTOR_SIZE
-
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Return simple embeddings."""
-        return [
-            [float(1.0)] * (VECTOR_SIZE - 1) + [float(i)] for i in range(len(texts))
-        ]
-
-    def embed_query(self, text: str = "default") -> List[float]:
-        """Return simple embeddings."""
-        return [float(1.0)] * (VECTOR_SIZE - 1) + [float(0.0)]
-
-
-embeddings_service = FakeEmbeddingsWithDimension()
+embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 
 def get_env_var(key: str, desc: str) -> str:
