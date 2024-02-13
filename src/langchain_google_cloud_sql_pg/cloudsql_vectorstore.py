@@ -67,7 +67,7 @@ class CloudSQLVectorStore(VectorStore):
         metadata_columns: List[str] = [],
         ignore_metadata_columns: Optional[List[str]] = None,
         id_column: str = "langchain_id",
-        metadata_json_column: str = "langchain_metadata",
+        metadata_json_column: Optional[str] = "langchain_metadata",
     ):
         """Constructor for CloudSQLVectorStore.
         Args:
