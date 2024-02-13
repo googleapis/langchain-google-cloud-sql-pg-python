@@ -43,7 +43,7 @@ class BaseIndex(ABC):
 
 
 @dataclass
-class BruteForce(BaseIndex):
+class ExactNearestNeighbor(BaseIndex):
     index_type: str = "knn"
 
 
@@ -59,13 +59,13 @@ class HNSWIndex(BaseIndex):
 
 @dataclass
 class QueryOptions:
-    def to_string(self):
-        pass
+    def to_string(self) -> str:
+        raise NotImplementedError("to_string method must be implemented by subclass")
 
 
 @dataclass
 class HNSWQueryOptions(QueryOptions):
-    ef_search: int
+    ef_search: int = 40
 
     def to_string(self):
         return f"hnsw.ef_search = {self.ef_search}"
@@ -82,7 +82,7 @@ class IVFFlatIndex(BaseIndex):
 
 @dataclass
 class IVFFlatQueryOptions(QueryOptions):
-    probes: int
+    probes: int = 1
 
     def to_string(self):
         return f"ivflfat.probes = {self.probes}"

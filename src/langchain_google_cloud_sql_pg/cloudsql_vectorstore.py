@@ -54,10 +54,9 @@ class CloudSQLVectorStore(VectorStore):
         metadata_json_column: str = "langchain_metadata",
         store_metadata: Optional[bool] = True,
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
-        k: Optional[int] = None,
-        score_threshold: Optional[float] = None,
-        fetch_k: Optional[int] = None,
-        lambda_mult: Optional[float] = None,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
     ):
         if key != CloudSQLVectorStore.__create_key:
@@ -76,7 +75,6 @@ class CloudSQLVectorStore(VectorStore):
         self.store_metadata = store_metadata
         self.distance_strategy = distance_strategy
         self.k = k
-        self.score_threshold = score_threshold
         self.fetch_k = fetch_k
         self.lambda_mult = lambda_mult
         self.index_query_options = index_query_options
@@ -94,10 +92,9 @@ class CloudSQLVectorStore(VectorStore):
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
-        k: Optional[int] = None,
-        score_threshold: Optional[float] = None,
-        fetch_k: Optional[int] = None,
-        lambda_mult: Optional[float] = None,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
     ):
         """Constructor for CloudSQLVectorStore.
@@ -174,7 +171,6 @@ class CloudSQLVectorStore(VectorStore):
             store_metadata,
             distance_strategy,
             k,
-            score_threshold,
             fetch_k,
             lambda_mult,
             index_query_options,
@@ -193,10 +189,9 @@ class CloudSQLVectorStore(VectorStore):
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
-        k: Optional[int] = None,
-        score_threshold: Optional[float] = None,
-        fetch_k: Optional[int] = None,
-        lambda_mult: Optional[float] = None,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
     ):
         coro = cls.create(
@@ -211,7 +206,6 @@ class CloudSQLVectorStore(VectorStore):
             metadata_json_column,
             distance_strategy,
             k,
-            score_threshold,
             fetch_k,
             lambda_mult,
             index_query_options,
@@ -328,19 +322,23 @@ class CloudSQLVectorStore(VectorStore):
     async def __query_collection(
         self,
         embedding: List[float],
-        k: int = 4,
+        k: Optional[int] = None,
         filter: Optional[str] = None,
     ) -> List[Any]:
-        k = self.k if self.k else k
+        k = k if k else self.k
         if self.distance_strategy == DistanceStrategy.EUCLIDEAN:
             operator = "<->"
             vector_function = "l2_distance"
         elif self.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
             operator = "<=>"
             vector_function = "cosine_distance"
-        else:  # Inner product
+        elif self.distance_strategy == DistanceStrategy.INNER_PRODUCT:
             operator = "<#>"
             vector_function = "inner_product"
+        else:
+            raise ValueError(
+                "distance strategy is not one of: 'EUCLIDEAN', 'COSINE_DISTANCE', 'INNER_PRODUCT'"
+            )
 
         filter = f"WHERE {filter}" if filter else ""
         stmt = f"SELECT *, {vector_function}({self.embedding_column}, '{embedding}') as distance FROM {self.table_name} {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
@@ -354,7 +352,7 @@ class CloudSQLVectorStore(VectorStore):
     def similarity_search(
         self,
         query: str,
-        k: int = 4,
+        k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
@@ -365,7 +363,7 @@ class CloudSQLVectorStore(VectorStore):
     async def asimilarity_search(
         self,
         query: str,
-        k: int = 4,
+        k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
@@ -378,7 +376,7 @@ class CloudSQLVectorStore(VectorStore):
     async def asimilarity_search_with_score(
         self,
         query: str,
-        k: int = 4,
+        k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
@@ -391,7 +389,7 @@ class CloudSQLVectorStore(VectorStore):
     async def asimilarity_search_by_vector(
         self,
         embedding: List[float],
-        k: int = 4,
+        k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
@@ -404,7 +402,7 @@ class CloudSQLVectorStore(VectorStore):
     async def asimilarity_search_with_score_by_vector(
         self,
         embedding: List[float],
-        k: int = 4,
+        k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
@@ -436,9 +434,9 @@ class CloudSQLVectorStore(VectorStore):
     async def amax_marginal_relevance_search(
         self,
         query: str,
-        k: int = 4,
-        fetch_k: int = 20,
-        lambda_mult: float = 0.5,
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
@@ -456,9 +454,9 @@ class CloudSQLVectorStore(VectorStore):
     async def amax_marginal_relevance_search_by_vector(
         self,
         embedding: List[float],
-        k: int = 4,
-        fetch_k: int = 20,
-        lambda_mult: float = 0.5,
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
@@ -479,9 +477,9 @@ class CloudSQLVectorStore(VectorStore):
     async def amax_marginal_relevance_search_with_score_by_vector(
         self,
         embedding: List[float],
-        k: int = 4,
-        fetch_k: int = 20,
-        lambda_mult: float = 0.5,
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
@@ -489,9 +487,9 @@ class CloudSQLVectorStore(VectorStore):
             embedding=embedding, k=fetch_k, filter=filter, **kwargs
         )
 
-        k = self.k if self.k else k
-        fetch_k = self.fetch_k if self.fetch_k else fetch_k
-        lambda_mult = self.lambda_mult if self.lambda_mult else lambda_mult
+        k = k if k else self.k
+        fetch_k = fetch_k if fetch_k else self.fetch_k
+        lambda_mult = lambda_mult if lambda_mult else self.lambda_mult
         embedding_list = [json.loads(row[self.embedding_column]) for row in results]
         mmr_selected = maximal_marginal_relevance(
             np.array(embedding, dtype=np.float32),
@@ -538,7 +536,7 @@ class CloudSQLVectorStore(VectorStore):
     def similarity_search_with_score(
         self,
         query: str,
-        k: int = 4,
+        k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
@@ -548,7 +546,7 @@ class CloudSQLVectorStore(VectorStore):
     def similarity_search_by_vector(
         self,
         embedding: List[float],
-        k: int = 4,
+        k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
@@ -558,7 +556,7 @@ class CloudSQLVectorStore(VectorStore):
     def similarity_search_with_score_by_vector(
         self,
         embedding: List[float],
-        k: int = 4,
+        k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
@@ -570,9 +568,9 @@ class CloudSQLVectorStore(VectorStore):
     def max_marginal_relevance_search(
         self,
         query: str,
-        k: int = 4,
-        fetch_k: int = 20,
-        lambda_mult: float = 0.5,
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
@@ -589,9 +587,9 @@ class CloudSQLVectorStore(VectorStore):
     def max_marginal_relevance_search_by_vector(
         self,
         embedding: List[float],
-        k: int = 4,
-        fetch_k: int = 20,
-        lambda_mult: float = 0.5,
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
@@ -608,9 +606,9 @@ class CloudSQLVectorStore(VectorStore):
     def max_marginal_relevance_search_with_score_by_vector(
         self,
         embedding: List[float],
-        k: int = 4,
-        fetch_k: int = 20,
-        lambda_mult: float = 0.5,
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
