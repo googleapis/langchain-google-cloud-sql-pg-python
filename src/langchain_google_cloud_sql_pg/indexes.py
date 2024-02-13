@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import enum
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -30,20 +31,25 @@ DEFAULT_INDEX_NAME = "langchainvectorindex"
 
 
 @dataclass
-class BaseIndex:
+class BaseIndex(ABC):
     name: str = DEFAULT_INDEX_NAME
     index_type: str = "base"
     distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY
     partial_indexes: Optional[List] = None
 
+    @abstractmethod
+    def index_options(self) -> str:
+        pass
 
+
+@dataclass
 class BruteForce(BaseIndex):
-    index_type = "knn"
+    index_type: str = "knn"
 
 
 @dataclass
 class HNSWIndex(BaseIndex):
-    index_type = "hnsw"
+    index_type: str = "hnsw"
     m: int = 16
     ef_construction: int = 64
 
