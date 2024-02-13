@@ -88,7 +88,6 @@ class TestVectorStoreSearch:
         await vs.aadd_documents(docs, ids=ids)
         yield vs
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine._connector.close_async()
         await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
@@ -131,7 +130,6 @@ class TestVectorStoreSearch:
         engine_sync.run_as_sync(
             engine_sync._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
         )
-        engine_sync.run_as_sync(engine_sync._connector.close_async())
         engine_sync.run_as_sync(engine_sync._engine.dispose())
 
     async def test_asimilarity_search(self, vs):
