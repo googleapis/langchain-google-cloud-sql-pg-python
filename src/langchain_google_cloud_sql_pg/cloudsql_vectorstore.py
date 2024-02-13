@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type
 
 import numpy as np
 from langchain_community.vectorstores.utils import maximal_marginal_relevance
@@ -24,15 +24,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
-from .indexes import (
-    DEFAULT_DISTANCE_STRATEGY,
-    DistanceStrategy,
-    HNSWIndex,
-    HNSWQueryOptions,
-    IVFFlatIndex,
-    IVFFlatQueryOptions,
-    QueryOptions,
-)
+from .indexes import DEFAULT_DISTANCE_STRATEGY, DistanceStrategy, QueryOptions
 from .postgresql_engine import PostgreSQLEngine
 
 
