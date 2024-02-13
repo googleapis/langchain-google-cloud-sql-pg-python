@@ -94,7 +94,6 @@ class TestIndex:
         await vs.adrop_vector_index()
         yield vs
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine._connector.close_async()
         await engine._engine.dispose()
 
     async def test_aapply_vector_index(self, vs):
