@@ -16,12 +16,15 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Iterable, List, Optional, Type
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type
 
+import numpy as np
+from langchain_community.vectorstores.utils import maximal_marginal_relevance
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
+from .indexes import DEFAULT_DISTANCE_STRATEGY, DistanceStrategy, QueryOptions
 from .postgresql_engine import PostgreSQLEngine
 
 
@@ -41,6 +44,11 @@ class CloudSQLVectorStore(VectorStore):
         metadata_columns: List[str] = [],
         id_column: str = "langchain_id",
         metadata_json_column: Optional[str] = "langchain_metadata",
+        distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+        index_query_options: Optional[QueryOptions] = None,
     ):
         if key != CloudSQLVectorStore.__create_key:
             raise Exception(
@@ -55,6 +63,11 @@ class CloudSQLVectorStore(VectorStore):
         self.metadata_columns = metadata_columns
         self.id_column = id_column
         self.metadata_json_column = metadata_json_column
+        self.distance_strategy = distance_strategy
+        self.k = k
+        self.fetch_k = fetch_k
+        self.lambda_mult = lambda_mult
+        self.index_query_options = index_query_options
 
     @classmethod
     async def create(
@@ -68,6 +81,11 @@ class CloudSQLVectorStore(VectorStore):
         ignore_metadata_columns: Optional[List[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: Optional[str] = "langchain_metadata",
+        distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+        index_query_options: Optional[QueryOptions] = None,
     ):
         """Constructor for CloudSQLVectorStore.
         Args:
@@ -141,6 +159,11 @@ class CloudSQLVectorStore(VectorStore):
             metadata_columns,
             id_column,
             metadata_json_column,
+            distance_strategy,
+            k,
+            fetch_k,
+            lambda_mult,
+            index_query_options,
         )
 
     @classmethod
@@ -155,6 +178,11 @@ class CloudSQLVectorStore(VectorStore):
         ignore_metadata_columns: Optional[List[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
+        distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+        index_query_options: Optional[QueryOptions] = None,
     ):
         coro = cls.create(
             engine,
@@ -166,6 +194,11 @@ class CloudSQLVectorStore(VectorStore):
             ignore_metadata_columns,
             id_column,
             metadata_json_column,
+            distance_strategy,
+            k,
+            fetch_k,
+            lambda_mult,
+            index_query_options,
         )
         return engine.run_as_sync(coro)
 
@@ -403,7 +436,280 @@ class CloudSQLVectorStore(VectorStore):
         )
         return engine.run_as_sync(coro)
 
+    async def __query_collection(
+        self,
+        embedding: List[float],
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+    ) -> List[Any]:
+        k = k if k else self.k
+        operator = self.distance_strategy.operator
+        search_function = self.distance_strategy.search_function
+
+        filter = f"WHERE {filter}" if filter else ""
+        stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM {self.table_name} {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
+        if self.index_query_options:
+            await self.engine._aexecute(
+                f"SET LOCAL {self.index_query_options.to_string()};"
+            )
+        results = await self.engine._afetch(stmt)
+        return results
+
     def similarity_search(
-        self, query: str, k: int = 4, **kwargs: Any
+        self,
+        query: str,
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
     ) -> List[Document]:
-        return []
+        return self.engine.run_as_sync(
+            self.asimilarity_search(query, k=k, filter=filter, **kwargs)
+        )
+
+    async def asimilarity_search(
+        self,
+        query: str,
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        embedding = self.embedding_service.embed_query(text=query)
+
+        return await self.asimilarity_search_by_vector(
+            embedding=embedding, k=k, filter=filter, **kwargs
+        )
+
+    async def asimilarity_search_with_score(
+        self,
+        query: str,
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        embedding = self.embedding_service.embed_query(query)
+        docs = await self.asimilarity_search_with_score_by_vector(
+            embedding=embedding, k=k, filter=filter, **kwargs
+        )
+        return docs
+
+    async def asimilarity_search_by_vector(
+        self,
+        embedding: List[float],
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        docs_and_scores = await self.asimilarity_search_with_score_by_vector(
+            embedding=embedding, k=k, filter=filter, **kwargs
+        )
+
+        return [doc for doc, _ in docs_and_scores]
+
+    async def asimilarity_search_with_score_by_vector(
+        self,
+        embedding: List[float],
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        results = await self.__query_collection(
+            embedding=embedding, k=k, filter=filter, **kwargs
+        )
+
+        documents_with_scores = []
+        for row in results:
+            metadata = (
+                row[self.metadata_json_column]
+                if self.metadata_json_column and row[self.metadata_json_column]
+                else {}
+            )
+            for col in self.metadata_columns:
+                metadata[col] = row[col]
+            documents_with_scores.append(
+                (
+                    Document(
+                        page_content=row[self.content_column],
+                        metadata=metadata,
+                    ),
+                    row["distance"],
+                )
+            )
+
+        return documents_with_scores
+
+    async def amax_marginal_relevance_search(
+        self,
+        query: str,
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        embedding = self.embedding_service.embed_query(text=query)
+
+        return await self.amax_marginal_relevance_search_by_vector(
+            embedding=embedding,
+            k=k,
+            fetch_k=fetch_k,
+            lambda_mult=lambda_mult,
+            filter=filter,
+            **kwargs,
+        )
+
+    async def amax_marginal_relevance_search_by_vector(
+        self,
+        embedding: List[float],
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        """Return docs selected using the maximal marginal relevance."""
+        docs_and_scores = (
+            await self.amax_marginal_relevance_search_with_score_by_vector(
+                embedding,
+                k=k,
+                fetch_k=fetch_k,
+                lambda_mult=lambda_mult,
+                filter=filter,
+                **kwargs,
+            )
+        )
+
+        return [result[0] for result in docs_and_scores]
+
+    async def amax_marginal_relevance_search_with_score_by_vector(
+        self,
+        embedding: List[float],
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        results = await self.__query_collection(
+            embedding=embedding, k=fetch_k, filter=filter, **kwargs
+        )
+
+        k = k if k else self.k
+        fetch_k = fetch_k if fetch_k else self.fetch_k
+        lambda_mult = lambda_mult if lambda_mult else self.lambda_mult
+        embedding_list = [json.loads(row[self.embedding_column]) for row in results]
+        mmr_selected = maximal_marginal_relevance(
+            np.array(embedding, dtype=np.float32),
+            embedding_list,
+            k=k,
+            lambda_mult=lambda_mult,
+        )
+
+        documents_with_scores = []
+        for row in results:
+            metadata = (
+                row[self.metadata_json_column]
+                if self.metadata_json_column and row[self.metadata_json_column]
+                else {}
+            )
+            for col in self.metadata_columns:
+                metadata[col] = row[col]
+            documents_with_scores.append(
+                (
+                    Document(
+                        page_content=row[self.content_column],
+                        metadata=metadata,
+                    ),
+                    row["distance"],
+                )
+            )
+
+        return [r for i, r in enumerate(documents_with_scores) if i in mmr_selected]
+
+    def similarity_search_with_score(
+        self,
+        query: str,
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        coro = self.asimilarity_search_with_score(query, k, filter=filter, **kwargs)
+        return self.engine.run_as_sync(coro)
+
+    def similarity_search_by_vector(
+        self,
+        embedding: List[float],
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        coro = self.asimilarity_search_by_vector(embedding, k, filter=filter, **kwargs)
+        return self.engine.run_as_sync(coro)
+
+    def similarity_search_with_score_by_vector(
+        self,
+        embedding: List[float],
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        coro = self.asimilarity_search_with_score_by_vector(
+            embedding, k, filter=filter, **kwargs
+        )
+        return self.engine.run_as_sync(coro)
+
+    def max_marginal_relevance_search(
+        self,
+        query: str,
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        coro = self.amax_marginal_relevance_search(
+            query,
+            k,
+            filter=filter,
+            fetch_k=fetch_k,
+            lambda_mult=lambda_mult,
+            **kwargs,
+        )
+        return self.engine.run_as_sync(coro)
+
+    def max_marginal_relevance_search_by_vector(
+        self,
+        embedding: List[float],
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        coro = self.amax_marginal_relevance_search_by_vector(
+            embedding,
+            k,
+            filter=filter,
+            fetch_k=fetch_k,
+            lambda_mult=lambda_mult,
+            **kwargs,
+        )
+        return self.engine.run_as_sync(coro)
+
+    def max_marginal_relevance_search_with_score_by_vector(
+        self,
+        embedding: List[float],
+        k: Optional[int] = None,
+        fetch_k: Optional[int] = None,
+        lambda_mult: Optional[float] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Tuple[Document, float]]:
+        coro = self.amax_marginal_relevance_search_with_score_by_vector(
+            embedding,
+            k,
+            filter=filter,
+            fetch_k=fetch_k,
+            lambda_mult=lambda_mult,
+            **kwargs,
+        )
+        return self.engine.run_as_sync(coro)
