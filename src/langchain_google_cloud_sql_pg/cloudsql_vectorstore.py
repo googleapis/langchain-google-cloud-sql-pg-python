@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Awaitable, Iterable, List, Optional
+from typing import Any, Iterable, List, Optional, Type
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
@@ -41,7 +41,7 @@ class CloudSQLVectorStore(VectorStore):
         metadata_columns: List[str] = [],
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
-        store_metadata: bool = True,
+        store_metadata: Optional[bool] = True,
     ):
         if key != CloudSQLVectorStore.__create_key:
             raise Exception(
@@ -83,7 +83,7 @@ class CloudSQLVectorStore(VectorStore):
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
             ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document’s metadata.
                                      Can not be used with metadata_columns. Defaults to None.
-            metadata_json_column (str): Column to store metadata as JSON. Defaulst to "langchain_metadata".
+            metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
         """
         if metadata_columns and ignore_metadata_columns:
             raise ValueError(
@@ -112,6 +112,7 @@ class CloudSQLVectorStore(VectorStore):
             raise ValueError(
                 f"Embedding column, {embedding_column}, is not type Vector."
             )
+        store_metadata = None
         if metadata_json_column in columns:
             store_metadata = True
 
@@ -273,18 +274,134 @@ class CloudSQLVectorStore(VectorStore):
     ) -> Optional[bool]:
         return self.engine.run_as_sync(self.adelete(ids, **kwargs))
 
-    # def run_as_sync(self, coro: Awaitable) -> Any:
-    #     try:
-    #         # asyncio.run(coro)
-    #         loop = asyncio.get_running_loop()
-    #         loop.run_until_complete(coro)
-
-    #     except RuntimeError:
-    #         return self.engine.run_as_sync(coro)
+    @classmethod
+    async def afrom_texts(  # type: ignore[override]
+        cls: Type[CloudSQLVectorStore],
+        texts: List[str],
+        embedding: Embeddings,
+        engine: PostgreSQLEngine,
+        table_name: str,
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        ignore_metadata_columns: Optional[List[str]] = None,
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+        **kwargs: Any,
+    ) -> CloudSQLVectorStore:
+        vs = await cls.create(
+            engine,
+            embedding,
+            table_name,
+            content_column,
+            embedding_column,
+            metadata_columns,
+            ignore_metadata_columns,
+            id_column,
+            metadata_json_column,
+        )
+        await vs.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
+        return vs
 
     @classmethod
-    def from_texts(cls):
-        pass
+    async def afrom_documents(  # type: ignore[override]
+        cls: Type[CloudSQLVectorStore],
+        documents: List[Document],
+        embedding: Embeddings,
+        engine: PostgreSQLEngine,
+        table_name: str,
+        ids: Optional[List[str]] = None,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        ignore_metadata_columns: Optional[List[str]] = None,
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+        **kwargs: Any,
+    ) -> CloudSQLVectorStore:
+        vs = await cls.create(
+            engine,
+            embedding,
+            table_name,
+            content_column,
+            embedding_column,
+            metadata_columns,
+            ignore_metadata_columns,
+            id_column,
+            metadata_json_column,
+        )
+        texts = [doc.page_content for doc in documents]
+        metadatas = [doc.metadata for doc in documents]
+        await vs.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
+        return vs
+
+    @classmethod
+    def from_texts(  # type: ignore[override]
+        cls: Type[CloudSQLVectorStore],
+        texts: List[str],
+        embedding: Embeddings,
+        engine: PostgreSQLEngine,
+        table_name: str,
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        ignore_metadata_columns: Optional[List[str]] = None,
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+        **kwargs: Any,
+    ):
+        coro = cls.afrom_texts(
+            texts,
+            embedding,
+            engine,
+            table_name,
+            metadatas=metadatas,
+            content_column=content_column,
+            embedding_column=embedding_column,
+            metadata_columns=metadata_columns,
+            ignore_metadata_columns=ignore_metadata_columns,
+            metadata_json_column=metadata_json_column,
+            id_column=id_column,
+            ids=ids,
+            **kwargs,
+        )
+        return engine.run_as_sync(coro)
+
+    @classmethod
+    def from_documents(  # type: ignore[override]
+        cls: Type[CloudSQLVectorStore],
+        documents: List[Document],
+        embedding: Embeddings,
+        engine: PostgreSQLEngine,
+        table_name: str,
+        ids: Optional[List[str]] = None,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        ignore_metadata_columns: Optional[List[str]] = None,
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+        **kwargs: Any,
+    ) -> CloudSQLVectorStore:
+        coro = cls.afrom_documents(
+            documents,
+            embedding,
+            engine,
+            table_name,
+            content_column=content_column,
+            embedding_column=embedding_column,
+            metadata_columns=metadata_columns,
+            ignore_metadata_columns=ignore_metadata_columns,
+            metadata_json_column=metadata_json_column,
+            id_column=id_column,
+            ids=ids,
+            **kwargs,
+        )
+        return engine.run_as_sync(coro)
 
     def similarity_search(
         self, query: str, k: int = 4, **kwargs: Any
