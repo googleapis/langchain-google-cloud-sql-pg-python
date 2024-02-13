@@ -19,8 +19,7 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 
-from postgresql_engine import Column
-from src.langchain_google_cloud_sql_pg import PostgreSQLLoader, PostgreSQLDocumentSaver, PostgreSQLEngine
+from src.langchain_google_cloud_sql_pg import PostgreSQLLoader, PostgreSQLDocumentSaver, PostgreSQLEngine, Column
 
 project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
