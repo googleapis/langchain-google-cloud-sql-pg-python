@@ -129,18 +129,14 @@ class CloudSQLVectorStore(VectorStore):
         if id_column not in columns:
             raise ValueError(f"Id column, {id_column}, does not exist.")
         if content_column not in columns:
-            raise ValueError(
-                f"Content column, {content_column}, does not exist."
-            )
+            raise ValueError(f"Content column, {content_column}, does not exist.")
         content_type = columns[content_column]
         if content_type != "text" and "char" not in content_type:
             raise ValueError(
                 f"Content column, {content_column}, is type, {content_type}. It must be a type of character string."
             )
         if embedding_column not in columns:
-            raise ValueError(
-                f"Embedding column, {embedding_column}, does not exist."
-            )
+            raise ValueError(f"Embedding column, {embedding_column}, does not exist.")
         if columns[embedding_column] != "USER-DEFINED":
             raise ValueError(
                 f"Embedding column, {embedding_column}, is not type Vector."
@@ -239,9 +235,7 @@ class CloudSQLVectorStore(VectorStore):
         if not metadatas:
             metadatas = [{} for _ in texts]
         # Insert embeddings
-        for id, content, embedding, metadata in zip(
-            ids, texts, embeddings, metadatas
-        ):
+        for id, content, embedding, metadata in zip(ids, texts, embeddings, metadatas):
             metadata_col_names = (
                 ", " + ", ".join(self.metadata_columns)
                 if len(self.metadata_columns) > 0
@@ -258,13 +252,9 @@ class CloudSQLVectorStore(VectorStore):
                     values_stmt += ",null"
 
             insert_stmt += (
-                f", {self.metadata_json_column})"
-                if self.store_metadata
-                else ")"
+                f", {self.metadata_json_column})" if self.store_metadata else ")"
             )
-            values_stmt += (
-                f",'{json.dumps(extra)}')" if self.store_metadata else ")"
-            )
+            values_stmt += f",'{json.dumps(extra)}')" if self.store_metadata else ")"
             query = insert_stmt + values_stmt
             await self.engine._aexecute(query)
 
@@ -291,9 +281,7 @@ class CloudSQLVectorStore(VectorStore):
     ) -> List[str]:
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
-        ids = await self.aadd_texts(
-            texts, metadatas=metadatas, ids=ids, **kwargs
-        )
+        ids = await self.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
         return ids
 
     def add_texts(
@@ -303,9 +291,7 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        return self.engine.run_as_sync(
-            self.aadd_texts(texts, metadatas, ids, **kwargs)
-        )
+        return self.engine.run_as_sync(self.aadd_texts(texts, metadatas, ids, **kwargs))
 
     def add_documents(
         self,
@@ -313,9 +299,7 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        return self.engine.run_as_sync(
-            self.aadd_documents(documents, ids, **kwargs)
-        )
+        return self.engine.run_as_sync(self.aadd_documents(documents, ids, **kwargs))
 
     async def adelete(
         self,
@@ -508,9 +492,7 @@ class CloudSQLVectorStore(VectorStore):
         k = self.k if self.k else k
         fetch_k = self.fetch_k if self.fetch_k else fetch_k
         lambda_mult = self.lambda_mult if self.lambda_mult else lambda_mult
-        embedding_list = [
-            json.loads(row[self.embedding_column]) for row in results
-        ]
+        embedding_list = [json.loads(row[self.embedding_column]) for row in results]
         mmr_selected = maximal_marginal_relevance(
             np.array(embedding, dtype=np.float32),
             embedding_list,
@@ -537,9 +519,7 @@ class CloudSQLVectorStore(VectorStore):
                 )
             )
 
-        return [
-            r for i, r in enumerate(documents_with_scores) if i in mmr_selected
-        ]
+        return [r for i, r in enumerate(documents_with_scores) if i in mmr_selected]
 
     def _select_relevance_score_fn(self) -> Callable[[float], float]:
         if self.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
@@ -562,9 +542,7 @@ class CloudSQLVectorStore(VectorStore):
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
-        coro = self.asimilarity_search_with_score(
-            query, k, filter=filter, **kwargs
-        )
+        coro = self.asimilarity_search_with_score(query, k, filter=filter, **kwargs)
         return self.engine.run_as_sync(coro)
 
     def similarity_search_by_vector(
@@ -574,9 +552,7 @@ class CloudSQLVectorStore(VectorStore):
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
-        coro = self.asimilarity_search_by_vector(
-            embedding, k, filter=filter, **kwargs
-        )
+        coro = self.asimilarity_search_by_vector(embedding, k, filter=filter, **kwargs)
         return self.engine.run_as_sync(coro)
 
     def similarity_search_with_score_by_vector(
