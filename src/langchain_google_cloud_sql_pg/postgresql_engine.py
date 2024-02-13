@@ -126,8 +126,8 @@ class PostgreSQLEngine:
             cls._connector = await create_async_connector()
 
         # anonymous function to be used for SQLAlchemy 'creator' argument
-        def getconn() -> asyncpg.Connection:
-            conn = cls._connector.connect_async(  # type: ignore
+        async def getconn() -> asyncpg.Connection:
+            conn = await cls._connector.connect_async(  # type: ignore
                 f"{project_id}:{region}:{instance}",
                 "asyncpg",
                 user=iam_database_user,

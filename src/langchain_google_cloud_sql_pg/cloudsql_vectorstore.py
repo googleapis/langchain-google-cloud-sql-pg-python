@@ -15,7 +15,6 @@
 # TODO: Remove below import when minimum supported Python version is 3.10
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import Any, Awaitable, Iterable, List, Optional
 
@@ -29,8 +28,39 @@ from .postgresql_engine import PostgreSQLEngine
 class CloudSQLVectorStore(VectorStore):
     """Google Cloud SQL for PostgreSQL Vector Store class"""
 
+    __create_key = object()
+
     def __init__(
         self,
+        key,
+        engine: PostgreSQLEngine,
+        embedding_service: Embeddings,
+        table_name: str,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+        store_metadata: bool = True,
+    ):
+        if key != CloudSQLVectorStore.__create_key:
+            raise Exception(
+                "Only create class through 'create' or 'create_sync' methods!"
+            )
+
+        self.engine = engine
+        self.embedding_service = embedding_service
+        self.table_name = table_name
+        self.content_column = content_column
+        self.embedding_column = embedding_column
+        self.metadata_columns = metadata_columns
+        self.id_column = id_column
+        self.metadata_json_column = metadata_json_column
+        self.store_metadata = store_metadata
+
+    @classmethod
+    async def create(
+        cls,
         engine: PostgreSQLEngine,
         embedding_service: Embeddings,
         table_name: str,
@@ -55,72 +85,90 @@ class CloudSQLVectorStore(VectorStore):
                                      Can not be used with metadata_columns. Defaults to None.
             metadata_json_column (str): Column to store metadata as JSON. Defaulst to "langchain_metadata".
         """
-        self.engine = engine
-        self.embedding_service = embedding_service
-        self.table_name = table_name
-        self.content_column = content_column
-        self.embedding_column = embedding_column
-        self.metadata_columns = metadata_columns
-        self.ignore_metadata_columns = ignore_metadata_columns
-        self.id_column = id_column
-        self.metadata_json_column = metadata_json_column
-        self.store_metadata = False
-
         if metadata_columns and ignore_metadata_columns:
             raise ValueError(
                 "Can not use both metadata_columns and ignore_metadata_columns."
             )
-        try:
-            loop = asyncio.get_running_loop()
-            coro = self.__post_init_async__()
-            asyncio.ensure_future(coro)
-        except RuntimeError:
-            self.engine.run_as_sync(self.__post_init_async__())
-
-    async def __post_init_async__(self) -> None:
         # Get field type information
-        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{self.table_name}'"
-        results = await self.engine._afetch(stmt)
+        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}'"
+        results = await engine._afetch(stmt)
         columns = {}
         for field in results:
             columns[field["column_name"]] = field["data_type"]
 
         # Check columns
-        if self.id_column not in columns:
-            raise ValueError(f"Id column, {self.id_column}, does not exist.")
-        if self.content_column not in columns:
-            raise ValueError(f"Content column, {self.content_column}, does not exist.")
-        content_type = columns[self.content_column]
+        if id_column not in columns:
+            raise ValueError(f"Id column, {id_column}, does not exist.")
+        if content_column not in columns:
+            raise ValueError(f"Content column, {content_column}, does not exist.")
+        content_type = columns[content_column]
         if content_type != "text" and "char" not in content_type:
             raise ValueError(
-                f"Content column, {self.content_column}, is type, {content_type}. It must be a type of character string."
+                f"Content column, {content_column}, is type, {content_type}. It must be a type of character string."
             )
-        if self.embedding_column not in columns:
+        if embedding_column not in columns:
+            raise ValueError(f"Embedding column, {embedding_column}, does not exist.")
+        if columns[embedding_column] != "USER-DEFINED":
             raise ValueError(
-                f"Embedding column, {self.embedding_column}, does not exist."
+                f"Embedding column, {embedding_column}, is not type Vector."
             )
-        if columns[self.embedding_column] != "USER-DEFINED":
-            raise ValueError(
-                f"Embedding column, {self.embedding_column}, is not type Vector."
-            )
-        if self.metadata_json_column in columns:
-            self.store_metadata = True
+        if metadata_json_column in columns:
+            store_metadata = True
 
         # If using metadata_columns check to make sure column exists
-        for column in self.metadata_columns:
+        for column in metadata_columns:
             if column not in columns:
                 raise ValueError(f"Metadata column, {column}, does not exist.")
 
         # If using ignore_metadata_columns, filter out known columns and set known metadata columns
         all_columns = columns
-        if self.ignore_metadata_columns:
-            for column in self.ignore_metadata_columns:
+        if ignore_metadata_columns:
+            for column in ignore_metadata_columns:
                 del all_columns[column]
 
-            del all_columns[self.id_column]
-            del all_columns[self.content_column]
-            del all_columns[self.embedding_column]
-            self.metadata_columns = [k for k, _ in all_columns.keys()]
+            del all_columns[id_column]
+            del all_columns[content_column]
+            del all_columns[embedding_column]
+            metadata_columns = [k for k, _ in all_columns.keys()]
+
+        return cls(
+            cls.__create_key,
+            engine,
+            embedding_service,
+            table_name,
+            content_column,
+            embedding_column,
+            metadata_columns,
+            id_column,
+            metadata_json_column,
+            store_metadata,
+        )
+
+    @classmethod
+    def create_sync(
+        cls,
+        engine: PostgreSQLEngine,
+        embedding_service: Embeddings,
+        table_name: str,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[str] = [],
+        ignore_metadata_columns: Optional[List[str]] = None,
+        id_column: str = "langchain_id",
+        metadata_json_column: str = "langchain_metadata",
+    ):
+        coro = cls.create(
+            engine,
+            embedding_service,
+            table_name,
+            content_column,
+            embedding_column,
+            metadata_columns,
+            ignore_metadata_columns,
+            id_column,
+            metadata_json_column,
+        )
+        return engine.run_as_sync(coro)
 
     @property
     def embeddings(self) -> Embeddings:
@@ -195,7 +243,7 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        return self.run_as_sync(self.aadd_texts(texts, metadatas, ids, **kwargs))
+        return self.engine.run_as_sync(self.aadd_texts(texts, metadatas, ids, **kwargs))
 
     def add_documents(
         self,
@@ -203,7 +251,7 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        return self.run_as_sync(self.aadd_documents(documents, ids, **kwargs))
+        return self.engine.run_as_sync(self.aadd_documents(documents, ids, **kwargs))
 
     async def adelete(
         self,
@@ -223,14 +271,16 @@ class CloudSQLVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
-        return self.run_as_sync(self.adelete(ids, **kwargs))
+        return self.engine.run_as_sync(self.adelete(ids, **kwargs))
 
-    def run_as_sync(self, coro: Awaitable) -> Any:
-        try:
-            loop = asyncio.get_running_loop()
-            asyncio.ensure_future(coro)
-        except RuntimeError:
-            return self.engine.run_as_sync(coro)
+    # def run_as_sync(self, coro: Awaitable) -> Any:
+    #     try:
+    #         # asyncio.run(coro)
+    #         loop = asyncio.get_running_loop()
+    #         loop.run_until_complete(coro)
+
+    #     except RuntimeError:
+    #         return self.engine.run_as_sync(coro)
 
     @classmethod
     def from_texts(cls):

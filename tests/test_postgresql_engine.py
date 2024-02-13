@@ -81,6 +81,7 @@ class TestEngineAsync:
             database=db_name,
         )
         yield engine
+        await engine._engine.dispose()
 
     async def test_execute(self, engine):
         await engine._aexecute("SELECT 1")

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import os
 import uuid
 
@@ -21,11 +20,7 @@ import pytest_asyncio
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import (
-    CloudSQLVectorStore,
-    Column,
-    PostgreSQLEngine,
-)
+from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
@@ -35,12 +30,9 @@ VECTOR_SIZE = 768
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz"]
-metadatas = [
-    {"page": str(i), "source": "google.com"} for i in range(len(texts))
-]
+metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
 docs = [
-    Document(page_content=texts[i], metadata=metadatas[i])
-    for i in range(len(texts))
+    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
 ]
 
 embeddings = [embeddings_service.embed_query("foo") for i in range(len(texts))]
@@ -55,20 +47,37 @@ def get_env_var(key: str, desc: str) -> str:
 
 @pytest.mark.asyncio(scope="class")
 class TestVectorStore:
+    # @pytest.fixture(scope="class")
+    # def event_loop(self):
+    #     # try:
+    #     loop = asyncio.get_event_loop()
+    #     # except RuntimeError:
+    #     #     loop = asyncio.new_event_loop()
+    #     yield loop
+    #     pending = asyncio.tasks.all_tasks(loop)
+    #     # loop.run_until_complete(asyncio.gather(*pending))
+    #     # loop.run_until_complete(asyncio.sleep(1))
+    #     if not loop.is_closed:
+    #         loop.close()
+
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
+        return "langchain-cloud-sql-testing"
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
     @pytest.fixture(scope="module")
     def db_region(self) -> str:
+        return "us-central1"
         return get_env_var("REGION", "region for cloud sql instance")
 
     @pytest.fixture(scope="module")
     def db_instance(self) -> str:
+        return "my-postgres-instance"
         return get_env_var("INSTANCE_ID", "instance for cloud sql")
 
     @pytest.fixture(scope="module")
     def db_name(self) -> str:
+        return "test-database"
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
     @pytest_asyncio.fixture(scope="class")
@@ -94,25 +103,21 @@ class TestVectorStore:
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_sync(self, engine_sync):
-        await engine_sync.init_vectorstore_table(
-            DEFAULT_TABLE_SYNC, VECTOR_SIZE
-        )
-        vs = CloudSQLVectorStore(
+        await engine_sync.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
+        vs = CloudSQLVectorStore.create_sync(
             engine_sync,
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE_SYNC,
         )
         yield vs
-        await engine_sync._aexecute(
-            f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}"
-        )
+        await engine_sync._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
         await engine_sync._connector.close_async()
         await engine_sync._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
-        vs = CloudSQLVectorStore(
+        vs = await CloudSQLVectorStore.create(
             engine,
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
@@ -133,7 +138,7 @@ class TestVectorStore:
             metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
             metadata_json_column="mymeta",
         )
-        vs = CloudSQLVectorStore(
+        vs = await CloudSQLVectorStore.create(
             engine,
             embedding_service=embeddings_service,
             table_name=CUSTOM_TABLE,
@@ -145,6 +150,19 @@ class TestVectorStore:
         )
         yield vs
         await engine._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+
+    async def test_post_init(self, engine):
+        with pytest.raises(ValueError):
+            await CloudSQLVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="noname",
+                embedding_column="myembedding",
+                metadata_columns=["page", "source"],
+                metadata_json_column="mymeta",
+            )
 
     async def test_aadd_texts(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -214,17 +232,15 @@ class TestVectorStore:
         assert len(results) == 3
         await engine._aexecute(f"TRUNCATE TABLE {CUSTOM_TABLE}")
 
-    async def test_add_docs(self, engine, vs_sync):
+    async def test_add_docs(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_documents(docs, ids=ids)
-        await asyncio.sleep(5)
-        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        results = await engine_sync._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 3
 
     async def test_add_texts(self, engine, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_texts(texts, ids=ids)
-        await asyncio.sleep(5)
         results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 6
 
