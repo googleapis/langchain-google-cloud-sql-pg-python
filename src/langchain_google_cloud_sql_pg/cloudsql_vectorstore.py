@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type
+from typing import Any, Iterable, List, Optional, Tuple, Type
 
 import numpy as np
 from langchain_community.vectorstores.utils import maximal_marginal_relevance
@@ -30,6 +30,7 @@ from .indexes import (
     BaseIndex,
     DistanceStrategy,
     ExactNearestNeighbor,
+    QueryOptions,
 )
 from .postgresql_engine import PostgreSQLEngine
 
@@ -720,26 +721,25 @@ class CloudSQLVectorStore(VectorStore):
         )
         return self.engine.run_as_sync(coro)
 
-      async def aapply_vector_index(
+    async def aapply_vector_index(
         self,
         index: BaseIndex,
         name: Optional[str] = None,
-        concurrently=False,
+        concurrently: bool = False,
     ) -> None:
         if isinstance(index, ExactNearestNeighbor):
+            await self.adrop_vector_index()
             return
 
-        filter = f"WHERE ({index.partial_indexes or ""})"
+        filter = f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
         params = "WITH " + index.index_options()
         function = index.distance_strategy.index_function
         name = name or index.name
-        concurrently = ""
+        stmt = f"CREATE INDEX {'CONCURRENTLY' if concurrently else ''} {name} ON {self.table_name} USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};"
         if concurrently:
-            concurrently = "CONCURRENTLY"
-            await self.engine._aexecute("COMMIT")
-
-        stmt = f"CREATE INDEX {concurrently} {name} ON {self.table_name} USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};"
-        await self.engine._aexecute(stmt)
+            await self.engine._aexecute_outside_tx(stmt)
+        else:
+            await self.engine._aexecute(stmt)
 
     async def areindex(self, index_name: str = DEFAULT_INDEX_NAME) -> None:
         query = f"REINDEX INDEX {index_name};"

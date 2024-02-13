@@ -159,6 +159,12 @@ class PostgreSQLEngine:
             await conn.execute(text(query))
             await conn.commit()
 
+    async def _aexecute_outside_tx(self, query: str):
+        """Execute a SQL query."""
+        async with self._engine.connect() as conn:
+            await conn.execute(text("COMMIT"))
+            await conn.execute(text(query))
+
     async def _afetch(self, query: str):
         async with self._engine.connect() as conn:
             """Fetch results from a SQL query."""
