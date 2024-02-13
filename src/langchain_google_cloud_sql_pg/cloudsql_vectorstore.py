@@ -625,20 +625,6 @@ class CloudSQLVectorStore(VectorStore):
 
         return [r for i, r in enumerate(documents_with_scores) if i in mmr_selected]
 
-    def _select_relevance_score_fn(self) -> Callable[[float], float]:
-        if self.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
-            return self._cosine_relevance_score_fn
-        elif self.distance_strategy == DistanceStrategy.EUCLIDEAN:
-            return self._euclidean_relevance_score_fn
-        elif self.distance_strategy == DistanceStrategy.INNER_PRODUCT:
-            return self._max_inner_product_relevance_score_fn
-        else:
-            raise ValueError(
-                "No supported normalization function"
-                f" for distance_strategy of {self.distance_strategy}."
-                "Consider providing relevance_score_fn to PGVector constructor."
-            )
-
     def similarity_search_with_score(
         self,
         query: str,
