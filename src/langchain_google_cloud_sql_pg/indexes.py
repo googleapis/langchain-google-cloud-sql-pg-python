@@ -14,16 +14,23 @@
 
 import enum
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 
-class DistanceStrategy(enum.Enum):
+@dataclass
+class StrategyMixin:
+    operator: str
+    search_function: str
+    index_function: str
+
+
+class DistanceStrategy(StrategyMixin, enum.Enum):
     """Enumerator of the Distance strategies."""
 
-    EUCLIDEAN = "l2"
-    COSINE_DISTANCE = "cosine"
-    INNER_PRODUCT = "inner"
+    EUCLIDEAN = "<->", "l2_distance", "vector_l2_ops"
+    COSINE_DISTANCE = "<=>", "cosine_distance", "vector_cosine_ops"
+    INNER_PRODUCT = "<#>", "ip_distance", "vector_ip_ops"
 
 
 DEFAULT_DISTANCE_STRATEGY = DistanceStrategy.COSINE_DISTANCE
@@ -34,12 +41,16 @@ DEFAULT_INDEX_NAME = "langchainvectorindex"
 class BaseIndex(ABC):
     name: str = DEFAULT_INDEX_NAME
     index_type: str = "base"
-    distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY
+    distance_strategy: DistanceStrategy = field(
+        default_factory=lambda: DistanceStrategy.COSINE_DISTANCE
+    )
     partial_indexes: Optional[List] = None
 
     @abstractmethod
     def index_options(self) -> str:
-        pass
+        raise NotImplementedError(
+            "index_options method must be implemented by subclass"
+        )
 
 
 @dataclass
@@ -58,7 +69,7 @@ class HNSWIndex(BaseIndex):
 
 
 @dataclass
-class QueryOptions:
+class QueryOptions(ABC):
     def to_string(self) -> str:
         raise NotImplementedError("to_string method must be implemented by subclass")
 

@@ -443,22 +443,11 @@ class CloudSQLVectorStore(VectorStore):
         filter: Optional[str] = None,
     ) -> List[Any]:
         k = k if k else self.k
-        if self.distance_strategy == DistanceStrategy.EUCLIDEAN:
-            operator = "<->"
-            vector_function = "l2_distance"
-        elif self.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
-            operator = "<=>"
-            vector_function = "cosine_distance"
-        elif self.distance_strategy == DistanceStrategy.INNER_PRODUCT:
-            operator = "<#>"
-            vector_function = "inner_product"
-        else:
-            raise ValueError(
-                "distance strategy is not one of: 'EUCLIDEAN', 'COSINE_DISTANCE', 'INNER_PRODUCT'"
-            )
+        operator = self.distance_strategy.operator
+        search_function = self.distance_strategy.search_function
 
         filter = f"WHERE {filter}" if filter else ""
-        stmt = f"SELECT *, {vector_function}({self.embedding_column}, '{embedding}') as distance FROM {self.table_name} {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
+        stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM {self.table_name} {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
         if self.index_query_options:
             await self.engine._aexecute(
                 f"SET LOCAL {self.index_query_options.to_string()};"
