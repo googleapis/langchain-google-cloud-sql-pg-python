@@ -102,17 +102,21 @@ class TestVectorStore:
         yield engine
 
     @pytest_asyncio.fixture(scope="class")
-    async def vs_sync(self, engine_sync):
-        await engine_sync.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
+    def vs_sync(self, engine_sync):
+        engine_sync.run_as_sync(
+            engine_sync.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
+        )
         vs = CloudSQLVectorStore.create_sync(
             engine_sync,
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE_SYNC,
         )
         yield vs
-        await engine_sync._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
-        await engine_sync._connector.close_async()
-        await engine_sync._engine.dispose()
+        engine_sync.run_as_sync(
+            engine_sync._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
+        )
+        engine_sync.run_as_sync(engine_sync._connector.close_async())
+        engine_sync.run_as_sync(engine_sync._engine.dispose())
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
@@ -235,13 +239,17 @@ class TestVectorStore:
     async def test_add_docs(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_documents(docs, ids=ids)
-        results = await engine_sync._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        results = engine_sync.run_as_sync(
+            engine_sync._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        )
         assert len(results) == 3
 
-    async def test_add_texts(self, engine, vs_sync):
+    async def test_add_texts(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_texts(texts, ids=ids)
-        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        results = engine_sync.run_as_sync(
+            engine_sync._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        )
         assert len(results) == 6
 
     # Need tests for store metadata=False
