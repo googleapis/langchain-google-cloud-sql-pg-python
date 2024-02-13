@@ -52,7 +52,6 @@ class CloudSQLVectorStore(VectorStore):
         metadata_columns: List[str] = [],
         id_column: str = "langchain_id",
         metadata_json_column: Optional[str] = "langchain_metadata",
-        store_metadata: Optional[bool] = True,
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
         k: int = 4,
         fetch_k: int = 20,
@@ -72,7 +71,6 @@ class CloudSQLVectorStore(VectorStore):
         self.metadata_columns = metadata_columns
         self.id_column = id_column
         self.metadata_json_column = metadata_json_column
-        self.store_metadata = store_metadata
         self.distance_strategy = distance_strategy
         self.k = k
         self.fetch_k = fetch_k
@@ -169,7 +167,6 @@ class CloudSQLVectorStore(VectorStore):
             metadata_columns,
             id_column,
             metadata_json_column,
-            store_metadata,
             distance_strategy,
             k,
             fetch_k,
@@ -542,7 +539,7 @@ class CloudSQLVectorStore(VectorStore):
         for row in results:
             metadata = (
                 row[self.metadata_json_column]
-                if self.store_metadata and row[self.metadata_json_column]
+                if self.metadata_json_column and row[self.metadata_json_column]
                 else {}
             )
             for col in self.metadata_columns:
@@ -630,7 +627,7 @@ class CloudSQLVectorStore(VectorStore):
         for row in results:
             metadata = (
                 row[self.metadata_json_column]
-                if self.store_metadata and row[self.metadata_json_column]
+                if self.metadata_json_column and row[self.metadata_json_column]
                 else {}
             )
             for col in self.metadata_columns:
