@@ -727,7 +727,7 @@ class CloudSQLVectorStore(VectorStore):
         concurrently=False,
     ) -> None:
         if isinstance(index, ExactNearestNeighbor):
-            return None
+            return
 
         filter = f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
         params = "WITH " + index.index_options()
