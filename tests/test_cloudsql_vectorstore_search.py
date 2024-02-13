@@ -20,15 +20,8 @@ import pytest_asyncio
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import (
-    CloudSQLVectorStore,
-    Column,
-    PostgreSQLEngine,
-)
-from langchain_google_cloud_sql_pg.indexes import (
-    HNSWQueryOptions,
-    IVFFlatQueryOptions,
-)
+from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
+from langchain_google_cloud_sql_pg.indexes import HNSWQueryOptions, IVFFlatQueryOptions
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
@@ -38,12 +31,9 @@ embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz", "boo"]
 ids = [str(uuid.uuid4()) for i in range(len(texts))]
-metadatas = [
-    {"page": str(i), "source": "google.com"} for i in range(len(texts))
-]
+metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
 docs = [
-    Document(page_content=texts[i], metadata=metadatas[i])
-    for i in range(len(texts))
+    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
 ]
 
 embeddings = [embeddings_service.embed_query("foo") for i in range(len(texts))]
@@ -146,9 +136,7 @@ class TestVectorStoreSearch:
         results = await vs.asimilarity_search("foo", k=1)
         assert len(results) == 1
         assert results == [Document(page_content="foo")]
-        results = await vs.asimilarity_search(
-            "foo", k=1, filter="content = 'bar'"
-        )
+        results = await vs.asimilarity_search("foo", k=1, filter="content = 'bar'")
         assert results == [Document(page_content="bar")]
 
     async def test_asimilarity_search_score(self, vs):
@@ -195,9 +183,7 @@ class TestVectorStoreSearch:
         results = vs_custom.similarity_search("foo", k=1)
         assert len(results) == 1
         assert results == [Document(page_content="foo")]
-        results = vs_custom.similarity_search(
-            "foo", k=1, filter="mycontent = 'bar'"
-        )
+        results = vs_custom.similarity_search("foo", k=1, filter="mycontent = 'bar'")
         assert results == [Document(page_content="bar")]
 
     def test_similarity_search_score(self, vs_custom):
