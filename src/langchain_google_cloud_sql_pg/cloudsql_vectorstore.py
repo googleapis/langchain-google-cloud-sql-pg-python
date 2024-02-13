@@ -29,6 +29,7 @@ class CloudSQLVectorStore(VectorStore):
     """Google Cloud SQL for PostgreSQL Vector Store class"""
 
     __create_key = object()
+    __store_metadata: Optional[bool]
 
     def __init__(
         self,
@@ -56,7 +57,7 @@ class CloudSQLVectorStore(VectorStore):
         self.metadata_columns = metadata_columns
         self.id_column = id_column
         self.metadata_json_column = metadata_json_column
-        self.store_metadata = store_metadata
+        self.__store_metadata = store_metadata
 
     @classmethod
     async def create(
@@ -205,9 +206,9 @@ class CloudSQLVectorStore(VectorStore):
                     values_stmt += ",null"
 
             insert_stmt += (
-                f", {self.metadata_json_column})" if self.store_metadata else ")"
+                f", {self.metadata_json_column})" if self.__store_metadata else ")"
             )
-            values_stmt += f",'{json.dumps(extra)}')" if self.store_metadata else ")"
+            values_stmt += f",'{json.dumps(extra)}')" if self.__store_metadata else ")"
             query = insert_stmt + values_stmt
             await self.engine._aexecute(query)
 
