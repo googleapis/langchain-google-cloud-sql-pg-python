@@ -3,6 +3,10 @@
 
 # C extensions
 *.so
+*.toml
+
+main.py
+test_postgresql_loader_test.py
 
 # Packages
 *.egg

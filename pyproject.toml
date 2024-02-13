@@ -40,3 +40,6 @@ warn_unused_configs = true
 exclude = [
     "owlbot.py"
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

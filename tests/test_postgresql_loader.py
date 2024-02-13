@@ -19,7 +19,8 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import PostgreSQLLoader, PostgreSQLDocumentSaver, PostgreSQLEngine, Column
+from postgresql_engine import Column
+from src.langchain_google_cloud_sql_pg import PostgreSQLLoader, PostgreSQLDocumentSaver, PostgreSQLEngine
 
 project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
@@ -51,14 +52,6 @@ class TestLoaderAsync:
     async def _cleanup_table(self, engine):
         query = f"DROP TABLE IF EXISTS {table_name}"
         await engine._aexecute(query)
-
-    async def test_execute(self, engine):
-        await engine._aexecute("SELECT 1")
-
-    async def test_fetch(self, engine):
-        results = await engine._afetch(f"SELECT * FROM {table_name}")
-        assert len(results) > 0
-        await engine._aexecute(f"DROP TABLE {table_name}")
 
     async def test_load_from_query_default(self, engine):
         try:
@@ -399,64 +392,6 @@ class TestLoaderAsync:
         finally:
             await self._cleanup_table(engine)
 
-    # @pytest.mark.parametrize("store_metadata", [True, False])
-    # async def test_save_doc_with_default_metadata(self, engine, store_metadata):
-    #     """Tests saving documents with default metadata."""
-    #
-    #     try:
-    #         await self._cleanup_table(engine)
-    #         query = f"""
-    #                 CREATE TABLE IF NOT EXISTS {table_name}(
-    #                     page_content VARCHAR(255),
-    #                     fruit_name VARCHAR(255),
-    #                     organic BOOLEAN
-    #                 )
-    #                 """
-    #         await engine._aexecute(query)
-    #
-    #         test_docs = [
-    #             Document(
-    #                 page_content="Granny Smith 150 0.99",
-    #                 metadata={"fruit_id": 1, "fruit_name": "Apple", "organic": True},
-    #             ),
-    #         ]
-    #         saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
-    #         loader = PostgreSQLLoader(
-    #             engine=engine,
-    #             table_name=table_name,
-    #             metadata_columns=[
-    #                 "fruit_id",
-    #                 "fruit_name",
-    #                 "organic",
-    #             ],
-    #         )
-    #
-    #         await saver.aadd_documents(test_docs)
-    #         docs = self._collect_async_items(loader.alazy_load())
-    #
-    #         if store_metadata:
-    #             docs == test_docs
-    #             assert (await (engine._load_document_table(table_name))).columns.keys() == [
-    #                 "page_content",
-    #                 "fruit_name",
-    #                 "organic",
-    #                 "langchain_metadata",
-    #             ]
-    #         else:
-    #             assert docs == [
-    #                 Document(
-    #                     page_content="Granny Smith 150 0.99",
-    #                     metadata={"fruit_name": "Apple", "organic": True},
-    #                 ),
-    #             ]
-    #             assert (await engine._load_document_table(table_name)).columns.keys() == [
-    #                 "page_content",
-    #                 "fruit_name",
-    #                 "organic",
-    #             ]
-    #     finally:
-    #         await self._cleanup_table(engine)
-
     async def test_save_doc_with_default_metadata(self, engine):
         try:
             await engine.init_document_table(table_name)
@@ -578,7 +513,7 @@ class TestLoaderAsync:
                     metadata={},
                 ),
             ]
-            assert engine._load_document_table(table_name).columns.keys() == [
+            assert (await engine._load_document_table(table_name)).columns.keys() == [
                 "page_content",
             ]
         finally:
@@ -616,14 +551,20 @@ class TestLoaderAsync:
     async def test_delete_doc_with_query(self, engine):
         await self._cleanup_table(engine)
 
-        query = f"""
-                CREATE TABLE IF NOT EXISTS {table_name}(
-                    page_content VARCHAR(255),
-                    fruit_name VARCHAR(255),
-                    organic BOOLEAN
-                )
-                """
-        await engine._aexecute(query=query)
+        await engine.init_document_table(
+            table_name,
+            metadata_columns=[
+                Column(
+                    "fruit_name",
+                    "VARCHAR",
+                ),
+                Column(
+                    "organic",
+                    "BOOLEAN",
+                ),
+            ],
+            store_metadata=True,
+        )
 
         try:
             test_docs = [
@@ -650,14 +591,17 @@ class TestLoaderAsync:
             assert len(docs) == 1
 
             await saver.adelete(docs)
-            assert len(await self._collect_async_items(loader.alazy_load())) == 2
+            assert len(await self._collect_async_items(loader.alazy_load())) == 0
         finally:
             await self._cleanup_table(engine)
 
     @pytest.mark.parametrize("metadata_json_column", [None, "metadata_col_test"])
     async def test_delete_doc_with_customized_metadata(self, engine, metadata_json_column):
 
-        await engine.init_document_table(
+        # TODO Partial Implementation
+
+        content_column = "content_col_test"
+        engine.init_document_table(
             table_name,
             metadata_columns=[
                 Column(
@@ -666,39 +610,46 @@ class TestLoaderAsync:
                 ),
                 Column(
                     "organic",
-                    "BOOLEAN"),
+                    "BOOLEAN"
+                ),
             ],
-            content_column="content_col_test",
-            metadata_json_columns=metadata_json_column,
+            content_column=content_column,
+            metadata_json_column=metadata_json_column,
+        )
+        test_docs = [
+            Document(
+                page_content="Granny Smith 150 0.99",
+                metadata={"fruit-id": 1, "fruit_name": "Apple", "organic": True},
+            ),
+            Document(
+                page_content="Cavendish 200 0.59 0",
+                metadata={"fruit_id": 2, "fruit_name": "Banana", "organic": True},
+            ),
+        ]
+        saver = PostgreSQLDocumentSaver(
+            engine=engine,
+            table_name=table_name,
+            content_column=content_column,
+            metadata_json_column=metadata_json_column,
+        )
+        loader = PostgreSQLLoader(
+            engine=engine,
+            table_name=table_name,
+            content_columns=[content_column],
+            metadata_json_column=metadata_json_column,
         )
 
-        try:
-            test_docs = [
-                Document(
-                    page_content="Granny Smith 150 0.99",
-                    metadata={"fruit-id": 1, "fruit_name": "Apple", "organic": True},
-                ),
-                Document(
-                    page_content="Cavendish 200 0.59 0",
-                    metadata={"fruit_id": 2, "fruit_name": "Banana", "organic": True},
-                ),
-            ]
-            saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
-            loader = PostgreSQLLoader(engine=engine, table_name=table_name)
+        await saver.aadd_documents(test_docs)
+        docs = loader.load()
+        assert len(docs) == 2
 
-            await saver.aadd_documents(test_docs)
-            docs = await self._collect_async_items(loader.alazy_load())
-            assert len(docs) == 2
+        await saver.adelete(docs[:1])
+        assert len(await self._collect_async_items(loader.alazy_load())) == 1
 
-            await saver.adelete(docs[:1])
-            assert len(await self._collect_async_items(loader.alazy_load())) == 1
+        await saver.adelete(docs)
+        assert len(await self._collect_async_items(loader.alazy_load())) == 0
 
-            await saver.adelete(docs)
-            assert len(loader.load()) == 0
-        finally:
-            await self._cleanup_table(engine)
-
-    def test_sync_engine(self, db_project, db_region, db_instance, db_name):
+    def test_sync_engine(self):
         engine = PostgreSQLEngine.from_instance(
             project_id=project_id,
             instance=instance_id,

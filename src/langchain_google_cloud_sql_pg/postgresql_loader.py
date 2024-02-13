@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from threading import Thread
-from typing import List, Optional, Iterator
+from typing import List, Optional, Iterator, Iterable, Dict, Any
 
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
@@ -34,8 +35,9 @@ class PostgreSQLLoader(BaseLoader):
         metadata_columns: Optional[List[str]] = None,
         format: Optional[str] = None,
         read_only: Optional[bool] = None,
-        time_out: Optional[int]  = None,
+        time_out: Optional[int] = None,
         formatter: Optional = None,
+        metadata_json_column: Optional[str] = None,
 
     ) -> None:
         """Initialize CloudSQL Postgres document loader."""
@@ -49,6 +51,9 @@ class PostgreSQLLoader(BaseLoader):
         self.read_only = read_only
         self.time_out = time_out
         self.formatter = formatter
+        self.metadata_json_column = (
+            metadata_json_column if metadata_json_column else DEFAULT_METADATA_COL
+        )
 
     async def _collect_async_items(self):
         docs = []
@@ -148,6 +153,7 @@ def _parse_doc_from_row(
             metadata[column] = row[column]
     return Document(page_content=page_content, metadata=metadata)
 
+
 def _parse_row_from_doc(column_names: Iterable[str], doc: Document) -> Dict:
     doc_metadata = doc.metadata.copy()
     row: Dict[str, Any] = {"page_content": doc.page_content}
@@ -193,12 +199,13 @@ class PostgreSQLDocumentSaver:
         self._table = await self.engine._load_document_table(self.table_name)
         for doc in docs:
             row = _parse_row_from_doc(self._table.columns.keys(), doc)
-            #@ TODO check why sqlalchemy insert is not returning the right columns
+            # @ TODO check why sqlalchemy insert is not returning the right columns
 
             values = tuple(
                 json.dumps(value) if isinstance(value, dict) else value
                 for value in row.values()
             )
+            values = values if len(values) > 1 else f"('{values[0]}')"  # Unpack single-element tuple
             stmt = f"INSERT INTO {self.table_name} ({', '.join(row.keys())}) VALUES {values};"
             await self.engine._aexecute(stmt)
 
