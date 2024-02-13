@@ -55,7 +55,7 @@ class BaseIndex(ABC):
 
 @dataclass
 class ExactNearestNeighbor(BaseIndex):
-    index_type: str = "knn"
+    index_type: str = "exactnearestneighbor"
 
 
 @dataclass
