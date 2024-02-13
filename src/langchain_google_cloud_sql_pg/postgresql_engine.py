@@ -99,11 +99,13 @@ class PostgreSQLEngine:
         database: str,
     ) -> PostgreSQLEngine:
         # Running a loop in a background thread allows us to support
-        # async methods from non-async enviroments
+        # async methods from non-async environments
         loop = asyncio.new_event_loop()
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()
-        coro = cls.afrom_instance(project_id, region, instance, database)
+        coro = cls._create(
+            project_id, region, instance, database, loop=loop, thread=thread
+        )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
     @classmethod
@@ -124,8 +126,8 @@ class PostgreSQLEngine:
             cls._connector = await create_async_connector()
 
         # anonymous function to be used for SQLAlchemy 'creator' argument
-        def getconn() -> asyncpg.Connection:
-            conn = cls._connector.connect_async(  # type: ignore
+        async def getconn() -> asyncpg.Connection:
+            conn = await cls._connector.connect_async(  # type: ignore
                 f"{project_id}:{region}:{instance}",
                 "asyncpg",
                 user=iam_database_user,
@@ -165,7 +167,7 @@ class PostgreSQLEngine:
 
         return result_fetch
 
-    def run_as_sync(self, coro: Awaitable[T]):  # TODO: add return type
+    def run_as_sync(self, coro: Awaitable[T]) -> T:
         if not self._loop:
             raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
@@ -177,7 +179,7 @@ class PostgreSQLEngine:
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[Column] = [],
-        metadata_json_columns: str = "langchain_metadata",
+        metadata_json_column: str = "langchain_metadata",
         id_column: str = "langchain_id",
         overwrite_existing: bool = False,
         store_metadata: bool = True,
@@ -196,7 +198,7 @@ class PostgreSQLEngine:
                 "NOT NULL" if not column.nullable else ""
             )
         if store_metadata:
-            query += f",\n{metadata_json_columns} JSON"
+            query += f",\n{metadata_json_column} JSON"
         query += "\n);"
 
         await self._aexecute(query)
