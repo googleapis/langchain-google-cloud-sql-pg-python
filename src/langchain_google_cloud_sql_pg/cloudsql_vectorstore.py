@@ -729,7 +729,7 @@ class CloudSQLVectorStore(VectorStore):
         if isinstance(index, ExactNearestNeighbor):
             return
 
-        filter = f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
+        filter = f"WHERE ({index.partial_indexes or ""})"
         params = "WITH " + index.index_options()
         function = index.distance_strategy.index_function
         name = name or index.name
