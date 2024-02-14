@@ -57,7 +57,7 @@ class TestEngineAsync:
 
     @pytest.fixture(scope="module")
     def user(self) -> str:
-        return get_env_var("DB_USER", "instance for AlloyDB")
+        return get_env_var("DB_USER", "database user for cloud sql")
 
     @pytest.fixture(scope="module")
     def password(self) -> str:
