@@ -22,3 +22,13 @@ steps:
     name: python:3.11
     entrypoint: python
     args: ["-m", "pytest"]
+    env:
+      - "PROJECT_ID=$PROJECT_ID"
+      - "INSTANCE_ID=$_INSTANCE_ID"
+      - "DATABASE_ID=$_DATABASE_ID"
+      - "REGION=$_REGION"
+
+substitutions:
+  _DATABASE_USER: test-instance
+  _DATABASE_ID: test-database
+  _REGION: us-central1

@@ -1,6 +1,6 @@
 # Cloud SQL for PostgreSQL for LangChain
 
-*Description*
+This package contains the [LangChain][langchain] integrations for Cloud SQL for PostgreSQL.
 
 > **🧪 Preview:** This feature is covered by the Pre-GA Offerings Terms of the Google Cloud Terms of Service. Please note that pre-GA products and features might have limited support, and changes to pre-GA products and features might not be compatible with other pre-GA versions. For more information, see the [launch stage descriptions](https://cloud.google.com/products#product-launch-stages)
 
@@ -33,11 +33,61 @@ source <your-env>/bin/activate
 <your-env>/bin/pip install langchain-google-cloud-sql-pg
 ```
 
-## Usage
+## Vector Store Usage
+
+Use a vector store to store embedded data and perform vector search.
 
 ```python
-from langchain_google_cloud_sql_pg import CloudSQLVectorstore, CloudSQLLoader, CloudSQLChatMessageHistory
+from langchain_google_cloud_sql_pg import CloudSQLVectorstore, PostgreSQLEngine
+from langchain.embeddings import VertexAIEmbeddings
+
+
+engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
+embeddings_service = VertexAIEmbeddings()
+vectorstore = CloudQLVectorStore(
+    engine,
+    table_name="my-table",
+    embeddings=embedding_service
+)
 ```
+
+See the full [Vector Store][vectorstore] tutorial.
+
+## Document Loader Usage
+
+Use a document loader to load data as LangChain `Document`s.
+
+```python
+from langchain_google_cloud_sql_pg import PostgreSQLEngine, PostgreSQLLoader
+
+
+engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
+loader = PostgresSQLLoader(
+    engine,
+    table_name="my-table-name"
+)
+docs = loader.lazy_load()
+```
+
+See the full [Document Loader][loader] tutorial.
+
+## Chat Message History Usage
+
+Use `ChatMessageHistory` to store messages and provide conversation history to LLMs.
+
+```python
+from langchain_google_cloud_sql_pg import PostgreSQLChatMessageHistory, PostgreSQLEngine
+
+
+engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
+history = PostgreSQLChatMessageHistory(
+    engine,
+    table_name="my-message-store",
+    session_id="my-session_id"
+)
+```
+
+See the full [Chat Message History][history] tutorial.
 
 ## Contributing
 
@@ -57,8 +107,12 @@ Apache 2.0 - See [LICENSE](LICENSE) for more information.
 
 This is not an officially supported Google product.
 
+[langchain]: https://github.com/langchain-ai/langchain
 [project]: https://console.cloud.google.com/project
 [billing]: https://cloud.google.com/billing/docs/how-to/modify-project#enable_billing_for_a_project
 [api]: https://console.cloud.google.com/flows/enableapi?apiid=sqladmin.googleapis.com
 [auth]: https://googleapis.dev/python/google-api-core/latest/auth.html
 [venv]: https://virtualenv.pypa.io/en/latest/
+[vectorstore]: ./docs/vector_store.ipynb
+[loader]: ./docs/document_loader.ipynb
+[history]: ./docs/chat_message_history.ipynb
