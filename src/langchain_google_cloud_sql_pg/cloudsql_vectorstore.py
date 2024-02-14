@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type
+from typing import Any, Iterable, List, Optional, Tuple, Type
 
 import numpy as np
 from langchain_community.vectorstores.utils import maximal_marginal_relevance
@@ -24,7 +24,14 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
-from .indexes import DEFAULT_DISTANCE_STRATEGY, DistanceStrategy, QueryOptions
+from .indexes import (
+    DEFAULT_DISTANCE_STRATEGY,
+    DEFAULT_INDEX_NAME,
+    BaseIndex,
+    DistanceStrategy,
+    ExactNearestNeighbor,
+    QueryOptions,
+)
 from .postgresql_engine import PostgreSQLEngine
 
 
@@ -713,3 +720,46 @@ class CloudSQLVectorStore(VectorStore):
             **kwargs,
         )
         return self.engine.run_as_sync(coro)
+
+    async def aapply_vector_index(
+        self,
+        index: BaseIndex,
+        name: Optional[str] = None,
+        concurrently: bool = False,
+    ) -> None:
+        if isinstance(index, ExactNearestNeighbor):
+            await self.adrop_vector_index()
+            return
+
+        filter = f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
+        params = "WITH " + index.index_options()
+        function = index.distance_strategy.index_function
+        name = name or index.name
+        stmt = f"CREATE INDEX {'CONCURRENTLY' if concurrently else ''} {name} ON {self.table_name} USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};"
+        if concurrently:
+            await self.engine._aexecute_outside_tx(stmt)
+        else:
+            await self.engine._aexecute(stmt)
+
+    async def areindex(self, index_name: str = DEFAULT_INDEX_NAME) -> None:
+        query = f"REINDEX INDEX {index_name};"
+        await self.engine._aexecute(query)
+
+    async def adrop_vector_index(
+        self,
+        index_name: str = DEFAULT_INDEX_NAME,
+    ) -> None:
+        query = f"DROP INDEX IF EXISTS {index_name};"
+        await self.engine._aexecute(query)
+
+    async def is_valid_index(
+        self,
+        index_name: str = DEFAULT_INDEX_NAME,
+    ) -> bool:
+        query = f"""
+        SELECT tablename, indexname
+        FROM pg_indexes
+        WHERE tablename = '{self.table_name}' AND indexname = '{index_name}';
+        """
+        results = await self.engine._afetch(query)
+        return bool(len(results) == 1)

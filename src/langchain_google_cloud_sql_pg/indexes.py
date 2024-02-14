@@ -44,7 +44,7 @@ class BaseIndex(ABC):
     distance_strategy: DistanceStrategy = field(
         default_factory=lambda: DistanceStrategy.COSINE_DISTANCE
     )
-    partial_indexes: Optional[List] = None
+    partial_indexes: Optional[List[str]] = None
 
     @abstractmethod
     def index_options(self) -> str:

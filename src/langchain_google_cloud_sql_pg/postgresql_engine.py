@@ -50,10 +50,11 @@ async def _get_iam_principal_email(
             The email address associated with the current authenticated IAM
             principal.
     """
-    # refresh credentials if they are not valid
     if not credentials.valid:
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
+    if hasattr(credentials, "_service_account_email"):
+        email = credentials._service_account_email
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -65,7 +66,7 @@ async def _get_iam_principal_email(
             "Failed to automatically obtain authenticated IAM princpal's "
             "email address using environment's ADC credentials!"
         )
-    return email
+    return email.replace(".gserviceaccount.com", "")
 
 
 @dataclass
@@ -157,6 +158,12 @@ class PostgreSQLEngine:
         async with self._engine.connect() as conn:
             await conn.execute(text(query))
             await conn.commit()
+
+    async def _aexecute_outside_tx(self, query: str):
+        """Execute a SQL query."""
+        async with self._engine.connect() as conn:
+            await conn.execute(text("COMMIT"))
+            await conn.execute(text(query))
 
     async def _afetch(self, query: str):
         async with self._engine.connect() as conn:
