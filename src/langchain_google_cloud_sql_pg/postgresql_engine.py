@@ -157,6 +157,7 @@ class PostgreSQLEngine:
                 f"{project_id}:{region}:{instance}",
                 "asyncpg",
                 user=db_user,
+                password=password,
                 db=database,
                 enable_iam_auth=enable_iam_auth,
             )
