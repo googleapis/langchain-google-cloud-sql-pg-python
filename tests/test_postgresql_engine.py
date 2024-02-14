@@ -125,7 +125,7 @@ class TestEngineAsync:
         assert engine
         engine.run_as_sync(engine._aexecute("SELECT 1"))
 
-    async def test_password(
+    def test_password(
         self,
         db_project,
         db_region,
@@ -134,7 +134,7 @@ class TestEngineAsync:
         user,
         password,
     ):
-        engine = await PostgreSQLEngine.afrom_instance(
+        engine = PostgreSQLEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
             region=db_region,
@@ -143,4 +143,4 @@ class TestEngineAsync:
             password=password,
         )
         assert engine
-        await engine._aexecute("SELECT 1")
+        engine.run_as_sync(engine._aexecute("SELECT 1"))
