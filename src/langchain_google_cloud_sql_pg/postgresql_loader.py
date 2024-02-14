@@ -1,3 +1,17 @@
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import asyncio
@@ -10,7 +24,7 @@ from langchain_core.documents import Document
 
 # TODO Move to PostgreSQLEngine Implementation from Vectorstore PR once it is merged
 # from langchain_google_cloud_sql_pg.pgsql_engine import PostgreSQLEngine
-from postgresql_engine import PostgreSQLEngine
+from .postgresql_engine import PostgreSQLEngine
 
 DEFAULT_CONTENT_COL = "page_content"
 DEFAULT_METADATA_COL = "langchain_metadata"
@@ -30,7 +44,6 @@ class PostgreSQLLoader(BaseLoader):
         engine: PostgreSQLEngine,
         query: str = None,
         table_name: str = None,
-        *,
         content_columns: Optional[List[str]] = None,
         metadata_columns: Optional[List[str]] = None,
         format: Optional[str] = None,
@@ -55,9 +68,8 @@ class PostgreSQLLoader(BaseLoader):
             metadata_json_column if metadata_json_column else DEFAULT_METADATA_COL
         )
 
-    async def _collect_async_items(self):
+    async def _collect_async_items(self, docs_generator):
         docs = []
-        docs_generator = self.alazy_load()
         async for doc in docs_generator:
             docs.append(doc)
         return docs
@@ -67,7 +79,7 @@ class PostgreSQLLoader(BaseLoader):
         self._loop = asyncio.new_event_loop()
         self._thread = Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
-        documents = asyncio.run_coroutine_threadsafe(self._collect_async_items(), self._loop).result()
+        documents = asyncio.run_coroutine_threadsafe(self._collect_async_items(self.alazy_load()), self._loop).result()
 
         return documents
 

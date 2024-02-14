@@ -230,7 +230,6 @@ class PostgreSQLEngine:
             store_metadata (bool): Whether to store extra metadata in a metadata column
                 if not described in 'metadata' field list (Default: True).
         """
-        await self._aexecute(f"DROP TABLE IF EXISTS {table_name}")
 
         query = f"""CREATE TABLE {table_name}(
             {content_column} TEXT NOT NULL

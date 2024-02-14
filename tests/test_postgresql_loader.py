@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import asyncio
 import json
 import os
 
@@ -393,6 +393,7 @@ class TestLoaderAsync:
 
     async def test_save_doc_with_default_metadata(self, engine):
         try:
+            await self._cleanup_table(engine)
             await engine.init_document_table(table_name)
             test_docs = [
                 Document(
@@ -424,7 +425,7 @@ class TestLoaderAsync:
 
     @pytest.mark.parametrize("store_metadata", [True, False])
     async def test_save_doc_with_customized_metadata(self, engine, store_metadata):
-
+        await self._cleanup_table(engine)
         await engine.init_document_table(
             table_name,
             metadata_columns=[
@@ -483,7 +484,7 @@ class TestLoaderAsync:
     async def test_save_doc_without_metadata(self, engine):
 
         try:
-
+            await self._cleanup_table(engine)
             await engine.init_document_table(
                 table_name,
                 metadata_json_columns=None,
@@ -519,6 +520,7 @@ class TestLoaderAsync:
             await self._cleanup_table(engine)
 
     async def test_delete_doc_with_default_metadata(self, engine):
+        await self._cleanup_table(engine)
         await engine.init_document_table(table_name)
 
         try:
@@ -549,7 +551,6 @@ class TestLoaderAsync:
 
     async def test_delete_doc_with_query(self, engine):
         await self._cleanup_table(engine)
-
         await engine.init_document_table(
             table_name,
             metadata_columns=[
@@ -598,9 +599,9 @@ class TestLoaderAsync:
     async def test_delete_doc_with_customized_metadata(self, engine, metadata_json_column):
 
         # TODO Partial Implementation
-
+        await self._cleanup_table(engine)
         content_column = "content_col_test"
-        engine.init_document_table(
+        await engine.init_document_table(
             table_name,
             metadata_columns=[
                 Column(
