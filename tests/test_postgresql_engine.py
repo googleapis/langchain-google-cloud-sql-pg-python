@@ -61,7 +61,7 @@ class TestEngineAsync:
 
     @pytest.fixture(scope="module")
     def password(self) -> str:
-        return get_env_var("DB_PASSWORD", "instance for AlloyDB")
+        return get_env_var("DB_PASSWORD", "database password for cloud sql")
 
     @pytest_asyncio.fixture
     async def engine(self, db_project, db_region, db_instance, db_name):
