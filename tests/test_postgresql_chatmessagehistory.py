@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import uuid
 from typing import Generator
 
 import pytest
@@ -26,8 +27,7 @@ project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
 instance_id = os.environ["INSTANCE_ID"]
 db_name = os.environ["DATABASE_ID"]
-table_name = "message_store-test"
-
+table_name = "message_store_test" + str(uuid.uuid4())
 
 @pytest.fixture(name="memory_engine")
 def setup() -> Generator:
@@ -37,9 +37,7 @@ def setup() -> Generator:
         instance=instance_id,
         database=db_name,
     )
-    engine.run_as_sync(engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"'))
     engine.run_as_sync(engine.init_chat_history_table(table_name=table_name))
-
     yield engine
 
 
@@ -60,3 +58,4 @@ def test_chat_message_history(memory_engine: PostgreSQLEngine) -> None:
     # verify clear() clears message history
     history.clear()
     assert len(history.messages) == 0
+    engine.run_as_sync(engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"'))
