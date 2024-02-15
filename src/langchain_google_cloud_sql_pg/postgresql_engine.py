@@ -98,6 +98,8 @@ class PostgreSQLEngine:
         region: str,
         instance: str,
         database: str,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
     ) -> PostgreSQLEngine:
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
@@ -105,7 +107,14 @@ class PostgreSQLEngine:
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()
         coro = cls._create(
-            project_id, region, instance, database, loop=loop, thread=thread
+            project_id,
+            region,
+            instance,
+            database,
+            user,
+            password,
+            loop=loop,
+            thread=thread,
         )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
@@ -116,24 +125,41 @@ class PostgreSQLEngine:
         region: str,
         instance: str,
         database: str,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
         loop: Optional[asyncio.AbstractEventLoop] = None,
         thread: Optional[Thread] = None,
     ) -> PostgreSQLEngine:
-        credentials, _ = google.auth.default(
-            scopes=["https://www.googleapis.com/auth/userinfo.email"]
-        )
-        iam_database_user = await _get_iam_principal_email(credentials)
+        if bool(user) ^ bool(password):
+            raise ValueError(
+                "Only one of 'user' or 'password' were specified. Either "
+                "both should be specified to use basic user/password "
+                "authentication or neither for IAM DB authentication."
+            )
         if cls._connector is None:
             cls._connector = await create_async_connector()
+        # if user and password are given, use basic auth
+        if user and password:
+            enable_iam_auth = False
+            db_user = user
+        # otherwise use automatic IAM database authentication
+        else:
+            # get application default credentials
+            credentials, _ = google.auth.default(
+                scopes=["https://www.googleapis.com/auth/userinfo.email"]
+            )
+            db_user = await _get_iam_principal_email(credentials)
+            enable_iam_auth = True
 
         # anonymous function to be used for SQLAlchemy 'creator' argument
         async def getconn() -> asyncpg.Connection:
             conn = await cls._connector.connect_async(  # type: ignore
                 f"{project_id}:{region}:{instance}",
                 "asyncpg",
-                user=iam_database_user,
+                user=db_user,
+                password=password,
                 db=database,
-                enable_iam_auth=True,
+                enable_iam_auth=enable_iam_auth,
             )
             return conn
 
@@ -150,8 +176,17 @@ class PostgreSQLEngine:
         region: str,
         instance: str,
         database: str,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
     ) -> PostgreSQLEngine:
-        return await cls._create(project_id, region, instance, database)
+        return await cls._create(
+            project_id,
+            region,
+            instance,
+            database,
+            user,
+            password,
+        )
 
     async def _aexecute(self, query: str):
         """Execute a SQL query."""
