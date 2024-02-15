@@ -18,11 +18,7 @@ import json
 from typing import List
 
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.messages import (
-    BaseMessage,
-    message_to_dict,
-    messages_from_dict,
-)
+from langchain_core.messages import BaseMessage, message_to_dict, messages_from_dict
 
 from langchain_google_cloud_sql_pg.postgresql_engine import PostgreSQLEngine
 
@@ -30,9 +26,7 @@ from langchain_google_cloud_sql_pg.postgresql_engine import PostgreSQLEngine
 class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
     """Chat message history stored in a Postgres database."""
 
-    def __init__(
-        self, engine: PostgreSQLEngine, session_id: str, table_name: str
-    ):
+    def __init__(self, engine: PostgreSQLEngine, session_id: str, table_name: str):
         self.engine = engine
         self.session_id = session_id
         self.table_name = table_name
@@ -47,10 +41,7 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
         if not results:
             return []
 
-        items = [
-            {"data": result["data"], "type": result["type"]}
-            for result in results
-        ]
+        items = [{"data": result["data"], "type": result["type"]} for result in results]
         messages = messages_from_dict(items)
         return messages
 
