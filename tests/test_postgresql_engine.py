@@ -54,6 +54,14 @@ class TestEngineAsync:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
+    @pytest.fixture(scope="module")
+    def user(self) -> str:
+        return get_env_var("DB_USER", "database user for cloud sql")
+
+    @pytest.fixture(scope="module")
+    def password(self) -> str:
+        return get_env_var("DB_PASSWORD", "database password for cloud sql")
+
     @pytest_asyncio.fixture
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgreSQLEngine.afrom_instance(
@@ -114,7 +122,31 @@ class TestEngineAsync:
             database=db_name,
         )
         assert engine
+        engine.run_as_sync(engine._aexecute("SELECT 1"))
+        
+    def test_password(
+        self,
+        db_project,
+        db_region,
+        db_instance,
+        db_name,
+        user,
+        password,
+    ):
+        PostgreSQLEngine._connector = None
+        engine = PostgreSQLEngine.from_instance(
+            project_id=db_project,
+            instance=db_instance,
+            region=db_region,
+            database=db_name,
+            user=user,
+            password=password,
+        )
+        assert engine
+        engine.run_as_sync(engine._aexecute("SELECT 1"))
+        PostgreSQLEngine._connector = None
 
     async def test_column(self, engine):
         with pytest.raises(ValueError):
             Column("test", VARCHAR)
+
