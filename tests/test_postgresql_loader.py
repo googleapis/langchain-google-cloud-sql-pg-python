@@ -24,8 +24,8 @@ from src.langchain_google_cloud_sql_pg import PostgreSQLLoader, PostgreSQLDocume
 project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
 instance_id = os.environ["INSTANCE_ID"]
-db_name = os.environ["DB_NAME"]
-table_name = os.environ["TABLE_NAME"]
+db_name = os.environ["DATABASE_ID"]
+table_name = os.getenv("TABLE_NAME", "test_table")
 
 
 @pytest.mark.asyncio
