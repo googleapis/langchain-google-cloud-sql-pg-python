@@ -125,32 +125,6 @@ class TestEngineAsync:
         assert engine
         engine.run_as_sync(engine._aexecute("SELECT 1"))
 
-
-class TestEngineSync:
-    @pytest.fixture(scope="module")
-    def db_project(self) -> str:
-        return get_env_var("PROJECT_ID", "project id for google cloud")
-
-    @pytest.fixture(scope="module")
-    def db_region(self) -> str:
-        return get_env_var("REGION", "region for cloud sql instance")
-
-    @pytest.fixture(scope="module")
-    def db_instance(self) -> str:
-        return get_env_var("INSTANCE_ID", "instance for cloud sql")
-
-    @pytest.fixture(scope="module")
-    def db_name(self) -> str:
-        return get_env_var("DATABASE_ID", "instance for cloud sql")
-
-    @pytest.fixture(scope="module")
-    def user(self) -> str:
-        return get_env_var("DB_USER", "database user for cloud sql")
-
-    @pytest.fixture(scope="module")
-    def password(self) -> str:
-        return get_env_var("DB_PASSWORD", "database password for cloud sql")
-
     def test_password(
         self,
         db_project,
@@ -160,6 +134,7 @@ class TestEngineSync:
         user,
         password,
     ):
+        PostgreSQLEngine._connector  None
         engine = PostgreSQLEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
@@ -170,3 +145,4 @@ class TestEngineSync:
         )
         assert engine
         engine.run_as_sync(engine._aexecute("SELECT 1"))
+        PostgreSQLEngine._connector  None
