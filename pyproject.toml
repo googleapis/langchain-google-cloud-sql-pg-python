@@ -20,7 +20,6 @@ Changelog = "https://github.com/googleapis/langchain-google-cloud-sql-pg-python/
 
 [project.optional-dependencies]
 test = [
-    "black==23.12.0",
     "black[jupyter]==23.12.0",
     "isort==5.13.2",
     "langchain-community>=0.0.18",
