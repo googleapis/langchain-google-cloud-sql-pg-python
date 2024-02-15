@@ -123,7 +123,7 @@ class TestEngineAsync:
         )
         assert engine
         engine.run_as_sync(engine._aexecute("SELECT 1"))
-        
+
     def test_password(
         self,
         db_project,
@@ -149,4 +149,3 @@ class TestEngineAsync:
     async def test_column(self, engine):
         with pytest.raises(ValueError):
             Column("test", VARCHAR)
-
