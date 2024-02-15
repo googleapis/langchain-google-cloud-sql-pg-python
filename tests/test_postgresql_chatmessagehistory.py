@@ -6,7 +6,7 @@ import sqlalchemy
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 
-from langchain_google_cloud_sql_pg_python import PostgreSQLChatMessageHistory, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import PostgreSQLChatMessageHistory, PostgreSQLEngine
 
 project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
