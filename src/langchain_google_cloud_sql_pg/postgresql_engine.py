@@ -1,3 +1,5 @@
+# Copyright 2024 Google LLC
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import asyncio
 from dataclasses import dataclass
 from threading import Thread
@@ -185,10 +188,10 @@ class PostgreSQLEngine:
             password,
         )
 
-    async def _aexecute(self, query: str):
+    async def _aexecute(self, query: str, params: Optional[dict] = None):
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
-            await conn.execute(text(query))
+            await conn.execute(text(query), params)
             await conn.commit()
 
     async def _aexecute_outside_tx(self, query: str):
@@ -197,10 +200,10 @@ class PostgreSQLEngine:
             await conn.execute(text("COMMIT"))
             await conn.execute(text(query))
 
-    async def _afetch(self, query: str):
+    async def _afetch(self, query: str, params: Optional[dict] = None):
         async with self._engine.connect() as conn:
             """Fetch results from a SQL query."""
-            result = await conn.execute(text(query))
+            result = await conn.execute(text(query), params)
             result_map = result.mappings()
             result_fetch = result_map.fetchall()
 
@@ -243,15 +246,10 @@ class PostgreSQLEngine:
         await self._aexecute(query)
 
     async def init_chat_history_table(self, table_name) -> None:
-        create_table_query = f"""CREATE TABLE IF NOT EXISTS {table_name} (
+        create_table_query = f"""CREATE TABLE IF NOT EXISTS "{table_name}"(
             id SERIAL PRIMARY KEY,
             session_id TEXT NOT NULL,
             data JSONB NOT NULL,
-            type TEXT NOT NULL,
-            content TEXT NOT NULL,
-            example TEXT NOT NULL,
-            additional_kwargs JSONB NOT NULL
-
+            type TEXT NOT NULL
         );"""
-        
-        await self.engine._aexecute(create_table_query)
+        await self._aexecute(create_table_query)
