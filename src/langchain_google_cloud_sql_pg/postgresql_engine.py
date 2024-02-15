@@ -194,7 +194,7 @@ class PostgreSQLEngine:
             password,
         )
 
-    async def _aexecute(self, query: str, params: dict = None):
+    async def _aexecute(self, query: str, params: Optional[dict] = None):
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text(query), params)
@@ -238,15 +238,15 @@ class PostgreSQLEngine:
             await self._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
 
         query = f"""CREATE TABLE "{table_name}"(
-            {id_column} UUID PRIMARY KEY,
-            {content_column} TEXT NOT NULL,
-            {embedding_column} vector({vector_size}) NOT NULL"""
+            "{id_column}" UUID PRIMARY KEY,
+            "{content_column}" TEXT NOT NULL,
+            "{embedding_column}" vector({vector_size}) NOT NULL"""
         for column in metadata_columns:
-            query += f",\n{column.name} {column.data_type}" + (
+            query += f""",\n"{column.name}" {column.data_type}""" + (
                 "NOT NULL" if not column.nullable else ""
             )
         if store_metadata:
-            query += f",\n{metadata_json_column} JSON"
+            query += f""",\n"{metadata_json_column}" JSON"""
         query += "\n);"
 
         await self._aexecute(query)
