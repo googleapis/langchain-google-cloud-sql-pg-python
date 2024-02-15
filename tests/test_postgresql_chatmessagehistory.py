@@ -58,4 +58,4 @@ def test_chat_message_history(memory_engine: PostgreSQLEngine) -> None:
     # verify clear() clears message history
     history.clear()
     assert len(history.messages) == 0
-    engine.run_as_sync(engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"'))
+    memory_engine.run_as_sync(memory_engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"'))
