@@ -188,10 +188,10 @@ class PostgreSQLEngine:
             password,
         )
 
-    async def _aexecute(self, query: str):
+    async def _aexecute(self, query: str, params: Optional[dict] = None):
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
-            await conn.execute(text(query))
+            await conn.execute(text(query), params)
             await conn.commit()
 
     async def _aexecute_outside_tx(self, query: str):
@@ -200,10 +200,10 @@ class PostgreSQLEngine:
             await conn.execute(text("COMMIT"))
             await conn.execute(text(query))
 
-    async def _afetch(self, query: str):
+    async def _afetch(self, query: str, params: Optional[dict] = None):
         async with self._engine.connect() as conn:
             """Fetch results from a SQL query."""
-            result = await conn.execute(text(query))
+            result = await conn.execute(text(query), params)
             result_map = result.mappings()
             result_fetch = result_map.fetchall()
 
@@ -244,3 +244,12 @@ class PostgreSQLEngine:
         query += "\n);"
 
         await self._aexecute(query)
+
+    async def init_chat_history_table(self, table_name) -> None:
+        create_table_query = f"""CREATE TABLE IF NOT EXISTS "{table_name}"(
+            id SERIAL PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            data JSONB NOT NULL,
+            type TEXT NOT NULL
+        );"""
+        await self._aexecute(create_table_query)
