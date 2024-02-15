@@ -174,6 +174,7 @@ class TestVectorStore:
         await vs.aadd_texts(texts, ids=ids)
         results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
         assert len(results) == 3
+        await engine._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE}")
 
     async def test_aadd_docs(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]

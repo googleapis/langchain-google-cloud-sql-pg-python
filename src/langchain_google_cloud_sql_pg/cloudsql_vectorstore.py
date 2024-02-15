@@ -236,53 +236,39 @@ class CloudSQLVectorStore(VectorStore):
         for id, content, embedding, metadata in zip(
             ids, texts, embeddings, metadatas
         ):
-            # metadata_col_names = (
-            #     ", " + ", ".join(self.metadata_columns)
-            #     if len(self.metadata_columns) > 0
-            #     else ""
-            # )
-            # insert_stmt = f"""INSERT INTO "{self.table_name}"({self.id_column}, {self.content_column}, {self.embedding_column}{metadata_col_names}"""
-            # values_stmt = f""" VALUES ('{id}',{content},'{embedding}'"""
-            # extra = metadata
-            # for metadata_column in self.metadata_columns:
-            #     if metadata_column in metadata:
-            #         values_stmt += f",'{metadata[metadata_column]}'"
-            #         del extra[metadata_column]
-            #     else:
-            #         values_stmt += ",null"
+            metadata_col_names = (
+                ", " + ", ".join(self.metadata_columns)
+                if len(self.metadata_columns) > 0
+                else ""
+            )
+            insert_stmt = f"""INSERT INTO "{self.table_name}"({self.id_column}, {self.content_column}, {self.embedding_column}{metadata_col_names}"""
+            values = {"id": id, "content": content, "embedding": str(embedding)}
+            values_stmt = "VALUES (:id, :content, :embedding"
 
-            # insert_stmt += (
-            #     f", {self.metadata_json_column})"
-            #     if self.metadata_json_column
-            #     else ")"
-            # )
-            # values_stmt += (
-            #     f",'{json.dumps(extra)}')" if self.metadata_json_column else ")"
-            # )
-            # query = insert_stmt + values_stmt
-            # await self.engine._aexecute(query)
-            async with self.engine._engine.connect() as conn:
-                await conn.execute(
-                    "INSERT INTO $1::str($2)",
-                    (
-                        self.table_name,
-                        self.id_column,
-                    ),
-                )
-                # await conn.execute(
-                #     text(
-                #         "INSERT INTO :table(:id_col,:content_col,:embedding_col) VALUES (:id,:content,:embedding)"
-                #     ),
-                #     {
-                #         "table": self.table_name,
-                #         "id_col": self.id_column,
-                #         "content_col": self.content_column,
-                #         "embedding_col": self.embedding_column,
-                #         "id": id,
-                #         "content": content,
-                #         "embedding": embedding,
-                #     },
-                # )
+            # Add metadata
+            extra = metadata
+            for metadata_column in self.metadata_columns:
+                if metadata_column in metadata:
+                    values_stmt += f", :{metadata_column}"
+                    values[metadata_column] = metadata[metadata_column]
+                    del extra[metadata_column]
+                else:
+                    values_stmt += ",null"
+
+            # Add JSON column and/or close statement
+            insert_stmt += (
+                f", {self.metadata_json_column})"
+                if self.metadata_json_column
+                else ")"
+            )
+            if self.metadata_json_column:
+                values_stmt += ", :extra)"
+                values["extra"] = json.dumps(extra)
+            else:
+                values_stmt += ")"
+
+            query = insert_stmt + values_stmt
+            await self.engine._aexecute(query, values)
 
         return ids
 
