@@ -233,7 +233,7 @@ class CloudSQLVectorStore(VectorStore):
                 if len(self.metadata_columns) > 0
                 else ""
             )
-            insert_stmt = f"""INSERT INTO "{self.table_name}"({self.id_column}, {self.content_column}, {self.embedding_column}{metadata_col_names}"""
+            insert_stmt = f'INSERT INTO "{self.table_name}"({self.id_column}, {self.content_column}, {self.embedding_column}{metadata_col_names}'
             values = {"id": id, "content": content, "embedding": str(embedding)}
             values_stmt = "VALUES (:id, :content, :embedding"
 
