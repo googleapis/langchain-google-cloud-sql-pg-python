@@ -29,6 +29,7 @@ instance_id = os.environ["INSTANCE_ID"]
 db_name = os.environ["DATABASE_ID"]
 table_name = "message_store_test" + str(uuid.uuid4())
 
+
 @pytest.fixture(name="memory_engine")
 def setup() -> Generator:
     engine = PostgreSQLEngine.from_instance(
@@ -58,4 +59,6 @@ def test_chat_message_history(memory_engine: PostgreSQLEngine) -> None:
     # verify clear() clears message history
     history.clear()
     assert len(history.messages) == 0
-    memory_engine.run_as_sync(memory_engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"'))
+    memory_engine.run_as_sync(
+        memory_engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
+    )
