@@ -14,4 +14,4 @@
 
 from langchain_google_cloud_sql_pg.postgresql_engine import Column, PostgreSQLEngine
 
-__all__ = ["PostgreSQLEngine", "Column"]
+__all__ = ["PostgreSQLEngine", "Column", "PostgreSQLChatMessageHistory"]

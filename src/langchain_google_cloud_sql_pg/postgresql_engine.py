@@ -1,19 +1,4 @@
-# Copyright 2024 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import annotations
-
 import asyncio
 from dataclasses import dataclass
 from threading import Thread
@@ -50,10 +35,11 @@ async def _get_iam_principal_email(
             The email address associated with the current authenticated IAM
             principal.
     """
-    # refresh credentials if they are not valid
     if not credentials.valid:
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
+    if hasattr(credentials, "_service_account_email"):
+        email = credentials._service_account_email
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -65,7 +51,7 @@ async def _get_iam_principal_email(
             "Failed to automatically obtain authenticated IAM princpal's "
             "email address using environment's ADC credentials!"
         )
-    return email
+    return email.replace(".gserviceaccount.com", "")
 
 
 @dataclass
@@ -99,11 +85,13 @@ class PostgreSQLEngine:
         database: str,
     ) -> PostgreSQLEngine:
         # Running a loop in a background thread allows us to support
-        # async methods from non-async enviroments
+        # async methods from non-async environments
         loop = asyncio.new_event_loop()
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()
-        coro = cls.afrom_instance(project_id, region, instance, database)
+        coro = cls._create(
+            project_id, region, instance, database, loop=loop, thread=thread
+        )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
     @classmethod
@@ -124,8 +112,8 @@ class PostgreSQLEngine:
             cls._connector = await create_async_connector()
 
         # anonymous function to be used for SQLAlchemy 'creator' argument
-        def getconn() -> asyncpg.Connection:
-            conn = cls._connector.connect_async(  # type: ignore
+        async def getconn() -> asyncpg.Connection:
+            conn = await cls._connector.connect_async(  # type: ignore
                 f"{project_id}:{region}:{instance}",
                 "asyncpg",
                 user=iam_database_user,
@@ -156,6 +144,12 @@ class PostgreSQLEngine:
             await conn.execute(text(query))
             await conn.commit()
 
+    async def _aexecute_outside_tx(self, query: str):
+        """Execute a SQL query."""
+        async with self._engine.connect() as conn:
+            await conn.execute(text("COMMIT"))
+            await conn.execute(text(query))
+
     async def _afetch(self, query: str):
         async with self._engine.connect() as conn:
             """Fetch results from a SQL query."""
@@ -165,7 +159,7 @@ class PostgreSQLEngine:
 
         return result_fetch
 
-    def run_as_sync(self, coro: Awaitable[T]):  # TODO: add return type
+    def run_as_sync(self, coro: Awaitable[T]) -> T:
         if not self._loop:
             raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
@@ -177,7 +171,7 @@ class PostgreSQLEngine:
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[Column] = [],
-        metadata_json_columns: str = "langchain_metadata",
+        metadata_json_column: str = "langchain_metadata",
         id_column: str = "langchain_id",
         overwrite_existing: bool = False,
         store_metadata: bool = True,
@@ -196,7 +190,21 @@ class PostgreSQLEngine:
                 "NOT NULL" if not column.nullable else ""
             )
         if store_metadata:
-            query += f",\n{metadata_json_columns} JSON"
+            query += f",\n{metadata_json_column} JSON"
         query += "\n);"
 
         await self._aexecute(query)
+
+    async def init_chat_history_table(self, table_name) -> None:
+        create_table_query = f"""CREATE TABLE IF NOT EXISTS {table_name} (
+            id SERIAL PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            data JSONB NOT NULL,
+            type TEXT NOT NULL,
+            content TEXT NOT NULL,
+            example TEXT NOT NULL,
+            additional_kwargs JSONB NOT NULL
+
+        );"""
+        
+        await self.engine._aexecute(create_table_query)

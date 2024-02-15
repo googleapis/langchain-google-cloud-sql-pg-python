@@ -26,8 +26,7 @@ def setup() -> Generator:
     query = f"DROP TABLE IF EXISTS `{table_name}`"
     engine._aexecute(query)
 
-
-def test_chat_message_history(memory_engine: MySQLEngine) -> None:
+def test_chat_message_history(memory_engine: PostgreSQLEngine) -> None:
     history = PostgreSQLChatMessageHistory(engine=memory_engine, session_id="test")
     history.add_user_message("hi!")
     history.add_ai_message("whats up?")
