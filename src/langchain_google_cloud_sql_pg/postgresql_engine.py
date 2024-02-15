@@ -63,7 +63,7 @@ async def _get_iam_principal_email(
         email = response_json.get("email")
     if email is None:
         raise ValueError(
-            "Failed to automatically obtain authenticated IAM princpal's "
+            "Failed to automatically obtain authenticated IAM principal's "
             "email address using environment's ADC credentials!"
         )
     return email.replace(".gserviceaccount.com", "")
@@ -74,6 +74,12 @@ class Column:
     name: str
     data_type: str
     nullable: bool = True
+
+    def __post_init__(self):
+        if not isinstance(self.name, str):
+            raise ValueError("Column name must be type string")
+        if not isinstance(self.data_type, str):
+            raise ValueError("Column data_type must be type string")
 
 
 class PostgreSQLEngine:
@@ -194,9 +200,9 @@ class PostgreSQLEngine:
         await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
 
         if overwrite_existing:
-            await self._aexecute(f"DROP TABLE IF EXISTS {table_name}")
+            await self._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
 
-        query = f"""CREATE TABLE {table_name}(
+        query = f"""CREATE TABLE "{table_name}"(
             {id_column} UUID PRIMARY KEY,
             {content_column} TEXT NOT NULL,
             {embedding_column} vector({vector_size}) NOT NULL"""
