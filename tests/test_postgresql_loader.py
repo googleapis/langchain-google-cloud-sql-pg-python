@@ -14,6 +14,7 @@
 import asyncio
 import json
 import os
+import uuid
 
 import pytest
 import pytest_asyncio
@@ -25,7 +26,7 @@ project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
 instance_id = os.environ["INSTANCE_ID"]
 db_name = os.environ["DATABASE_ID"]
-table_name = os.getenv("TABLE_NAME", "test_table")
+table_name = "test_table" + str(uuid.uuid4())
 
 
 @pytest.mark.asyncio
