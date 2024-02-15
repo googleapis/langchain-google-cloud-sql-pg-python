@@ -27,8 +27,15 @@ steps:
       - "INSTANCE_ID=$_INSTANCE_ID"
       - "DATABASE_ID=$_DATABASE_ID"
       - "REGION=$_REGION"
+    secretEnv: ["DB_USER", "DB_PASSWORD"]
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/langchain-test-pg-username/versions/1
+      env: "DB_USER"
+    - versionName: projects/$PROJECT_ID/secrets/langchain-test-pg-password/versions/1
+      env: "DB_PASSWORD"
 
 substitutions:
-  _DATABASE_USER: test-instance
   _DATABASE_ID: test-database
   _REGION: us-central1

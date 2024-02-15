@@ -19,7 +19,7 @@ from typing import List
 
 import pytest
 import pytest_asyncio
-from langchain_community.embeddings import FakeEmbeddings
+from langchain_community.embeddings import DeterministicFakeEmbedding
 
 from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine
 
@@ -27,24 +27,7 @@ DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
-
-class FakeEmbeddingsWithDimension(FakeEmbeddings):
-    """Fake embeddings functionality for testing."""
-
-    size: int = VECTOR_SIZE
-
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Return simple embeddings."""
-        return [
-            [float(1.0)] * (VECTOR_SIZE - 1) + [float(i)] for i in range(len(texts))
-        ]
-
-    def embed_query(self, text: str = "default") -> List[float]:
-        """Return simple embeddings."""
-        return [float(1.0)] * (VECTOR_SIZE - 1) + [float(0.0)]
-
-
-embeddings_service = FakeEmbeddingsWithDimension()
+embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -72,6 +55,14 @@ class TestEngineAsync:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
+    @pytest.fixture(scope="module")
+    def user(self) -> str:
+        return get_env_var("DB_USER", "database user for cloud sql")
+
+    @pytest.fixture(scope="module")
+    def password(self) -> str:
+        return get_env_var("DB_PASSWORD", "database password for cloud sql")
+
     @pytest_asyncio.fixture
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgreSQLEngine.afrom_instance(
@@ -81,6 +72,7 @@ class TestEngineAsync:
             database=db_name,
         )
         yield engine
+        await engine._engine.dispose()
 
     async def test_execute(self, engine):
         await engine._aexecute("SELECT 1")
@@ -131,3 +123,26 @@ class TestEngineAsync:
             database=db_name,
         )
         assert engine
+        engine.run_as_sync(engine._aexecute("SELECT 1"))
+
+    def test_password(
+        self,
+        db_project,
+        db_region,
+        db_instance,
+        db_name,
+        user,
+        password,
+    ):
+        PostgreSQLEngine._connector = None
+        engine = PostgreSQLEngine.from_instance(
+            project_id=db_project,
+            instance=db_instance,
+            region=db_region,
+            database=db_name,
+            user=user,
+            password=password,
+        )
+        assert engine
+        engine.run_as_sync(engine._aexecute("SELECT 1"))
+        PostgreSQLEngine._connector = None
