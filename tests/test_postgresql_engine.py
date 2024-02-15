@@ -134,7 +134,7 @@ class TestEngineAsync:
         user,
         password,
     ):
-        PostgreSQLEngine._connector  None
+        PostgreSQLEngine._connector = None
         engine = PostgreSQLEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
@@ -145,4 +145,4 @@ class TestEngineAsync:
         )
         assert engine
         engine.run_as_sync(engine._aexecute("SELECT 1"))
-        PostgreSQLEngine._connector  None
+        PostgreSQLEngine._connector = None
