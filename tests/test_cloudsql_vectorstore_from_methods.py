@@ -22,7 +22,7 @@ import pytest_asyncio
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine, PostgresVectorStore
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
@@ -108,7 +108,7 @@ class TestVectorStoreFromMethods:
 
     async def test_afrom_texts(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await CloudSQLVectorStore.afrom_texts(
+        await PostgresVectorStore.afrom_texts(
             texts,
             embeddings_service,
             engine,
@@ -122,7 +122,7 @@ class TestVectorStoreFromMethods:
 
     async def test_from_texts(self, engine_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        CloudSQLVectorStore.from_texts(
+        PostgresVectorStore.from_texts(
             texts,
             embeddings_service,
             engine_sync,
@@ -140,7 +140,7 @@ class TestVectorStoreFromMethods:
 
     async def test_afrom_docs(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await CloudSQLVectorStore.afrom_documents(
+        await PostgresVectorStore.afrom_documents(
             docs,
             embeddings_service,
             engine,
@@ -153,7 +153,7 @@ class TestVectorStoreFromMethods:
 
     async def test_from_docs(self, engine_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        CloudSQLVectorStore.from_documents(
+        PostgresVectorStore.from_documents(
             docs,
             embeddings_service,
             engine_sync,
@@ -170,7 +170,7 @@ class TestVectorStoreFromMethods:
 
     async def test_afrom_texts_custom(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await CloudSQLVectorStore.afrom_texts(
+        await PostgresVectorStore.afrom_texts(
             texts,
             embeddings_service,
             engine,
@@ -199,7 +199,7 @@ class TestVectorStoreFromMethods:
             )
             for i in range(len(texts))
         ]
-        await CloudSQLVectorStore.afrom_documents(
+        await PostgresVectorStore.afrom_documents(
             docs,
             embeddings_service,
             engine,
