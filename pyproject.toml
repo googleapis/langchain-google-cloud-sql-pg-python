@@ -9,7 +9,6 @@ dependencies = [
     "cloud-sql-python-connector[asyncpg] >= 1.6.0, <2.0.0",
     "langchain-core>=0.1.1, <2.0.0 ",
     "langchain-community>=0.0.18, <0.1.0",
-    "numpy>=1.26.3, <2.0.0",
     "pgvector>=0.2.5, <1.0.0",
     "SQLAlchemy>=2.0.25, <3.0.0"
 ]
