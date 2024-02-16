@@ -1,16 +1,20 @@
 [project]
 name = "langchain-google-cloud-sql-pg"
-version = "0.0.1"
+dynamic = ["version"]
 description = "LangChain integrations for Google Cloud SQL for PostgreSQL"
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.8"
 dependencies = [
-    "cloud-sql-python-connector[asyncpg]>=1.6.0",
-    "langchain-core>=0.1.1",
-    "pgvector>=0.2.5",
-    "SQLAlchemy>=2.0.25"
+    "cloud-sql-python-connector[asyncpg] >= 1.6.0, <2.0.0",
+    "langchain-core>=0.1.1, <2.0.0 ",
+    "numpy>=1.26.3, <2.0.0",
+    "pgvector>=0.2.5, <1.0.0",
+    "SQLAlchemy>=2.0.25, <3.0.0"
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "langchain_google_cloud_sql_pg.version.__version__"}
 
 [project.urls]
 Homepage = "https://github.com/googleapis/langchain-google-cloud-sql-pg-python"
