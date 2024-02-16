@@ -13,6 +13,14 @@
 # limitations under the License.
 
 from langchain_google_cloud_sql_pg.cloudsql_vectorstore import CloudSQLVectorStore
+from langchain_google_cloud_sql_pg.postgresql_chat_message_history import (
+    PostgreSQLChatMessageHistory,
+)
 from langchain_google_cloud_sql_pg.postgresql_engine import Column, PostgreSQLEngine
 
-__all__ = ["PostgreSQLEngine", "Column", "CloudSQLVectorStore"]
+__all__ = [
+    "PostgreSQLEngine",
+    "Column",
+    "CloudSQLVectorStore",
+    "PostgreSQLChatMessageHistory",
+]

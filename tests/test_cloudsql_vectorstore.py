@@ -24,7 +24,7 @@ from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQ
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
-CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE = "test-table-custom" + str(uuid.uuid4())
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
@@ -134,7 +134,7 @@ class TestVectorStore:
             metadata_json_column="mymeta",
         )
         yield vs
-        await engine._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await engine._aexecute(f'DROP TABLE IF EXISTS "{CUSTOM_TABLE}"')
 
     async def test_post_init(self, engine):
         with pytest.raises(ValueError):
@@ -161,6 +161,14 @@ class TestVectorStore:
         assert len(results) == 6
         await engine._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE}")
 
+    async def test_aadd_texts_edge_cases(self, engine, vs):
+        texts = ["Taylor's", '"Swift"', "best-friend"]
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        await vs.aadd_texts(texts, ids=ids)
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        assert len(results) == 3
+        await engine._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE}")
+
     async def test_aadd_docs(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_documents(docs, ids=ids)
@@ -178,7 +186,7 @@ class TestVectorStore:
     async def test_aadd_texts_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_custom.aadd_texts(texts, ids=ids)
-        results = await engine._afetch(f"SELECT * FROM {CUSTOM_TABLE}")
+        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 3
         assert results[0]["mycontent"] == "foo"
         assert results[0]["myembedding"]
@@ -187,9 +195,9 @@ class TestVectorStore:
 
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_custom.aadd_texts(texts, metadatas, ids)
-        results = await engine._afetch(f"SELECT * FROM {CUSTOM_TABLE}")
+        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 6
-        await engine._aexecute(f"TRUNCATE TABLE {CUSTOM_TABLE}")
+        await engine._aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
 
     async def test_aadd_docs_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -202,20 +210,20 @@ class TestVectorStore:
         ]
         await vs_custom.aadd_documents(docs, ids=ids)
 
-        results = await engine._afetch(f"SELECT * FROM {CUSTOM_TABLE}")
+        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 3
         assert results[0]["mycontent"] == "foo"
         assert results[0]["myembedding"]
         assert results[0]["page"] == "0"
         assert results[0]["source"] == "google.com"
-        await engine._aexecute(f"TRUNCATE TABLE {CUSTOM_TABLE}")
+        await engine._aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
 
     async def test_aadd_embedding_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_custom._aadd_embeddings(texts, embeddings, metadatas, ids)
-        results = await engine._afetch(f"SELECT * FROM {CUSTOM_TABLE}")
+        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 3
-        await engine._aexecute(f"TRUNCATE TABLE {CUSTOM_TABLE}")
+        await engine._aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
 
     async def test_add_docs(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
