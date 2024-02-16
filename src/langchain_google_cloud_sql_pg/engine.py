@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
-USER_AGENT = "langchain_google_cloud_sql_pg/" + __version__
+USER_AGENT = "langchain-google-cloud-sql-pg-python/" + __version__
 
 
 async def _get_iam_principal_email(
