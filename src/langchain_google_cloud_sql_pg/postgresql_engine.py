@@ -64,7 +64,7 @@ async def _get_iam_principal_email(
         email = response_json.get("email")
     if email is None:
         raise ValueError(
-            "Failed to automatically obtain authenticated IAM princpal's "
+            "Failed to automatically obtain authenticated IAM principal's "
             "email address using environment's ADC credentials!"
         )
     return email.replace(".gserviceaccount.com", "")
@@ -76,6 +76,12 @@ class Column:
     name: str
     data_type: str
     nullable: bool = True
+
+    def __post_init__(self):
+        if not isinstance(self.name, str):
+            raise ValueError("Column name must be type string")
+        if not isinstance(self.data_type, str):
+            raise ValueError("Column data_type must be type string")
 
 
 class PostgreSQLEngine:
@@ -190,10 +196,10 @@ class PostgreSQLEngine:
             password,
         )
 
-    async def _aexecute(self, query: str):
+    async def _aexecute(self, query: str, params: Optional[dict] = None):
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
-            await conn.execute(text(query))
+            await conn.execute(text(query), params)
             await conn.commit()
 
     async def _aexecute_outside_tx(self, query: str):
@@ -202,10 +208,10 @@ class PostgreSQLEngine:
             await conn.execute(text("COMMIT"))
             await conn.execute(text(query))
 
-    async def _afetch(self, query: str):
+    async def _afetch(self, query: str, params: Optional[dict] = None):
         async with self._engine.connect() as conn:
             """Fetch results from a SQL query."""
-            result = await conn.execute(text(query))
+            result = await conn.execute(text(query), params)
             result_map = result.mappings()
             result_fetch = result_map.fetchall()
 
@@ -231,18 +237,18 @@ class PostgreSQLEngine:
         await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
 
         if overwrite_existing:
-            await self._aexecute(f"DROP TABLE IF EXISTS {table_name}")
+            await self._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
 
-        query = f"""CREATE TABLE {table_name}(
-            {id_column} UUID PRIMARY KEY,
-            {content_column} TEXT NOT NULL,
-            {embedding_column} vector({vector_size}) NOT NULL"""
+        query = f"""CREATE TABLE "{table_name}"(
+            "{id_column}" UUID PRIMARY KEY,
+            "{content_column}" TEXT NOT NULL,
+            "{embedding_column}" vector({vector_size}) NOT NULL"""
         for column in metadata_columns:
-            query += f",\n{column.name} {column.data_type}" + (
+            query += f""",\n"{column.name}" {column.data_type}""" + (
                 "NOT NULL" if not column.nullable else ""
             )
         if store_metadata:
-            query += f",\n{metadata_json_column} JSON"
+            query += f""",\n"{metadata_json_column}" JSON"""
         query += "\n);"
 
         await self._aexecute(query)
@@ -306,3 +312,13 @@ class PostgreSQLEngine:
             })
 
         return metadata.tables[table_name]
+
+    async def init_chat_history_table(self, table_name) -> None:
+        create_table_query = f"""CREATE TABLE IF NOT EXISTS "{table_name}"(
+            id SERIAL PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            data JSONB NOT NULL,
+            type TEXT NOT NULL
+        );"""
+        await self._aexecute(create_table_query)
+
