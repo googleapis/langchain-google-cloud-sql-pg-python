@@ -17,6 +17,7 @@ from langchain_google_cloud_sql_pg.postgresql_chat_message_history import (
     PostgreSQLChatMessageHistory,
 )
 from langchain_google_cloud_sql_pg.postgresql_engine import Column, PostgreSQLEngine
+
 from .version import __version__
 
 __all__ = [
@@ -24,5 +25,5 @@ __all__ = [
     "Column",
     "CloudSQLVectorStore",
     "PostgreSQLChatMessageHistory",
-    __version__
+    __version__,
 ]
