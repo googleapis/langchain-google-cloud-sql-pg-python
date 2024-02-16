@@ -46,5 +46,6 @@ profile = "black"
 python_version = 3.8
 warn_unused_configs = true
 exclude = [
-    "docs/"
+    "docs/",
+    "noxfile.py"
 ]
