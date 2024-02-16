@@ -26,11 +26,15 @@ from google.cloud.sql.connector import Connector, create_async_connector
 from sqlalchemy import text  # Column,
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+from .version import __version__
+
 if TYPE_CHECKING:
     import asyncpg  # type: ignore
     import google.auth.credentials  # type: ignore
 
 T = TypeVar("T")
+
+USER_AGENT = "langchain_google_cloud_sql_pg/" + __version__
 
 
 async def _get_iam_principal_email(
@@ -143,7 +147,9 @@ class PostgreSQLEngine:
                 "authentication or neither for IAM DB authentication."
             )
         if cls._connector is None:
-            cls._connector = await create_async_connector()
+            cls._connector = Connector(
+                loop=asyncio.get_event_loop(), user_agent=USER_AGENT
+            )
         # if user and password are given, use basic auth
         if user and password:
             enable_iam_auth = False
