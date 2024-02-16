@@ -20,7 +20,7 @@ import pytest_asyncio
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine, PostgresVectorStore
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
@@ -89,7 +89,7 @@ class TestVectorStore:
         engine_sync.run_as_sync(
             engine_sync.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
         )
-        vs = CloudSQLVectorStore.create_sync(
+        vs = PostgresVectorStore.create_sync(
             engine_sync,
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE_SYNC,
@@ -103,7 +103,7 @@ class TestVectorStore:
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
-        vs = await CloudSQLVectorStore.create(
+        vs = await PostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
@@ -123,7 +123,7 @@ class TestVectorStore:
             metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
             metadata_json_column="mymeta",
         )
-        vs = await CloudSQLVectorStore.create(
+        vs = await PostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
             table_name=CUSTOM_TABLE,
@@ -138,7 +138,7 @@ class TestVectorStore:
 
     async def test_post_init(self, engine):
         with pytest.raises(ValueError):
-            await CloudSQLVectorStore.create(
+            await PostgresVectorStore.create(
                 engine,
                 embedding_service=embeddings_service,
                 table_name=CUSTOM_TABLE,
