@@ -490,7 +490,7 @@ six==1.16.0 \
     # via
     #   gcp-docuploader
     #   python-dateutil
-twine==4.0.2 \
+twine==5.0.0 \
     --hash=sha256:929bc3c280033347a00f847236564d1c52a3e61b1ac2516c97c48f3ceab756d8 \
     --hash=sha256:9e102ef5fdd5a20661eb88fad46338806c3bd32cf1db729603fe3697b1bc83c8
     # via -r requirements.in
