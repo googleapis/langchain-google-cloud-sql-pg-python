@@ -93,7 +93,7 @@ colorlog==6.7.0 \
     # via
     #   gcp-docuploader
     #   nox
-cryptography==42.0.0 \
+cryptography==42.0.2 \
     --hash=sha256:0a68bfcf57a6887818307600c3c0ebc3f62fbb6ccad2240aa21887cda1f8df1b \
     --hash=sha256:146e971e92a6dd042214b537a726c9750496128453146ab0ee8971a0299dc9bd \
     --hash=sha256:14e4b909373bc5bf1095311fa0f7fcabf2d1a160ca13f1e9e467be1ac4cbdf94 \
