@@ -20,7 +20,7 @@ import pytest_asyncio
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import CloudSQLVectorStore, Column, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine, PostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import HNSWQueryOptions, IVFFlatQueryOptions
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
@@ -79,7 +79,7 @@ class TestVectorStoreSearch:
         await engine.init_vectorstore_table(
             DEFAULT_TABLE, VECTOR_SIZE, store_metadata=False
         )
-        vs = await CloudSQLVectorStore.create(
+        vs = await PostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
@@ -116,7 +116,7 @@ class TestVectorStoreSearch:
                 store_metadata=False,
             )
         )
-        vs_custom = CloudSQLVectorStore.create_sync(
+        vs_custom = PostgresVectorStore.create_sync(
             engine_sync,
             embedding_service=embeddings_service,
             table_name=CUSTOM_TABLE,

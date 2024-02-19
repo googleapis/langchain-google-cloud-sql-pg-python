@@ -25,6 +25,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 from sqlalchemy import text
 
+from .engine import PostgreSQLEngine
 from .indexes import (
     DEFAULT_DISTANCE_STRATEGY,
     DEFAULT_INDEX_NAME,
@@ -33,10 +34,9 @@ from .indexes import (
     ExactNearestNeighbor,
     QueryOptions,
 )
-from .postgresql_engine import PostgreSQLEngine
 
 
-class CloudSQLVectorStore(VectorStore):
+class PostgresVectorStore(VectorStore):
     """Google Cloud SQL for PostgreSQL Vector Store class"""
 
     __create_key = object()
@@ -58,7 +58,7 @@ class CloudSQLVectorStore(VectorStore):
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
     ):
-        if key != CloudSQLVectorStore.__create_key:
+        if key != PostgresVectorStore.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
             )
@@ -325,7 +325,7 @@ class CloudSQLVectorStore(VectorStore):
 
     @classmethod
     async def afrom_texts(  # type: ignore[override]
-        cls: Type[CloudSQLVectorStore],
+        cls: Type[PostgresVectorStore],
         texts: List[str],
         embedding: Embeddings,
         engine: PostgreSQLEngine,
@@ -339,7 +339,7 @@ class CloudSQLVectorStore(VectorStore):
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         **kwargs: Any,
-    ) -> CloudSQLVectorStore:
+    ) -> PostgresVectorStore:
         vs = await cls.create(
             engine,
             embedding,
@@ -356,7 +356,7 @@ class CloudSQLVectorStore(VectorStore):
 
     @classmethod
     async def afrom_documents(  # type: ignore[override]
-        cls: Type[CloudSQLVectorStore],
+        cls: Type[PostgresVectorStore],
         documents: List[Document],
         embedding: Embeddings,
         engine: PostgreSQLEngine,
@@ -369,7 +369,7 @@ class CloudSQLVectorStore(VectorStore):
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         **kwargs: Any,
-    ) -> CloudSQLVectorStore:
+    ) -> PostgresVectorStore:
         vs = await cls.create(
             engine,
             embedding,
@@ -388,7 +388,7 @@ class CloudSQLVectorStore(VectorStore):
 
     @classmethod
     def from_texts(  # type: ignore[override]
-        cls: Type[CloudSQLVectorStore],
+        cls: Type[PostgresVectorStore],
         texts: List[str],
         embedding: Embeddings,
         engine: PostgreSQLEngine,
@@ -422,7 +422,7 @@ class CloudSQLVectorStore(VectorStore):
 
     @classmethod
     def from_documents(  # type: ignore[override]
-        cls: Type[CloudSQLVectorStore],
+        cls: Type[PostgresVectorStore],
         documents: List[Document],
         embedding: Embeddings,
         engine: PostgreSQLEngine,
@@ -435,7 +435,7 @@ class CloudSQLVectorStore(VectorStore):
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         **kwargs: Any,
-    ) -> CloudSQLVectorStore:
+    ) -> PostgresVectorStore:
         coro = cls.afrom_documents(
             documents,
             embedding,
