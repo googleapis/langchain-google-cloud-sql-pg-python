@@ -15,9 +15,9 @@
 from . import indexes
 from .chat_message_history import PostgreSQLChatMessageHistory
 from .engine import Column, PostgreSQLEngine
+from .postgresql_loader import PostgreSQLDocumentSaver, PostgreSQLLoader
 from .vectorstore import PostgresVectorStore
 from .version import __version__
-from .postgresql_loader import PostgreSQLLoader, PostgreSQLDocumentSaver
 
 __all__ = [
     "indexes",
