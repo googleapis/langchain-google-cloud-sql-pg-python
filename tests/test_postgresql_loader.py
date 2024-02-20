@@ -64,10 +64,6 @@ class TestLoaderAsync:
         return docs
 
     async def _cleanup_table(self, engine):
-        query = f"DROP TABLE IF EXISTS {table_name}"
-        await engine._aexecute(query)
-
-    async def _cleanup_table(self, engine):
         query = f'DROP TABLE IF EXISTS "{table_name}"'
         await engine._aexecute(query)
 
