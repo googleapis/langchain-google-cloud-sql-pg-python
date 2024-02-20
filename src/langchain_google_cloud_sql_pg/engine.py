@@ -265,3 +265,54 @@ class PostgreSQLEngine:
             type TEXT NOT NULL
         );"""
         await self._aexecute(create_table_query)
+
+    async def ainit_document_table(
+        self,
+        table_name: str,
+        content_column: str = "page_content",
+        metadata_columns: List[Column] = [],
+        metadata_json_column: str = "langchain_metadata",
+        store_metadata: bool = True,
+    ) -> None:
+        """
+        Create a table for saving of langchain documents.
+
+        Args:
+            table_name (str): The PgSQL database table name.
+            metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
+                to create for custom metadata. Optional.
+            store_metadata (bool): Whether to store extra metadata in a metadata column
+                if not described in 'metadata' field list (Default: True).
+        """
+
+        query = f"""CREATE TABLE "{table_name}"(
+            {content_column} TEXT NOT NULL
+            """
+        for column in metadata_columns:
+            query += f',\n"{column.name}" {column.data_type}' + (
+                "NOT NULL" if not column.nullable else ""
+            )
+        metadata_json_column = metadata_json_column or "langchain_metadata"
+        if store_metadata:
+            query += f',\n"{metadata_json_column}" JSON'
+        query += "\n);"
+
+        await self._aexecute(query)
+
+    def init_document_table(
+        self,
+        table_name: str,
+        content_column: str = "page_content",
+        metadata_columns: List[Column] = [],
+        metadata_json_column: str = "langchain_metadata",
+        store_metadata: bool = True,
+    ) -> None:
+        return self.run_as_sync(
+            self.ainit_document_table(
+                table_name,
+                content_column,
+                metadata_columns,
+                metadata_json_column,
+                store_metadata,
+            )
+        )

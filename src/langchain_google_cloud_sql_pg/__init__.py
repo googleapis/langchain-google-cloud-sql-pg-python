@@ -17,6 +17,7 @@ from .chat_message_history import PostgreSQLChatMessageHistory
 from .engine import Column, PostgreSQLEngine
 from .vectorstore import PostgresVectorStore
 from .version import __version__
+from .postgresql_loader import PostgreSQLLoader, PostgreSQLDocumentSaver
 
 __all__ = [
     "indexes",
@@ -24,5 +25,7 @@ __all__ = [
     "PostgreSQLChatMessageHistory",
     "Column",
     "PostgreSQLEngine",
+    "PostgreSQLLoader",
+    "PostgreSQLDocumentSaver",
     "__version__",
 ]
