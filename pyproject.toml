@@ -8,6 +8,7 @@ requires-python = ">=3.8"
 dependencies = [
     "cloud-sql-python-connector[asyncpg] >= 1.7.0, <2.0.0",
     "langchain-core>=0.1.1, <2.0.0 ",
+    "numpy>=1.26.4, <2.0.0",
     "pgvector>=0.2.5, <1.0.0",
     "SQLAlchemy>=2.0.25, <3.0.0"
 ]
