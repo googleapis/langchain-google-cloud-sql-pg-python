@@ -33,7 +33,7 @@ from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from sqlalchemy import Table
 
-from postgresql_engine import PostgreSQLEngine
+from .engine import PostgreSQLEngine
 
 DEFAULT_CONTENT_COL = "page_content"
 DEFAULT_METADATA_COL = "langchain_metadata"
