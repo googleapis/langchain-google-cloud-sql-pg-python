@@ -8,6 +8,7 @@ requires-python = ">=3.8"
 dependencies = [
     "cloud-sql-python-connector[asyncpg] >= 1.7.0, <2.0.0",
     "langchain-core>=0.1.1, <2.0.0 ",
+    "langchain-community>=0.0.18, <0.1.0",
     "numpy>=1.26.4, <2.0.0",
     "pgvector>=0.2.5, <1.0.0",
     "SQLAlchemy>=2.0.25, <3.0.0"
@@ -26,7 +27,6 @@ Changelog = "https://github.com/googleapis/langchain-google-cloud-sql-pg-python/
 test = [
     "black[jupyter]==23.12.0",
     "isort==5.13.2",
-    "langchain-community>=0.0.18, <0.1.0",
     "mypy==1.7.1",
     "pytest-asyncio==0.23.0",
     "pytest==7.4.4"
