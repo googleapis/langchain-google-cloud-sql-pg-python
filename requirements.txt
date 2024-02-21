@@ -1,4 +1,6 @@
 cloud-sql-python-connector[asyncpg]==1.7.0
 langchain-core==0.1.23
+langchain-community==0.0.18
+numpy==1.26.4
 pgvector==0.2.5
 SQLAlchemy==2.0.27
