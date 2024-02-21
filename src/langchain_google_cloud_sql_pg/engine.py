@@ -26,11 +26,15 @@ from google.cloud.sql.connector import Connector, create_async_connector
 from sqlalchemy import text  # Column,
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+from .version import __version__
+
 if TYPE_CHECKING:
     import asyncpg  # type: ignore
     import google.auth.credentials  # type: ignore
 
 T = TypeVar("T")
+
+USER_AGENT = "langchain-google-cloud-sql-pg-python/" + __version__
 
 
 async def _get_iam_principal_email(
@@ -143,7 +147,9 @@ class PostgreSQLEngine:
                 "authentication or neither for IAM DB authentication."
             )
         if cls._connector is None:
-            cls._connector = await create_async_connector()
+            cls._connector = Connector(
+                loop=asyncio.get_event_loop(), user_agent=USER_AGENT
+            )
         # if user and password are given, use basic auth
         if user and password:
             enable_iam_auth = False
@@ -259,3 +265,54 @@ class PostgreSQLEngine:
             type TEXT NOT NULL
         );"""
         await self._aexecute(create_table_query)
+
+    async def ainit_document_table(
+        self,
+        table_name: str,
+        content_column: str = "page_content",
+        metadata_columns: List[Column] = [],
+        metadata_json_column: str = "langchain_metadata",
+        store_metadata: bool = True,
+    ) -> None:
+        """
+        Create a table for saving of langchain documents.
+
+        Args:
+            table_name (str): The PgSQL database table name.
+            metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
+                to create for custom metadata. Optional.
+            store_metadata (bool): Whether to store extra metadata in a metadata column
+                if not described in 'metadata' field list (Default: True).
+        """
+
+        query = f"""CREATE TABLE "{table_name}"(
+            {content_column} TEXT NOT NULL
+            """
+        for column in metadata_columns:
+            query += f',\n"{column.name}" {column.data_type}' + (
+                "NOT NULL" if not column.nullable else ""
+            )
+        metadata_json_column = metadata_json_column or "langchain_metadata"
+        if store_metadata:
+            query += f',\n"{metadata_json_column}" JSON'
+        query += "\n);"
+
+        await self._aexecute(query)
+
+    def init_document_table(
+        self,
+        table_name: str,
+        content_column: str = "page_content",
+        metadata_columns: List[Column] = [],
+        metadata_json_column: str = "langchain_metadata",
+        store_metadata: bool = True,
+    ) -> None:
+        return self.run_as_sync(
+            self.ainit_document_table(
+                table_name,
+                content_column,
+                metadata_columns,
+                metadata_json_column,
+                store_metadata,
+            )
+        )
