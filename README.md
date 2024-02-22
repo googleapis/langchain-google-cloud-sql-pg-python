@@ -38,13 +38,13 @@ source <your-env>/bin/activate
 Use a vector store to store embedded data and perform vector search.
 
 ```python
-from langchain_google_cloud_sql_pg import CloudSQLVectorstore, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgreSQLEngine
 from langchain.embeddings import VertexAIEmbeddings
 
 
 engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
 embeddings_service = VertexAIEmbeddings()
-vectorstore = CloudQLVectorStore(
+vectorstore = PostgresVectorStore(
     engine,
     table_name="my-table",
     embeddings=embedding_service
