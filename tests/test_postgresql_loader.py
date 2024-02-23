@@ -736,7 +736,7 @@ class TestLoaderAsync:
 
     async def test_load_from_query_default_sync(self, sync_engine):
         try:
-            sync_engine.run_as_sync(self._cleanup_table(sync_engine))
+            sync_engine._run_as_sync(self._cleanup_table(sync_engine))
             sync_engine.init_document_table(table_name)
             saver = PostgreSQLDocumentSaver(engine=sync_engine, table_name=table_name)
             test_docs = [
@@ -763,4 +763,4 @@ class TestLoaderAsync:
             assert len(documents) == 0
 
         finally:
-            sync_engine.run_as_sync(self._cleanup_table(sync_engine))
+            sync_engine._run_as_sync(self._cleanup_table(sync_engine))
