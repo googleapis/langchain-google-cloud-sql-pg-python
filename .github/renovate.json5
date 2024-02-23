@@ -1,9 +1,4 @@
-// Dependency Update Configuration
-//
-// See https://docs.renovatebot.com/configuration-options/
-// See https://json5.org/ for JSON5 syntax
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:base", // https://docs.renovatebot.com/presets-config/#configbase
     ":semanticCommits", // https://docs.renovatebot.com/presets-default/#semanticcommits
@@ -13,7 +8,7 @@
     ":prConcurrentLimitNone", // View complete backlog as PRs. https://docs.renovatebot.com/presets-default/#prconcurrentlimitnone
     ":prNotPending", // https://docs.renovatebot.com/presets-default/#prnotpending
     ":prHourlyLimitNone", // https://docs.renovatebot.com/presets-default/#prhourlylimitnone
-    "docker:enableMajor", // https://docs.renovatebot.com/presets-docker/#dockerenablemajor
+    ":preserveSemverRanges",
   ],
 
   // Synchronized with a 2 week sprint cycle and outside business hours.
@@ -35,25 +30,8 @@
   "dependencyDashboardLabels": [
     "type: process",
   ],
-
-  "constraints": {
-    "python": "3.11"
-  },
-
-  "pip_requirements": {
-    "fileMatch": ["requirements-test.txt"]
-  },
   "packageRules": [
 
-    // Tooling & Runtime behaviors.
-    {
-      // Covers Dockerfiles, cloudbuild.yaml, and other docker-based tools.
-      "groupName": "Docker Runtimes",
-      "matchDatasources": ["docker"],
-      // TODO: Uncomment if your Dockerfiles are not included in samples.
-      // Increases build repeatability, image cache use, and supply chain security.
-      // "pinDigests": true,
-    },
     {
        "groupName": "GitHub Actions",
        "matchManagers": ["github-actions"],
