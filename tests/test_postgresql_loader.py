@@ -89,7 +89,7 @@ class TestLoaderAsync:
             """
             await engine._aexecute(insert_query)
 
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 table_name=table_name,
@@ -137,7 +137,7 @@ class TestLoaderAsync:
             """
             await engine._aexecute(insert_query)
 
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 content_columns=[
@@ -191,7 +191,7 @@ class TestLoaderAsync:
             """
             await engine._aexecute(insert_query)
 
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 content_columns=[
@@ -243,7 +243,7 @@ class TestLoaderAsync:
             """
             await engine._aexecute(insert_query)
 
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 metadata_columns=["fruit_name", "organic"],
@@ -283,7 +283,7 @@ class TestLoaderAsync:
                 VALUES ('Apple', 'Granny Smith', 150, 1, '{metadata}');"""
             await engine._aexecute(insert_query)
 
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 metadata_columns=[
@@ -330,7 +330,7 @@ class TestLoaderAsync:
                 VALUES ('Apple', '{variety}', 150, 1, '{metadata}');"""
             await engine._aexecute(insert_query)
 
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 metadata_columns=[
@@ -381,7 +381,7 @@ class TestLoaderAsync:
                     str(row[column]) for column in content_columns if column in row
                 )
 
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 content_columns=[
@@ -431,7 +431,7 @@ class TestLoaderAsync:
                         """
             await engine._aexecute(insert_query)
 
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 content_columns=[
@@ -477,7 +477,7 @@ class TestLoaderAsync:
                 ),
             ]
             saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
-            loader = PostgreSQLLoader(engine=engine, table_name=table_name)
+            loader = await PostgreSQLLoader.create(engine=engine, table_name=table_name)
 
             await saver.aadd_documents(test_docs)
             docs = await self._collect_async_items(loader.alazy_load())
@@ -512,7 +512,7 @@ class TestLoaderAsync:
             ),
         ]
         saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
-        loader = PostgreSQLLoader(
+        loader = await PostgreSQLLoader.create(
             engine=engine,
             table_name=table_name,
             metadata_columns=[
@@ -562,7 +562,7 @@ class TestLoaderAsync:
             saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
             await saver.aadd_documents(test_docs)
 
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create(
                 engine=engine,
                 table_name=table_name,
             )
@@ -597,7 +597,7 @@ class TestLoaderAsync:
                 ),
             ]
             saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
-            loader = PostgreSQLLoader(engine=engine, table_name=table_name)
+            loader = await PostgreSQLLoader.create(engine=engine, table_name=table_name)
 
             await saver.aadd_documents(test_docs)
             docs = await self._collect_async_items(loader.alazy_load())
@@ -657,7 +657,7 @@ class TestLoaderAsync:
             ]
             saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
             query = f"SELECT * FROM \"{table_name}\" WHERE fruit_name='Apple';"
-            loader = PostgreSQLLoader(engine=engine, query=query)
+            loader = await PostgreSQLLoader.create(engine=engine, query=query)
 
             await saver.aadd_documents(test_docs)
             docs = await self._collect_async_items(loader.alazy_load())
@@ -707,7 +707,7 @@ class TestLoaderAsync:
             content_column=content_column,
             metadata_json_column=metadata_json_column,
         )
-        loader = PostgreSQLLoader(
+        loader = await PostgreSQLLoader.create(
             engine=engine,
             table_name=table_name,
             content_columns=[content_column],
@@ -751,7 +751,7 @@ class TestLoaderAsync:
             ]
 
             saver.add_documents(test_docs)
-            loader = PostgreSQLLoader(
+            loader = await PostgreSQLLoader.create_sync(
                 engine=sync_engine,
                 query=f'SELECT * FROM "{table_name}";',
             )
