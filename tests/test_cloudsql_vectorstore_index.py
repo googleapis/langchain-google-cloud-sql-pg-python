@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
+
 import os
 import uuid
-from typing import List
 
 import pytest
 import pytest_asyncio
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine, PostgresVectorStore
+from langchain_google_cloud_sql_pg import PostgreSQLEngine, PostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import (
     DEFAULT_INDEX_NAME,
     DistanceStrategy,
@@ -83,7 +82,7 @@ class TestIndex:
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         vs = await PostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
