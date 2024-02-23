@@ -169,13 +169,14 @@ class PostgreSQLLoader(BaseLoader):
 
         if format and format.lower() not in ["csv", "text", "json", "yaml"]:
             raise ValueError("format must be type: 'csv', 'text', 'JSON', 'YAML'")
+        format = format.lower() if format else format
         if formatter:
             formatter = formatter
-        elif format.lower() == "csv":
+        elif format == "csv":
             formatter = cvs_formatter
-        elif format.lower() == "yaml":
+        elif format == "yaml":
             formatter = yaml_formatter
-        elif format.lower() == "json":
+        elif format == "json":
             formatter = json_formatter
         else:
             formatter = text_formatter
