@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
 import uuid
-from typing import List
 
 import pytest
 import pytest_asyncio
@@ -74,8 +72,8 @@ class TestVectorStoreFromMethods:
             region=db_region,
             database=db_name,
         )
-        await engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
-        await engine.init_vectorstore_table(
+        await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await engine.ainit_vectorstore_table(
             CUSTOM_TABLE,
             VECTOR_SIZE,
             id_column="myid",
@@ -97,14 +95,12 @@ class TestVectorStoreFromMethods:
             region=db_region,
             database=db_name,
         )
-        engine.run_as_sync(
-            engine.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
-        )
+        engine.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
+
         yield engine
-        engine.run_as_sync(
-            engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
-        )
-        engine.run_as_sync(engine._engine.dispose())
+        engine._execute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
+
+        engine._engine.dispose()
 
     async def test_afrom_texts(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -130,13 +126,9 @@ class TestVectorStoreFromMethods:
             metadatas=metadatas,
             ids=ids,
         )
-        results = engine_sync.run_as_sync(
-            engine_sync._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
-        )
+        results = engine_sync._fetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 3
-        engine_sync.run_as_sync(
-            engine_sync._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
-        )
+        engine_sync._execute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
 
     async def test_afrom_docs(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -160,13 +152,9 @@ class TestVectorStoreFromMethods:
             DEFAULT_TABLE_SYNC,
             ids=ids,
         )
-        results = engine_sync.run_as_sync(
-            engine_sync._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
-        )
+        results = engine_sync._fetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 3
-        engine_sync.run_as_sync(
-            engine_sync._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
-        )
+        engine_sync._execute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
 
     async def test_afrom_texts_custom(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]

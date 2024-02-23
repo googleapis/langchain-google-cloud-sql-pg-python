@@ -221,12 +221,18 @@ class PostgreSQLEngine:
 
         return result_fetch
 
+    def _execute(self, query: str, params: Optional[dict] = None):
+        return self.run_as_sync(self._aexecute(query, params))
+
+    def _fetch(self, query: str, params: Optional[dict] = None):
+        return self.run_as_sync(self._afetch(query, params))
+
     def run_as_sync(self, coro: Awaitable[T]) -> T:
         if not self._loop:
             raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
-    async def init_vectorstore_table(
+    async def ainit_vectorstore_table(
         self,
         table_name: str,
         vector_size: int,
@@ -257,7 +263,33 @@ class PostgreSQLEngine:
 
         await self._aexecute(query)
 
-    async def init_chat_history_table(self, table_name) -> None:
+    def init_vectorstore_table(
+        self,
+        table_name: str,
+        vector_size: int,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[Column] = [],
+        metadata_json_column: str = "langchain_metadata",
+        id_column: str = "langchain_id",
+        overwrite_existing: bool = False,
+        store_metadata: bool = True,
+    ) -> None:
+        return self.run_as_sync(
+            self.ainit_vectorstore_table(
+                table_name,
+                vector_size,
+                content_column,
+                embedding_column,
+                metadata_columns,
+                metadata_json_column,
+                id_column,
+                overwrite_existing,
+                store_metadata,
+            )
+        )
+
+    async def ainit_chat_history_table(self, table_name) -> None:
         create_table_query = f"""CREATE TABLE IF NOT EXISTS "{table_name}"(
             id SERIAL PRIMARY KEY,
             session_id TEXT NOT NULL,
@@ -265,6 +297,13 @@ class PostgreSQLEngine:
             type TEXT NOT NULL
         );"""
         await self._aexecute(create_table_query)
+
+    def init_chat_history_table(self, table_name) -> None:
+        return self.run_as_sync(
+            self.ainit_chat_history_table(
+                table_name,
+            )
+        )
 
     async def ainit_document_table(
         self,
