@@ -133,7 +133,7 @@ class TestEngineAsync:
             password=password,
         )
         assert engine
-        engine._execute("SELECT 1")
+        await engine._aexecute("SELECT 1")
         PostgreSQLEngine._connector = None
 
     async def test_column(self, engine):
