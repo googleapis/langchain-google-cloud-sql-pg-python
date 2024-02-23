@@ -38,7 +38,7 @@ def setup() -> Generator:
         instance=instance_id,
         database=db_name,
     )
-    engine.run_as_sync(engine.init_chat_history_table(table_name=table_name))
+    engine.init_chat_history_table(table_name=table_name)
     yield engine
 
 
@@ -59,6 +59,4 @@ def test_chat_message_history(memory_engine: PostgreSQLEngine) -> None:
     # verify clear() clears message history
     history.clear()
     assert len(history.messages) == 0
-    memory_engine.run_as_sync(
-        memory_engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
-    )
+    memory_engine._execute(f'DROP TABLE IF EXISTS "{table_name}"')
