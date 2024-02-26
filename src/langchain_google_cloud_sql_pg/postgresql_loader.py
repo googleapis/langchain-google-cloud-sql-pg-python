@@ -40,7 +40,7 @@ def text_formatter(row, content_columns) -> str:
     return " ".join(str(row[column]) for column in content_columns if column in row)
 
 
-def cvs_formatter(row, content_columns) -> str:
+def csv_formatter(row, content_columns) -> str:
     return ", ".join(str(row[column]) for column in content_columns if column in row)
 
 
@@ -171,7 +171,7 @@ class PostgreSQLLoader(BaseLoader):
         if formatter:
             formatter = formatter
         elif format == "csv":
-            formatter = cvs_formatter
+            formatter = csv_formatter
         elif format == "YAML":
             formatter = yaml_formatter
         elif format == "JSON":
