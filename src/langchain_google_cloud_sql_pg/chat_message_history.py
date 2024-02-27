@@ -40,7 +40,7 @@ async def _aget_messages(
 
 
 class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
-    """Chat message history stored in an PostgreSQL."""
+    """Chat message history stored in an Cloud SQL for PostgreSQL database."""
 
     __create_key = object()
 
