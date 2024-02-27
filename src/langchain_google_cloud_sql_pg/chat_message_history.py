@@ -35,7 +35,7 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
     def messages(self) -> List[BaseMessage]:  # type: ignore
         """Retrieve the messages from PostgreSQL"""
         query = f"""SELECT data, type FROM "{self.table_name}" WHERE session_id = :session_id ORDER BY id;"""
-        results = self.engine.run_as_sync(
+        results = self.engine._run_as_sync(
             self.engine._afetch(query, {"session_id": self.session_id})
         )
         if not results:
@@ -60,7 +60,7 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
         )
 
     def add_message(self, message: BaseMessage) -> None:
-        self.engine.run_as_sync(self.aadd_message(message))
+        self.engine._run_as_sync(self.aadd_message(message))
 
     async def aclear(self) -> None:
         """Clear session memory from PostgreSQL"""
@@ -68,4 +68,4 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
         await self.engine._aexecute(query, {"session_id": self.session_id})
 
     def clear(self) -> None:
-        self.engine.run_as_sync(self.aclear())
+        self.engine._run_as_sync(self.aclear())
