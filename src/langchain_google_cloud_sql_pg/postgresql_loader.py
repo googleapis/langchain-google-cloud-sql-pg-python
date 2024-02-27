@@ -479,7 +479,7 @@ class PostgreSQLDocumentSaver:
         async with self.engine._engine.connect() as conn:
             await conn.run_sync(metadata.reflect, only=[self.table_name])
 
-        table = Table(self.table_name, metadata)
+        table = sqlalchemy.Table(self.table_name, metadata)
         # Extract the schema information
         schema = []
         for column in table.columns:
