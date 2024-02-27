@@ -381,7 +381,7 @@ class PostgreSQLDocumentSaver:
             metadata_columns,
             metadata_json_column,
         )
-        return engine.run_as_sync(coro)
+        return engine._run_as_sync(coro)
 
     async def aadd_documents(self, docs: List[Document]) -> None:
         """
