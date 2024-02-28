@@ -23,7 +23,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
-from .engine import PostgreSQLEngine
+from .engine import PostgresEngine
 from .indexes import (
     DEFAULT_DISTANCE_STRATEGY,
     DEFAULT_INDEX_NAME,
@@ -42,7 +42,7 @@ class PostgresVectorStore(VectorStore):
     def __init__(
         self,
         key,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -78,7 +78,7 @@ class PostgresVectorStore(VectorStore):
     @classmethod
     async def create(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -95,7 +95,7 @@ class PostgresVectorStore(VectorStore):
     ):
         """Constructor for CloudSQLVectorStore.
         Args:
-            engine (PostgreSQLEngine): AsyncEngine with pool connection to the postgres database. Required.
+            engine (PostgresEngine): AsyncEngine with pool connection to the postgres database. Required.
             embedding_service (Embeddings): Text embedding model to use.
             table_name (str): Name of the existing table or the table to be created.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
@@ -122,21 +122,27 @@ class PostgresVectorStore(VectorStore):
         if id_column not in columns:
             raise ValueError(f"Id column, {id_column}, does not exist.")
         if content_column not in columns:
-            raise ValueError(f"Content column, {content_column}, does not exist.")
+            raise ValueError(
+                f"Content column, {content_column}, does not exist."
+            )
         content_type = columns[content_column]
         if content_type != "text" and "char" not in content_type:
             raise ValueError(
                 f"Content column, {content_column}, is type, {content_type}. It must be a type of character string."
             )
         if embedding_column not in columns:
-            raise ValueError(f"Embedding column, {embedding_column}, does not exist.")
+            raise ValueError(
+                f"Embedding column, {embedding_column}, does not exist."
+            )
         if columns[embedding_column] != "USER-DEFINED":
             raise ValueError(
                 f"Embedding column, {embedding_column}, is not type Vector."
             )
 
         metadata_json_column = (
-            None if metadata_json_column not in columns else metadata_json_column
+            None
+            if metadata_json_column not in columns
+            else metadata_json_column
         )
 
         # If using metadata_columns check to make sure column exists
@@ -175,7 +181,7 @@ class PostgresVectorStore(VectorStore):
     @classmethod
     def create_sync(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -225,7 +231,9 @@ class PostgresVectorStore(VectorStore):
         if not metadatas:
             metadatas = [{} for _ in texts]
         # Insert embeddings
-        for id, content, embedding, metadata in zip(ids, texts, embeddings, metadatas):
+        for id, content, embedding, metadata in zip(
+            ids, texts, embeddings, metadatas
+        ):
             metadata_col_names = (
                 ", " + ", ".join(self.metadata_columns)
                 if len(self.metadata_columns) > 0
@@ -247,7 +255,9 @@ class PostgresVectorStore(VectorStore):
 
             # Add JSON column and/or close statement
             insert_stmt += (
-                f", {self.metadata_json_column})" if self.metadata_json_column else ")"
+                f", {self.metadata_json_column})"
+                if self.metadata_json_column
+                else ")"
             )
             if self.metadata_json_column:
                 values_stmt += ", :extra)"
@@ -281,7 +291,9 @@ class PostgresVectorStore(VectorStore):
     ) -> List[str]:
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
-        ids = await self.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
+        ids = await self.aadd_texts(
+            texts, metadatas=metadatas, ids=ids, **kwargs
+        )
         return ids
 
     def add_texts(
@@ -301,7 +313,9 @@ class PostgresVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        return self.engine._run_as_sync(self.aadd_documents(documents, ids, **kwargs))
+        return self.engine._run_as_sync(
+            self.aadd_documents(documents, ids, **kwargs)
+        )
 
     async def adelete(
         self,
@@ -328,7 +342,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         texts: List[str],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         metadatas: Optional[List[dict]] = None,
         ids: Optional[List[str]] = None,
@@ -359,7 +373,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         documents: List[Document],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         ids: Optional[List[str]] = None,
         content_column: str = "content",
@@ -391,7 +405,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         texts: List[str],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         metadatas: Optional[List[dict]] = None,
         ids: Optional[List[str]] = None,
@@ -425,7 +439,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         documents: List[Document],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         ids: Optional[List[str]] = None,
         content_column: str = "content",
@@ -612,7 +626,9 @@ class PostgresVectorStore(VectorStore):
         k = k if k else self.k
         fetch_k = fetch_k if fetch_k else self.fetch_k
         lambda_mult = lambda_mult if lambda_mult else self.lambda_mult
-        embedding_list = [json.loads(row[self.embedding_column]) for row in results]
+        embedding_list = [
+            json.loads(row[self.embedding_column]) for row in results
+        ]
         mmr_selected = maximal_marginal_relevance(
             np.array(embedding, dtype=np.float32),
             embedding_list,
@@ -639,7 +655,9 @@ class PostgresVectorStore(VectorStore):
                 )
             )
 
-        return [r for i, r in enumerate(documents_with_scores) if i in mmr_selected]
+        return [
+            r for i, r in enumerate(documents_with_scores) if i in mmr_selected
+        ]
 
     def similarity_search_with_score(
         self,
@@ -648,7 +666,9 @@ class PostgresVectorStore(VectorStore):
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
-        coro = self.asimilarity_search_with_score(query, k, filter=filter, **kwargs)
+        coro = self.asimilarity_search_with_score(
+            query, k, filter=filter, **kwargs
+        )
         return self.engine._run_as_sync(coro)
 
     def similarity_search_by_vector(
@@ -658,7 +678,9 @@ class PostgresVectorStore(VectorStore):
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
-        coro = self.asimilarity_search_by_vector(embedding, k, filter=filter, **kwargs)
+        coro = self.asimilarity_search_by_vector(
+            embedding, k, filter=filter, **kwargs
+        )
         return self.engine._run_as_sync(coro)
 
     def similarity_search_with_score_by_vector(
@@ -740,7 +762,9 @@ class PostgresVectorStore(VectorStore):
             await self.adrop_vector_index()
             return
 
-        filter = f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
+        filter = (
+            f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
+        )
         params = "WITH " + index.index_options()
         function = index.distance_strategy.index_function
         name = name or index.name

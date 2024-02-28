@@ -30,23 +30,29 @@ import sqlalchemy
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
-from .engine import PostgreSQLEngine
+from .engine import PostgresEngine
 
 DEFAULT_CONTENT_COL = "page_content"
 DEFAULT_METADATA_COL = "langchain_metadata"
 
 
 def text_formatter(row, content_columns) -> str:
-    return " ".join(str(row[column]) for column in content_columns if column in row)
+    return " ".join(
+        str(row[column]) for column in content_columns if column in row
+    )
 
 
 def csv_formatter(row, content_columns) -> str:
-    return ", ".join(str(row[column]) for column in content_columns if column in row)
+    return ", ".join(
+        str(row[column]) for column in content_columns if column in row
+    )
 
 
 def yaml_formatter(row, content_columns) -> str:
     return "\n".join(
-        f"{column}: {str(row[column])}" for column in content_columns if column in row
+        f"{column}: {str(row[column])}"
+        for column in content_columns
+        if column in row
     )
 
 
@@ -97,7 +103,7 @@ def _parse_row_from_doc(
     return row
 
 
-class PostgreSQLLoader(BaseLoader):
+class PostgresLoader(BaseLoader):
     """Load documents from PostgreSQL`.
 
     Each document represents one row of the result. The `content_columns` are
@@ -111,14 +117,14 @@ class PostgreSQLLoader(BaseLoader):
     def __init__(
         self,
         key,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         query: str,
         content_columns: List[str],
         metadata_columns: List[str],
         formatter: Callable,
         metadata_json_column: Optional[str] = None,
     ) -> None:
-        if key != PostgreSQLLoader.__create_key:
+        if key != PostgresLoader.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
             )
@@ -133,7 +139,7 @@ class PostgreSQLLoader(BaseLoader):
     @classmethod
     async def create(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         query: Optional[str] = None,
         table_name: Optional[str] = None,
         content_columns: Optional[List[str]] = None,
@@ -142,10 +148,10 @@ class PostgreSQLLoader(BaseLoader):
         format: Optional[str] = None,
         formatter: Optional[Callable] = None,
     ):
-        """Constructor for PostgreSQLLoader
+        """Constructor for PostgresLoader
 
         Args:
-            engine (PostgreSQLEngine):AsyncEngine with pool connection to the postgres database
+            engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
             query (Optional[str], optional): SQL query. Defaults to None.
             table_name (Optional[str], optional): Name of table to query. Defaults to None.
             content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
@@ -155,19 +161,25 @@ class PostgreSQLLoader(BaseLoader):
             formatter (Optional[Callable], optional): A function to format page content (OneOf: format, formatter). Defaults to None.
 
         Returns:
-            PostgreSQLLoader
+            PostgresLoader
         """
         if table_name and query:
-            raise ValueError("Only one of 'table_name' or 'query' should be specified.")
+            raise ValueError(
+                "Only one of 'table_name' or 'query' should be specified."
+            )
         if not table_name and not query:
             raise ValueError(
                 "At least one of the parameters 'table_name' or 'query' needs to be provided"
             )
         if format and formatter:
-            raise ValueError("Only one of 'format' or 'formatter' should be specified.")
+            raise ValueError(
+                "Only one of 'format' or 'formatter' should be specified."
+            )
 
         if format and format not in ["csv", "text", "JSON", "YAML"]:
-            raise ValueError("format must be type: 'csv', 'text', 'JSON', 'YAML'")
+            raise ValueError(
+                "format must be type: 'csv', 'text', 'JSON', 'YAML'"
+            )
         if formatter:
             formatter = formatter
         elif format == "csv":
@@ -194,7 +206,10 @@ class PostgreSQLLoader(BaseLoader):
                 col for col in column_names if col not in content_columns
             ]
             # Check validity of metadata json column
-            if metadata_json_column and metadata_json_column not in column_names:
+            if (
+                metadata_json_column
+                and metadata_json_column not in column_names
+            ):
                 raise ValueError(
                     f"Column {metadata_json_column} not found in query result {column_names}."
                 )
@@ -226,7 +241,7 @@ class PostgreSQLLoader(BaseLoader):
     @classmethod
     def create_sync(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         query: Optional[str] = None,
         table_name: Optional[str] = None,
         content_columns: Optional[List[str]] = None,
@@ -281,7 +296,9 @@ class PostgreSQLLoader(BaseLoader):
                 row_data = {}
                 column_names = self.content_columns + self.metadata_columns
                 column_names += (
-                    [self.metadata_json_column] if self.metadata_json_column else []
+                    [self.metadata_json_column]
+                    if self.metadata_json_column
+                    else []
                 )
                 for column in column_names:
                     value = getattr(row, column)
@@ -296,7 +313,7 @@ class PostgreSQLLoader(BaseLoader):
                 )
 
 
-class PostgreSQLDocumentSaver:
+class PostgresDocumentSaver:
     """A class for saving langchain documents into a PostgreSQL database table."""
 
     __create_key = object()
@@ -304,13 +321,13 @@ class PostgreSQLDocumentSaver:
     def __init__(
         self,
         key,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         content_column: str,
         metadata_columns: List[str] = [],
         metadata_json_column: Optional[str] = None,
     ):
-        if key != PostgreSQLDocumentSaver.__create_key:
+        if key != PostgresDocumentSaver.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
             )
@@ -323,7 +340,7 @@ class PostgreSQLDocumentSaver:
     @classmethod
     async def create(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         content_column: str = DEFAULT_CONTENT_COL,
         metadata_columns: List[str] = [],
@@ -332,7 +349,9 @@ class PostgreSQLDocumentSaver:
         table_schema = await engine._aload_table_schema(table_name)
         column_names = table_schema.columns.keys()
         if content_column not in column_names:
-            raise ValueError(f"Content column, {content_column}, does not exist.")
+            raise ValueError(
+                f"Content column, {content_column}, does not exist."
+            )
 
         # Set metadata columns to all columns if not set
         if len(metadata_columns) == 0:
@@ -368,7 +387,7 @@ class PostgreSQLDocumentSaver:
     @classmethod
     def create_sync(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         content_column: str = DEFAULT_CONTENT_COL,
         metadata_columns: List[str] = [],
@@ -404,7 +423,9 @@ class PostgreSQLDocumentSaver:
                     row[key] = json.dumps(value)
 
             # Create list of column names
-            insert_stmt = f'INSERT INTO "{self.table_name}"({self.content_column}'
+            insert_stmt = (
+                f'INSERT INTO "{self.table_name}"({self.content_column}'
+            )
             values_stmt = f"VALUES (:{self.content_column}"
 
             # Add metadata
@@ -415,7 +436,9 @@ class PostgreSQLDocumentSaver:
 
             # Add JSON column and/or close statement
             insert_stmt += (
-                f", {self.metadata_json_column})" if self.metadata_json_column else ")"
+                f", {self.metadata_json_column})"
+                if self.metadata_json_column
+                else ")"
             )
             if self.metadata_json_column:
                 values_stmt += f", :{self.metadata_json_column})"

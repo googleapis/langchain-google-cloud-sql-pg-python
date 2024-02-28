@@ -22,9 +22,9 @@ from langchain_core.documents import Document
 
 from langchain_google_cloud_sql_pg import (
     Column,
-    PostgreSQLDocumentSaver,
-    PostgreSQLEngine,
-    PostgreSQLLoader,
+    PostgresDocumentSaver,
+    PostgresEngine,
+    PostgresLoader,
 )
 
 project_id = os.environ["PROJECT_ID"]
@@ -38,7 +38,7 @@ table_name = "test-table" + str(uuid.uuid4())
 class TestLoaderAsync:
     @pytest_asyncio.fixture
     async def engine(self):
-        engine = await PostgreSQLEngine.afrom_instance(
+        engine = await PostgresEngine.afrom_instance(
             project_id=project_id,
             instance=instance_id,
             region=region,
@@ -48,7 +48,7 @@ class TestLoaderAsync:
 
     @pytest_asyncio.fixture
     def sync_engine(self):
-        engine = PostgreSQLEngine.from_instance(
+        engine = PostgresEngine.from_instance(
             project_id=project_id,
             instance=instance_id,
             region=region,
@@ -89,7 +89,7 @@ class TestLoaderAsync:
             """
             await engine._aexecute(insert_query)
 
-            loader = await PostgreSQLLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 table_name=table_name,
@@ -114,7 +114,9 @@ class TestLoaderAsync:
         finally:
             await self._cleanup_table(engine)
 
-    async def test_load_from_query_customized_content_customized_metadata(self, engine):
+    async def test_load_from_query_customized_content_customized_metadata(
+        self, engine
+    ):
         try:
             await self._cleanup_table(engine)
             query = f"""
@@ -137,7 +139,7 @@ class TestLoaderAsync:
             """
             await engine._aexecute(insert_query)
 
-            loader = await PostgreSQLLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 content_columns=[
@@ -170,7 +172,9 @@ class TestLoaderAsync:
         finally:
             await self._cleanup_table(engine)
 
-    async def test_load_from_query_customized_content_default_metadata(self, engine):
+    async def test_load_from_query_customized_content_default_metadata(
+        self, engine
+    ):
         try:
             await self._cleanup_table(engine)
             query = f"""
@@ -191,7 +195,7 @@ class TestLoaderAsync:
             """
             await engine._aexecute(insert_query)
 
-            loader = await PostgreSQLLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 content_columns=[
@@ -217,7 +221,9 @@ class TestLoaderAsync:
         finally:
             await self._cleanup_table(engine)
 
-    async def test_load_from_query_default_content_customized_metadata(self, engine):
+    async def test_load_from_query_default_content_customized_metadata(
+        self, engine
+    ):
         try:
             await self._cleanup_table(engine)
             query = f"""
@@ -243,7 +249,7 @@ class TestLoaderAsync:
             """
             await engine._aexecute(insert_query)
 
-            loader = await PostgreSQLLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 metadata_columns=["fruit_name", "organic"],
@@ -283,7 +289,7 @@ class TestLoaderAsync:
                 VALUES ('Apple', 'Granny Smith', 150, 1, '{metadata}');"""
             await engine._aexecute(insert_query)
 
-            loader = await PostgreSQLLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 metadata_columns=[
@@ -330,7 +336,7 @@ class TestLoaderAsync:
                 VALUES ('Apple', '{variety}', 150, 1, '{metadata}');"""
             await engine._aexecute(insert_query)
 
-            loader = await PostgreSQLLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 metadata_columns=[
@@ -378,10 +384,12 @@ class TestLoaderAsync:
 
             def my_formatter(row, content_columns):
                 return "-".join(
-                    str(row[column]) for column in content_columns if column in row
+                    str(row[column])
+                    for column in content_columns
+                    if column in row
                 )
 
-            loader = await PostgreSQLLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 content_columns=[
@@ -431,7 +439,7 @@ class TestLoaderAsync:
                         """
             await engine._aexecute(insert_query)
 
-            loader = await PostgreSQLLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 content_columns=[
@@ -476,16 +484,20 @@ class TestLoaderAsync:
                     metadata={"fruit_id": 3},
                 ),
             ]
-            saver = await PostgreSQLDocumentSaver.create(
+            saver = await PostgresDocumentSaver.create(
                 engine=engine, table_name=table_name
             )
-            loader = await PostgreSQLLoader.create(engine=engine, table_name=table_name)
+            loader = await PostgresLoader.create(
+                engine=engine, table_name=table_name
+            )
 
             await saver.aadd_documents(test_docs)
             docs = await self._collect_async_items(loader.alazy_load())
 
             assert docs == test_docs
-            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
+            assert (
+                await engine._aload_table_schema(table_name)
+            ).columns.keys() == [
                 "page_content",
                 "langchain_metadata",
             ]
@@ -493,7 +505,9 @@ class TestLoaderAsync:
             await self._cleanup_table(engine)
 
     @pytest.mark.parametrize("store_metadata", [True, False])
-    async def test_save_doc_with_customized_metadata(self, engine, store_metadata):
+    async def test_save_doc_with_customized_metadata(
+        self, engine, store_metadata
+    ):
         await self._cleanup_table(engine)
         await engine.ainit_document_table(
             table_name,
@@ -513,10 +527,10 @@ class TestLoaderAsync:
                 },
             ),
         ]
-        saver = await PostgreSQLDocumentSaver.create(
+        saver = await PostgresDocumentSaver.create(
             engine=engine, table_name=table_name
         )
-        loader = await PostgreSQLLoader.create(
+        loader = await PostgresLoader.create(
             engine=engine,
             table_name=table_name,
             metadata_columns=[
@@ -530,7 +544,9 @@ class TestLoaderAsync:
 
         if store_metadata:
             docs == test_docs
-            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
+            assert (
+                await engine._aload_table_schema(table_name)
+            ).columns.keys() == [
                 "page_content",
                 "fruit_name",
                 "organic",
@@ -543,7 +559,9 @@ class TestLoaderAsync:
                     metadata={"fruit_name": "Apple", "organic": True},
                 ),
             ]
-            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
+            assert (
+                await engine._aload_table_schema(table_name)
+            ).columns.keys() == [
                 "page_content",
                 "fruit_name",
                 "organic",
@@ -563,12 +581,12 @@ class TestLoaderAsync:
                     },
                 ),
             ]
-            saver = await PostgreSQLDocumentSaver.create(
+            saver = await PostgresDocumentSaver.create(
                 engine=engine, table_name=table_name
             )
             await saver.aadd_documents(test_docs)
 
-            loader = await PostgreSQLLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 table_name=table_name,
             )
@@ -581,7 +599,9 @@ class TestLoaderAsync:
                     metadata={},
                 ),
             ]
-            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
+            assert (
+                await engine._aload_table_schema(table_name)
+            ).columns.keys() == [
                 "page_content",
             ]
         finally:
@@ -602,20 +622,26 @@ class TestLoaderAsync:
                     metadata={"fruit_id": 2},
                 ),
             ]
-            saver = await PostgreSQLDocumentSaver.create(
+            saver = await PostgresDocumentSaver.create(
                 engine=engine, table_name=table_name
             )
-            loader = await PostgreSQLLoader.create(engine=engine, table_name=table_name)
+            loader = await PostgresLoader.create(
+                engine=engine, table_name=table_name
+            )
 
             await saver.aadd_documents(test_docs)
             docs = await self._collect_async_items(loader.alazy_load())
             assert docs == test_docs
 
             await saver.adelete(docs[:1])
-            assert len(await self._collect_async_items(loader.alazy_load())) == 1
+            assert (
+                len(await self._collect_async_items(loader.alazy_load())) == 1
+            )
 
             await saver.adelete(docs)
-            assert len(await self._collect_async_items(loader.alazy_load())) == 0
+            assert (
+                len(await self._collect_async_items(loader.alazy_load())) == 0
+            )
         finally:
             await self._cleanup_table(engine)
 
@@ -663,22 +689,26 @@ class TestLoaderAsync:
                     },
                 ),
             ]
-            saver = await PostgreSQLDocumentSaver.create(
+            saver = await PostgresDocumentSaver.create(
                 engine=engine, table_name=table_name
             )
             query = f"SELECT * FROM \"{table_name}\" WHERE fruit_name='Apple';"
-            loader = await PostgreSQLLoader.create(engine=engine, query=query)
+            loader = await PostgresLoader.create(engine=engine, query=query)
 
             await saver.aadd_documents(test_docs)
             docs = await self._collect_async_items(loader.alazy_load())
             assert len(docs) == 1
 
             await saver.adelete(docs)
-            assert len(await self._collect_async_items(loader.alazy_load())) == 0
+            assert (
+                len(await self._collect_async_items(loader.alazy_load())) == 0
+            )
         finally:
             await self._cleanup_table(engine)
 
-    @pytest.mark.parametrize("metadata_json_column", [None, "metadata_col_test"])
+    @pytest.mark.parametrize(
+        "metadata_json_column", [None, "metadata_col_test"]
+    )
     async def test_delete_doc_with_customized_metadata(
         self, engine, metadata_json_column
     ):
@@ -711,13 +741,13 @@ class TestLoaderAsync:
                 },
             ),
         ]
-        saver = await PostgreSQLDocumentSaver.create(
+        saver = await PostgresDocumentSaver.create(
             engine=engine,
             table_name=table_name,
             content_column=content_column,
             metadata_json_column=metadata_json_column,
         )
-        loader = await PostgreSQLLoader.create(
+        loader = await PostgresLoader.create(
             engine=engine,
             table_name=table_name,
             content_columns=[content_column],
@@ -736,7 +766,7 @@ class TestLoaderAsync:
         assert len(await self._collect_async_items(loader.alazy_load())) == 0
 
     def test_sync_engine(self):
-        engine = PostgreSQLEngine.from_instance(
+        engine = PostgresEngine.from_instance(
             project_id=project_id,
             instance=instance_id,
             region=region,
@@ -748,7 +778,7 @@ class TestLoaderAsync:
         try:
             sync_engine._run_as_sync(self._cleanup_table(sync_engine))
             sync_engine.init_document_table(table_name)
-            saver = PostgreSQLDocumentSaver.create_sync(
+            saver = PostgresDocumentSaver.create_sync(
                 engine=sync_engine, table_name=table_name
             )
             test_docs = [
@@ -763,7 +793,7 @@ class TestLoaderAsync:
             ]
 
             saver.add_documents(test_docs)
-            loader = PostgreSQLLoader.create_sync(
+            loader = PostgresLoader.create_sync(
                 engine=sync_engine,
                 query=f'SELECT * FROM "{table_name}";',
             )
