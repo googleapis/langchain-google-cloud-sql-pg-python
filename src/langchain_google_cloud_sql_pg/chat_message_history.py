@@ -32,9 +32,7 @@ async def _aget_messages(
     if not results:
         return []
 
-    items = [
-        {"data": result["data"], "type": result["type"]} for result in results
-    ]
+    items = [{"data": result["data"], "type": result["type"]} for result in results]
     messages = messages_from_dict(items)
     return messages
 

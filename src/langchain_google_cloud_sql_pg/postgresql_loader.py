@@ -37,22 +37,16 @@ DEFAULT_METADATA_COL = "langchain_metadata"
 
 
 def text_formatter(row, content_columns) -> str:
-    return " ".join(
-        str(row[column]) for column in content_columns if column in row
-    )
+    return " ".join(str(row[column]) for column in content_columns if column in row)
 
 
 def csv_formatter(row, content_columns) -> str:
-    return ", ".join(
-        str(row[column]) for column in content_columns if column in row
-    )
+    return ", ".join(str(row[column]) for column in content_columns if column in row)
 
 
 def yaml_formatter(row, content_columns) -> str:
     return "\n".join(
-        f"{column}: {str(row[column])}"
-        for column in content_columns
-        if column in row
+        f"{column}: {str(row[column])}" for column in content_columns if column in row
     )
 
 
@@ -164,22 +158,16 @@ class PostgresLoader(BaseLoader):
             PostgresLoader
         """
         if table_name and query:
-            raise ValueError(
-                "Only one of 'table_name' or 'query' should be specified."
-            )
+            raise ValueError("Only one of 'table_name' or 'query' should be specified.")
         if not table_name and not query:
             raise ValueError(
                 "At least one of the parameters 'table_name' or 'query' needs to be provided"
             )
         if format and formatter:
-            raise ValueError(
-                "Only one of 'format' or 'formatter' should be specified."
-            )
+            raise ValueError("Only one of 'format' or 'formatter' should be specified.")
 
         if format and format not in ["csv", "text", "JSON", "YAML"]:
-            raise ValueError(
-                "format must be type: 'csv', 'text', 'JSON', 'YAML'"
-            )
+            raise ValueError("format must be type: 'csv', 'text', 'JSON', 'YAML'")
         if formatter:
             formatter = formatter
         elif format == "csv":
@@ -206,10 +194,7 @@ class PostgresLoader(BaseLoader):
                 col for col in column_names if col not in content_columns
             ]
             # Check validity of metadata json column
-            if (
-                metadata_json_column
-                and metadata_json_column not in column_names
-            ):
+            if metadata_json_column and metadata_json_column not in column_names:
                 raise ValueError(
                     f"Column {metadata_json_column} not found in query result {column_names}."
                 )
@@ -296,9 +281,7 @@ class PostgresLoader(BaseLoader):
                 row_data = {}
                 column_names = self.content_columns + self.metadata_columns
                 column_names += (
-                    [self.metadata_json_column]
-                    if self.metadata_json_column
-                    else []
+                    [self.metadata_json_column] if self.metadata_json_column else []
                 )
                 for column in column_names:
                     value = getattr(row, column)
@@ -349,9 +332,7 @@ class PostgresDocumentSaver:
         table_schema = await engine._aload_table_schema(table_name)
         column_names = table_schema.columns.keys()
         if content_column not in column_names:
-            raise ValueError(
-                f"Content column, {content_column}, does not exist."
-            )
+            raise ValueError(f"Content column, {content_column}, does not exist.")
 
         # Set metadata columns to all columns if not set
         if len(metadata_columns) == 0:
@@ -423,9 +404,7 @@ class PostgresDocumentSaver:
                     row[key] = json.dumps(value)
 
             # Create list of column names
-            insert_stmt = (
-                f'INSERT INTO "{self.table_name}"({self.content_column}'
-            )
+            insert_stmt = f'INSERT INTO "{self.table_name}"({self.content_column}'
             values_stmt = f"VALUES (:{self.content_column}"
 
             # Add metadata
@@ -436,9 +415,7 @@ class PostgresDocumentSaver:
 
             # Add JSON column and/or close statement
             insert_stmt += (
-                f", {self.metadata_json_column})"
-                if self.metadata_json_column
-                else ")"
+                f", {self.metadata_json_column})" if self.metadata_json_column else ")"
             )
             if self.metadata_json_column:
                 values_stmt += f", :{self.metadata_json_column})"

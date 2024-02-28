@@ -375,9 +375,7 @@ class PostgresEngine:
             try:
                 await conn.run_sync(metadata.reflect, only=[table_name])
             except InvalidRequestError as e:
-                raise ValueError(
-                    f"Table, {table_name}, does not exist: " + str(e)
-                )
+                raise ValueError(f"Table, {table_name}, does not exist: " + str(e))
 
         table = Table(table_name, metadata)
         # Extract the schema information

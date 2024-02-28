@@ -20,10 +20,7 @@ import pytest_asyncio
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 
-from langchain_google_cloud_sql_pg import (
-    PostgresChatMessageHistory,
-    PostgresEngine,
-)
+from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
 project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
