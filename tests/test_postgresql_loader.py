@@ -486,7 +486,6 @@ class TestLoaderAsync:
 
             assert docs == test_docs
             assert (await engine._aload_table_schema(table_name)).columns.keys() == [
-
                 "page_content",
                 "langchain_metadata",
             ]
