@@ -42,7 +42,7 @@ from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
 from langchain.embeddings import VertexAIEmbeddings
 
 
-engine = PostgresEngine.from_instance("region", "my-instance", "my-database")
+engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
 embeddings_service = VertexAIEmbeddings()
 vectorstore = PostgresVectorStore(
     engine,
@@ -61,7 +61,7 @@ Use a document loader to load data as LangChain `Document`s.
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresLoader
 
 
-engine = PostgresEngine.from_instance("region", "my-instance", "my-database")
+engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
 loader = PostgresSQLLoader(
     engine,
     table_name="my-table-name"
@@ -79,7 +79,7 @@ Use `ChatMessageHistory` to store messages and provide conversation history to L
 from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
 
-engine = PostgresEngine.from_instance("region", "my-instance", "my-database")
+engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
 history = PostgresChatMessageHistory(
     engine,
     table_name="my-message-store",
