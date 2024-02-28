@@ -30,7 +30,7 @@ import sqlalchemy
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
-from .engine import PostgreSQLEngine
+from .engine import PostgresEngine
 
 DEFAULT_CONTENT_COL = "page_content"
 DEFAULT_METADATA_COL = "langchain_metadata"
@@ -97,7 +97,7 @@ def _parse_row_from_doc(
     return row
 
 
-class PostgreSQLLoader(BaseLoader):
+class PostgresLoader(BaseLoader):
     """Load documents from PostgreSQL`.
 
     Each document represents one row of the result. The `content_columns` are
@@ -111,14 +111,14 @@ class PostgreSQLLoader(BaseLoader):
     def __init__(
         self,
         key,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         query: str,
         content_columns: List[str],
         metadata_columns: List[str],
         formatter: Callable,
         metadata_json_column: Optional[str] = None,
     ) -> None:
-        if key != PostgreSQLLoader.__create_key:
+        if key != PostgresLoader.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
             )
@@ -133,7 +133,7 @@ class PostgreSQLLoader(BaseLoader):
     @classmethod
     async def create(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         query: Optional[str] = None,
         table_name: Optional[str] = None,
         content_columns: Optional[List[str]] = None,
@@ -142,10 +142,10 @@ class PostgreSQLLoader(BaseLoader):
         format: Optional[str] = None,
         formatter: Optional[Callable] = None,
     ):
-        """Constructor for PostgreSQLLoader
+        """Constructor for PostgresLoader
 
         Args:
-            engine (PostgreSQLEngine):AsyncEngine with pool connection to the postgres database
+            engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
             query (Optional[str], optional): SQL query. Defaults to None.
             table_name (Optional[str], optional): Name of table to query. Defaults to None.
             content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
@@ -155,7 +155,7 @@ class PostgreSQLLoader(BaseLoader):
             formatter (Optional[Callable], optional): A function to format page content (OneOf: format, formatter). Defaults to None.
 
         Returns:
-            PostgreSQLLoader
+            PostgresLoader
         """
         if table_name and query:
             raise ValueError("Only one of 'table_name' or 'query' should be specified.")
@@ -226,7 +226,7 @@ class PostgreSQLLoader(BaseLoader):
     @classmethod
     def create_sync(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         query: Optional[str] = None,
         table_name: Optional[str] = None,
         content_columns: Optional[List[str]] = None,
@@ -296,7 +296,7 @@ class PostgreSQLLoader(BaseLoader):
                 )
 
 
-class PostgreSQLDocumentSaver:
+class PostgresDocumentSaver:
     """A class for saving langchain documents into a PostgreSQL database table."""
 
     __create_key = object()
@@ -304,13 +304,13 @@ class PostgreSQLDocumentSaver:
     def __init__(
         self,
         key,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         content_column: str,
         metadata_columns: List[str] = [],
         metadata_json_column: Optional[str] = None,
     ):
-        if key != PostgreSQLDocumentSaver.__create_key:
+        if key != PostgresDocumentSaver.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
             )
@@ -323,7 +323,7 @@ class PostgreSQLDocumentSaver:
     @classmethod
     async def create(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         content_column: str = DEFAULT_CONTENT_COL,
         metadata_columns: List[str] = [],
@@ -368,7 +368,7 @@ class PostgreSQLDocumentSaver:
     @classmethod
     def create_sync(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         content_column: str = DEFAULT_CONTENT_COL,
         metadata_columns: List[str] = [],

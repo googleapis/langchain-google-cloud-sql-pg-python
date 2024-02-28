@@ -23,7 +23,7 @@ from langchain_community.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import VARCHAR
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import Column, PostgresEngine
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
@@ -67,7 +67,7 @@ class TestEngineAsync:
 
     @pytest_asyncio.fixture
     async def engine(self, db_project, db_region, db_instance, db_name):
-        engine = await PostgreSQLEngine.afrom_instance(
+        engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
             instance=db_instance,
             region=db_region,
@@ -126,8 +126,8 @@ class TestEngineAsync:
         user,
         password,
     ):
-        PostgreSQLEngine._connector = None
-        engine = await PostgreSQLEngine.afrom_instance(
+        PostgresEngine._connector = None
+        engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
             instance=db_instance,
             region=db_region,
@@ -137,7 +137,7 @@ class TestEngineAsync:
         )
         assert engine
         await engine._aexecute("SELECT 1")
-        PostgreSQLEngine._connector = None
+        PostgresEngine._connector = None
 
     async def test_from_engine(
         self,
@@ -167,7 +167,7 @@ class TestEngineAsync:
                 async_creator=getconn,
             )
 
-            engine = PostgreSQLEngine.from_engine(engine)
+            engine = PostgresEngine.from_engine(engine)
             await engine._aexecute("SELECT 1")
 
     async def test_column(self, engine):
@@ -203,7 +203,7 @@ class TestEngineSync:
 
     @pytest_asyncio.fixture
     def engine(self, db_project, db_region, db_instance, db_name):
-        engine = PostgreSQLEngine.from_instance(
+        engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
             region=db_region,
@@ -262,8 +262,8 @@ class TestEngineSync:
         user,
         password,
     ):
-        PostgreSQLEngine._connector = None
-        engine = PostgreSQLEngine.from_instance(
+        PostgresEngine._connector = None
+        engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
             region=db_region,
@@ -273,4 +273,4 @@ class TestEngineSync:
         )
         assert engine
         engine._execute("SELECT 1")
-        PostgreSQLEngine._connector = None
+        PostgresEngine._connector = None

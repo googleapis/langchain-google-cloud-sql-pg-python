@@ -20,7 +20,7 @@ import pytest_asyncio
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 
-from langchain_google_cloud_sql_pg import PostgreSQLChatMessageHistory, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
 project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
@@ -32,7 +32,7 @@ table_name_async = "message_store" + str(uuid.uuid4())
 
 @pytest.fixture(name="memory_engine")
 def setup() -> Generator:
-    engine = PostgreSQLEngine.from_instance(
+    engine = PostgresEngine.from_instance(
         project_id=project_id,
         region=region,
         instance=instance_id,
@@ -40,14 +40,14 @@ def setup() -> Generator:
     )
     engine.init_chat_history_table(table_name=table_name)
     yield engine
-    # use default table for PostgreSQLChatMessageHistory
+    # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
     engine._execute(query)
 
 
 @pytest_asyncio.fixture
 async def async_engine():
-    engine = await PostgreSQLEngine.afrom_instance(
+    engine = await PostgresEngine.afrom_instance(
         project_id=project_id,
         region=region,
         instance=instance_id,
@@ -55,13 +55,13 @@ async def async_engine():
     )
     await engine.ainit_chat_history_table(table_name=table_name_async)
     yield engine
-    # use default table for PostgreSQLChatMessageHistory
+    # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
     await engine._aexecute(query)
 
 
-def test_chat_message_history(memory_engine: PostgreSQLEngine) -> None:
-    history = PostgreSQLChatMessageHistory.create_sync(
+def test_chat_message_history(memory_engine: PostgresEngine) -> None:
+    history = PostgresChatMessageHistory.create_sync(
         engine=memory_engine, session_id="test", table_name=table_name
     )
     history.add_user_message("hi!")
@@ -81,7 +81,7 @@ def test_chat_message_history(memory_engine: PostgreSQLEngine) -> None:
 
 def test_chat_table(memory_engine: Any):
     with pytest.raises(ValueError):
-        PostgreSQLChatMessageHistory.create_sync(
+        PostgresChatMessageHistory.create_sync(
             engine=memory_engine, session_id="test", table_name="doesnotexist"
         )
 
@@ -90,7 +90,7 @@ def test_chat_schema(memory_engine: Any):
     doc_table_name = "test_table" + str(uuid.uuid4())
     memory_engine.init_document_table(table_name=doc_table_name)
     with pytest.raises(IndexError):
-        PostgreSQLChatMessageHistory.create_sync(
+        PostgresChatMessageHistory.create_sync(
             engine=memory_engine, session_id="test", table_name=doc_table_name
         )
 
@@ -100,9 +100,9 @@ def test_chat_schema(memory_engine: Any):
 
 @pytest.mark.asyncio
 async def test_chat_message_history_async(
-    async_engine: PostgreSQLEngine,
+    async_engine: PostgresEngine,
 ) -> None:
-    history = await PostgreSQLChatMessageHistory.create(
+    history = await PostgresChatMessageHistory.create(
         engine=async_engine, session_id="test", table_name=table_name_async
     )
     msg1 = HumanMessage(content="hi!")
@@ -124,12 +124,12 @@ async def test_chat_message_history_async(
 
 @pytest.mark.asyncio
 async def test_chat_message_history_sync_messages(
-    async_engine: PostgreSQLEngine,
+    async_engine: PostgresEngine,
 ) -> None:
-    history1 = await PostgreSQLChatMessageHistory.create(
+    history1 = await PostgresChatMessageHistory.create(
         engine=async_engine, session_id="test", table_name=table_name_async
     )
-    history2 = await PostgreSQLChatMessageHistory.create(
+    history2 = await PostgresChatMessageHistory.create(
         engine=async_engine, session_id="test", table_name=table_name_async
     )
     msg1 = HumanMessage(content="hi!")
@@ -151,7 +151,7 @@ async def test_chat_message_history_sync_messages(
 @pytest.mark.asyncio
 async def test_chat_table_async(async_engine):
     with pytest.raises(ValueError):
-        await PostgreSQLChatMessageHistory.create(
+        await PostgresChatMessageHistory.create(
             engine=async_engine, session_id="test", table_name="doesnotexist"
         )
 
@@ -161,7 +161,7 @@ async def test_chat_schema_async(async_engine):
     table_name = "test_table" + str(uuid.uuid4())
     await async_engine.ainit_document_table(table_name=table_name)
     with pytest.raises(IndexError):
-        await PostgreSQLChatMessageHistory.create(
+        await PostgresChatMessageHistory.create(
             engine=async_engine, session_id="test", table_name=table_name
         )
 

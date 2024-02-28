@@ -20,11 +20,11 @@ from typing import List, Sequence
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict
 
-from .engine import PostgreSQLEngine
+from .engine import PostgresEngine
 
 
 async def _aget_messages(
-    engine: PostgreSQLEngine, session_id: str, table_name: str
+    engine: PostgresEngine, session_id: str, table_name: str
 ) -> List[BaseMessage]:
     """Retrieve the messages from PostgreSQL"""
     query = f"""SELECT data, type FROM "{table_name}" WHERE session_id = :session_id ORDER BY id;"""
@@ -37,7 +37,7 @@ async def _aget_messages(
     return messages
 
 
-class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
+class PostgresChatMessageHistory(BaseChatMessageHistory):
     """Chat message history stored in an Cloud SQL for PostgreSQL database."""
 
     __create_key = object()
@@ -45,12 +45,12 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
     def __init__(
         self,
         key,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         session_id: str,
         table_name: str,
         messages: List[BaseMessage],
     ):
-        if key != PostgreSQLChatMessageHistory.__create_key:
+        if key != PostgresChatMessageHistory.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
             )
@@ -62,7 +62,7 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
     @classmethod
     async def create(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         session_id: str,
         table_name: str,
     ):
@@ -89,7 +89,7 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
     @classmethod
     def create_sync(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         session_id: str,
         table_name: str,
     ):

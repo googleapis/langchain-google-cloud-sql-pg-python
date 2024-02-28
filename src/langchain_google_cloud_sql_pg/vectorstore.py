@@ -23,7 +23,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
-from .engine import PostgreSQLEngine
+from .engine import PostgresEngine
 from .indexes import (
     DEFAULT_DISTANCE_STRATEGY,
     DEFAULT_INDEX_NAME,
@@ -42,7 +42,7 @@ class PostgresVectorStore(VectorStore):
     def __init__(
         self,
         key,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -78,7 +78,7 @@ class PostgresVectorStore(VectorStore):
     @classmethod
     async def create(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -95,7 +95,7 @@ class PostgresVectorStore(VectorStore):
     ):
         """Constructor for CloudSQLVectorStore.
         Args:
-            engine (PostgreSQLEngine): AsyncEngine with pool connection to the postgres database. Required.
+            engine (PostgresEngine): AsyncEngine with pool connection to the postgres database. Required.
             embedding_service (Embeddings): Text embedding model to use.
             table_name (str): Name of the existing table or the table to be created.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
@@ -175,7 +175,7 @@ class PostgresVectorStore(VectorStore):
     @classmethod
     def create_sync(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -328,7 +328,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         texts: List[str],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         metadatas: Optional[List[dict]] = None,
         ids: Optional[List[str]] = None,
@@ -359,7 +359,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         documents: List[Document],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         ids: Optional[List[str]] = None,
         content_column: str = "content",
@@ -391,7 +391,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         texts: List[str],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         metadatas: Optional[List[dict]] = None,
         ids: Optional[List[str]] = None,
@@ -425,7 +425,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         documents: List[Document],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         ids: Optional[List[str]] = None,
         content_column: str = "content",
