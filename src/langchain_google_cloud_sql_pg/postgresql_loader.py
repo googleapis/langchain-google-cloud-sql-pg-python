@@ -329,7 +329,7 @@ class PostgreSQLDocumentSaver:
         metadata_columns: List[str] = [],
         metadata_json_column: Optional[str] = DEFAULT_METADATA_COL,
     ):
-        table_schema = await engine._aload_document_table(table_name)
+        table_schema = await engine._aload_table_schema(table_name)
         column_names = table_schema.columns.keys()
         if content_column not in column_names:
             raise ValueError(f"Content column, {content_column}, does not exist.")
@@ -468,7 +468,7 @@ class PostgreSQLDocumentSaver:
     def delete(self, docs: List[Document]) -> None:
         self.engine._run_as_sync(self.adelete(docs))
 
-    async def _aload_document_table(self) -> sqlalchemy.Table:
+    async def _aload_table_schema(self) -> sqlalchemy.Table:
         """
         Load table schema from existing table in PgSQL database.
 

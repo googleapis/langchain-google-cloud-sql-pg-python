@@ -360,7 +360,7 @@ class PostgreSQLEngine:
             )
         )
 
-    async def _aload_document_table(
+    async def _aload_table_schema(
         self,
         table_name: str,
     ) -> Table:
