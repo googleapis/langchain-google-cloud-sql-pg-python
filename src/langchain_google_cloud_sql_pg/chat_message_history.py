@@ -66,7 +66,7 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
         session_id: str,
         table_name: str,
     ):
-        table_schema = await engine._aload_table(table_name)
+        table_schema = await engine._aload_table_schema(table_name)
         column_names = table_schema.columns.keys()
 
         required_columns = ["id", "session_id", "data", "type"]
@@ -109,7 +109,9 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
                 "type": message.type,
             },
         )
-        self.messages.append(message)
+        self.messages = await _aget_messages(
+            self.engine, self.session_id, self.table_name
+        )
 
     def add_message(self, message: BaseMessage) -> None:
         self.engine._run_as_sync(self.aadd_message(message))
@@ -129,3 +131,11 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
 
     def clear(self) -> None:
         self.engine._run_as_sync(self.aclear())
+
+    async def async_messages(self) -> None:
+        self.messages = await _aget_messages(
+            self.engine, self.session_id, self.table_name
+        )
+
+    def sync_messages(self) -> None:
+        self.engine._run_as_sync(self.async_messages())

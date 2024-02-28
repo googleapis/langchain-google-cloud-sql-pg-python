@@ -13,7 +13,7 @@
 # limitations under the License.
 import os
 import uuid
-from typing import Generator
+from typing import Any, Generator
 
 import pytest
 import pytest_asyncio
@@ -79,14 +79,14 @@ def test_chat_message_history(memory_engine: PostgreSQLEngine) -> None:
     assert len(history.messages) == 0
 
 
-def test_chat_table(memory_engine):
+def test_chat_table(memory_engine: Any):
     with pytest.raises(ValueError):
         PostgreSQLChatMessageHistory.create_sync(
             engine=memory_engine, session_id="test", table_name="doesnotexist"
         )
 
 
-def test_chat_schema(memory_engine):
+def test_chat_schema(memory_engine: Any):
     doc_table_name = "test_table" + str(uuid.uuid4())
     memory_engine.init_document_table(table_name=doc_table_name)
     with pytest.raises(IndexError):
@@ -120,6 +120,32 @@ async def test_chat_message_history_async(
     # verify clear() clears message history
     await history.aclear()
     assert len(history.messages) == 0
+
+
+@pytest.mark.asyncio
+async def test_chat_message_history_sync_messages(
+    async_engine: PostgreSQLEngine,
+) -> None:
+    history1 = await PostgreSQLChatMessageHistory.create(
+        engine=async_engine, session_id="test", table_name=table_name_async
+    )
+    history2 = await PostgreSQLChatMessageHistory.create(
+        engine=async_engine, session_id="test", table_name=table_name_async
+    )
+    msg1 = HumanMessage(content="hi!")
+    msg2 = AIMessage(content="whats up?")
+    await history1.aadd_message(msg1)
+    await history2.aadd_message(msg2)
+
+    assert len(history1.messages) == 1
+    assert len(history2.messages) == 2
+
+    await history1.async_messages()
+    assert len(history1.messages) == 2
+
+    # verify clear() clears message history
+    await history2.aclear()
+    assert len(history2.messages) == 0
 
 
 @pytest.mark.asyncio

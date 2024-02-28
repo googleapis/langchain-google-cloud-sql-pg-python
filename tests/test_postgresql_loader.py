@@ -483,7 +483,7 @@ class TestLoaderAsync:
             docs = await self._collect_async_items(loader.alazy_load())
 
             assert docs == test_docs
-            assert (await saver._aload_table()).columns.keys() == [
+            assert (await saver._aload_table_schema()).columns.keys() == [
                 "page_content",
                 "langchain_metadata",
             ]
@@ -526,7 +526,7 @@ class TestLoaderAsync:
 
         if store_metadata:
             docs == test_docs
-            assert (await saver._aload_table()).columns.keys() == [
+            assert (await saver._aload_table_schema()).columns.keys() == [
                 "page_content",
                 "fruit_name",
                 "organic",
@@ -539,7 +539,7 @@ class TestLoaderAsync:
                     metadata={"fruit_name": "Apple", "organic": True},
                 ),
             ]
-            assert (await saver._aload_table()).columns.keys() == [
+            assert (await saver._aload_table_schema()).columns.keys() == [
                 "page_content",
                 "fruit_name",
                 "organic",
@@ -575,7 +575,7 @@ class TestLoaderAsync:
                     metadata={},
                 ),
             ]
-            assert (await saver._aload_table()).columns.keys() == [
+            assert (await saver._aload_table_schema()).columns.keys() == [
                 "page_content",
             ]
         finally:
