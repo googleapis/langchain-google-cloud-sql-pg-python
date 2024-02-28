@@ -20,7 +20,7 @@ import pytest_asyncio
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import Column, PostgreSQLEngine, PostgresVectorStore
+from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
@@ -65,7 +65,7 @@ class TestVectorStore:
 
     @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
-        engine = await PostgreSQLEngine.afrom_instance(
+        engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
             instance=db_instance,
             region=db_region,
@@ -76,7 +76,7 @@ class TestVectorStore:
 
     @pytest_asyncio.fixture(scope="class")
     def engine_sync(self, db_project, db_region, db_instance, db_name):
-        engine = PostgreSQLEngine.from_instance(
+        engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
             region=db_region,

@@ -87,7 +87,7 @@ class Column:
             raise ValueError("Column data_type must be type string")
 
 
-class PostgreSQLEngine:
+class PostgresEngine:
     """A class for managing connections to a Cloud SQL for Postgres database."""
 
     _connector: Optional[Connector] = None
@@ -111,7 +111,7 @@ class PostgreSQLEngine:
         database: str,
         user: Optional[str] = None,
         password: Optional[str] = None,
-    ) -> PostgreSQLEngine:
+    ) -> PostgresEngine:
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
         loop = asyncio.new_event_loop()
@@ -140,7 +140,7 @@ class PostgreSQLEngine:
         password: Optional[str] = None,
         loop: Optional[asyncio.AbstractEventLoop] = None,
         thread: Optional[Thread] = None,
-    ) -> PostgreSQLEngine:
+    ) -> PostgresEngine:
         if bool(user) ^ bool(password):
             raise ValueError(
                 "Only one of 'user' or 'password' were specified. Either "
@@ -191,7 +191,7 @@ class PostgreSQLEngine:
         database: str,
         user: Optional[str] = None,
         password: Optional[str] = None,
-    ) -> PostgreSQLEngine:
+    ) -> PostgresEngine:
         return await cls._create(
             project_id,
             region,
@@ -202,7 +202,7 @@ class PostgreSQLEngine:
         )
 
     @classmethod
-    def from_engine(cls, engine: AsyncEngine) -> PostgreSQLEngine:
+    def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
         return cls(engine, None, None)
 
     async def _aexecute(self, query: str, params: Optional[dict] = None):
