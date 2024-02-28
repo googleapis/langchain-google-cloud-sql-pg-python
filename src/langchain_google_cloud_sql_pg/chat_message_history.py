@@ -32,9 +32,7 @@ async def _aget_messages(
     if not results:
         return []
 
-    items = [
-        {"data": result["data"], "type": result["type"]} for result in results
-    ]
+    items = [{"data": result["data"], "type": result["type"]} for result in results]
     messages = messages_from_dict(items)
     return messages
 
@@ -68,7 +66,7 @@ class PostgreSQLChatMessageHistory(BaseChatMessageHistory):
         session_id: str,
         table_name: str,
     ):
-        table_schema = await engine._aload_document_table(table_name)
+        table_schema = await engine._aload_table(table_name)
         column_names = table_schema.columns.keys()
 
         required_columns = ["id", "session_id", "data", "type"]

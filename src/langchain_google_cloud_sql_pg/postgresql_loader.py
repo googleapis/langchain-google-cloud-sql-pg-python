@@ -323,7 +323,7 @@ class PostgreSQLDocumentSaver:
         Args:
             docs (List[langchain_core.documents.Document]): a list of documents to be saved.
         """
-        table_schema = await self._aload_document_table()
+        table_schema = await self._aload_table()
 
         for doc in docs:
             row = _parse_row_from_doc(
@@ -383,7 +383,7 @@ class PostgreSQLDocumentSaver:
         Args:
             docs (List[langchain_core.documents.Document]): a list of documents to be deleted.
         """
-        table_schema = await self._aload_document_table()
+        table_schema = await self._aload_table()
         for doc in docs:
             row = _parse_row_from_doc(
                 table_schema.columns.keys(),
