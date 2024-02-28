@@ -476,14 +476,16 @@ class TestLoaderAsync:
                     metadata={"fruit_id": 3},
                 ),
             ]
-            saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
+            saver = await PostgreSQLDocumentSaver.create(
+                engine=engine, table_name=table_name
+            )
             loader = await PostgreSQLLoader.create(engine=engine, table_name=table_name)
 
             await saver.aadd_documents(test_docs)
             docs = await self._collect_async_items(loader.alazy_load())
 
             assert docs == test_docs
-            assert (await saver._aload_document_table()).columns.keys() == [
+            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
                 "page_content",
                 "langchain_metadata",
             ]
@@ -511,7 +513,9 @@ class TestLoaderAsync:
                 },
             ),
         ]
-        saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
+        saver = await PostgreSQLDocumentSaver.create(
+            engine=engine, table_name=table_name
+        )
         loader = await PostgreSQLLoader.create(
             engine=engine,
             table_name=table_name,
@@ -526,7 +530,7 @@ class TestLoaderAsync:
 
         if store_metadata:
             docs == test_docs
-            assert (await saver._aload_document_table()).columns.keys() == [
+            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
                 "page_content",
                 "fruit_name",
                 "organic",
@@ -539,7 +543,7 @@ class TestLoaderAsync:
                     metadata={"fruit_name": "Apple", "organic": True},
                 ),
             ]
-            assert (await saver._aload_document_table()).columns.keys() == [
+            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
                 "page_content",
                 "fruit_name",
                 "organic",
@@ -559,7 +563,9 @@ class TestLoaderAsync:
                     },
                 ),
             ]
-            saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
+            saver = await PostgreSQLDocumentSaver.create(
+                engine=engine, table_name=table_name
+            )
             await saver.aadd_documents(test_docs)
 
             loader = await PostgreSQLLoader.create(
@@ -575,7 +581,7 @@ class TestLoaderAsync:
                     metadata={},
                 ),
             ]
-            assert (await saver._aload_document_table()).columns.keys() == [
+            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
                 "page_content",
             ]
         finally:
@@ -596,7 +602,9 @@ class TestLoaderAsync:
                     metadata={"fruit_id": 2},
                 ),
             ]
-            saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
+            saver = await PostgreSQLDocumentSaver.create(
+                engine=engine, table_name=table_name
+            )
             loader = await PostgreSQLLoader.create(engine=engine, table_name=table_name)
 
             await saver.aadd_documents(test_docs)
@@ -655,7 +663,9 @@ class TestLoaderAsync:
                     },
                 ),
             ]
-            saver = PostgreSQLDocumentSaver(engine=engine, table_name=table_name)
+            saver = await PostgreSQLDocumentSaver.create(
+                engine=engine, table_name=table_name
+            )
             query = f"SELECT * FROM \"{table_name}\" WHERE fruit_name='Apple';"
             loader = await PostgreSQLLoader.create(engine=engine, query=query)
 
@@ -701,7 +711,7 @@ class TestLoaderAsync:
                 },
             ),
         ]
-        saver = PostgreSQLDocumentSaver(
+        saver = await PostgreSQLDocumentSaver.create(
             engine=engine,
             table_name=table_name,
             content_column=content_column,
@@ -738,7 +748,9 @@ class TestLoaderAsync:
         try:
             sync_engine._run_as_sync(self._cleanup_table(sync_engine))
             sync_engine.init_document_table(table_name)
-            saver = PostgreSQLDocumentSaver(engine=sync_engine, table_name=table_name)
+            saver = PostgreSQLDocumentSaver.create_sync(
+                engine=sync_engine, table_name=table_name
+            )
             test_docs = [
                 Document(
                     page_content="Cavendish 200 0.59 0",
