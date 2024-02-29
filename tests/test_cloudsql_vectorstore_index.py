@@ -21,7 +21,7 @@ import pytest_asyncio
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg import PostgreSQLEngine, PostgresVectorStore
+from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import (
     DEFAULT_INDEX_NAME,
     DistanceStrategy,
@@ -72,7 +72,7 @@ class TestIndex:
 
     @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
-        engine = await PostgreSQLEngine.afrom_instance(
+        engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
             instance=db_instance,
             region=db_region,

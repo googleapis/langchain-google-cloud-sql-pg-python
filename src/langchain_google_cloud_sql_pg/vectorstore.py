@@ -23,7 +23,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
-from .engine import PostgreSQLEngine
+from .engine import PostgresEngine
 from .indexes import (
     DEFAULT_DISTANCE_STRATEGY,
     DEFAULT_INDEX_NAME,
@@ -42,7 +42,7 @@ class PostgresVectorStore(VectorStore):
     def __init__(
         self,
         key,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -78,7 +78,7 @@ class PostgresVectorStore(VectorStore):
     @classmethod
     async def create(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -95,7 +95,7 @@ class PostgresVectorStore(VectorStore):
     ):
         """Constructor for CloudSQLVectorStore.
         Args:
-            engine (PostgreSQLEngine): AsyncEngine with pool connection to the postgres database. Required.
+            engine (PostgresEngine): AsyncEngine with pool connection to the postgres database. Required.
             embedding_service (Embeddings): Text embedding model to use.
             table_name (str): Name of the existing table or the table to be created.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
@@ -175,7 +175,7 @@ class PostgresVectorStore(VectorStore):
     @classmethod
     def create_sync(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -206,7 +206,7 @@ class PostgresVectorStore(VectorStore):
             lambda_mult,
             index_query_options,
         )
-        return engine.run_as_sync(coro)
+        return engine._run_as_sync(coro)
 
     @property
     def embeddings(self) -> Embeddings:
@@ -291,7 +291,9 @@ class PostgresVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        return self.engine.run_as_sync(self.aadd_texts(texts, metadatas, ids, **kwargs))
+        return self.engine._run_as_sync(
+            self.aadd_texts(texts, metadatas, ids, **kwargs)
+        )
 
     def add_documents(
         self,
@@ -299,7 +301,7 @@ class PostgresVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        return self.engine.run_as_sync(self.aadd_documents(documents, ids, **kwargs))
+        return self.engine._run_as_sync(self.aadd_documents(documents, ids, **kwargs))
 
     async def adelete(
         self,
@@ -319,14 +321,14 @@ class PostgresVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
-        return self.engine.run_as_sync(self.adelete(ids, **kwargs))
+        return self.engine._run_as_sync(self.adelete(ids, **kwargs))
 
     @classmethod
     async def afrom_texts(  # type: ignore[override]
         cls: Type[PostgresVectorStore],
         texts: List[str],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         metadatas: Optional[List[dict]] = None,
         ids: Optional[List[str]] = None,
@@ -357,7 +359,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         documents: List[Document],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         ids: Optional[List[str]] = None,
         content_column: str = "content",
@@ -389,7 +391,7 @@ class PostgresVectorStore(VectorStore):
         cls: Type[PostgresVectorStore],
         texts: List[str],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         metadatas: Optional[List[dict]] = None,
         ids: Optional[List[str]] = None,
@@ -416,14 +418,14 @@ class PostgresVectorStore(VectorStore):
             ids=ids,
             **kwargs,
         )
-        return engine.run_as_sync(coro)
+        return engine._run_as_sync(coro)
 
     @classmethod
     def from_documents(  # type: ignore[override]
         cls: Type[PostgresVectorStore],
         documents: List[Document],
         embedding: Embeddings,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         table_name: str,
         ids: Optional[List[str]] = None,
         content_column: str = "content",
@@ -448,7 +450,7 @@ class PostgresVectorStore(VectorStore):
             ids=ids,
             **kwargs,
         )
-        return engine.run_as_sync(coro)
+        return engine._run_as_sync(coro)
 
     async def __query_collection(
         self,
@@ -476,7 +478,7 @@ class PostgresVectorStore(VectorStore):
         filter: Optional[str] = None,
         **kwargs: Any,
     ) -> List[Document]:
-        return self.engine.run_as_sync(
+        return self.engine._run_as_sync(
             self.asimilarity_search(query, k=k, filter=filter, **kwargs)
         )
 
@@ -647,7 +649,7 @@ class PostgresVectorStore(VectorStore):
         **kwargs: Any,
     ) -> List[Tuple[Document, float]]:
         coro = self.asimilarity_search_with_score(query, k, filter=filter, **kwargs)
-        return self.engine.run_as_sync(coro)
+        return self.engine._run_as_sync(coro)
 
     def similarity_search_by_vector(
         self,
@@ -657,7 +659,7 @@ class PostgresVectorStore(VectorStore):
         **kwargs: Any,
     ) -> List[Document]:
         coro = self.asimilarity_search_by_vector(embedding, k, filter=filter, **kwargs)
-        return self.engine.run_as_sync(coro)
+        return self.engine._run_as_sync(coro)
 
     def similarity_search_with_score_by_vector(
         self,
@@ -669,7 +671,7 @@ class PostgresVectorStore(VectorStore):
         coro = self.asimilarity_search_with_score_by_vector(
             embedding, k, filter=filter, **kwargs
         )
-        return self.engine.run_as_sync(coro)
+        return self.engine._run_as_sync(coro)
 
     def max_marginal_relevance_search(
         self,
@@ -688,7 +690,7 @@ class PostgresVectorStore(VectorStore):
             lambda_mult=lambda_mult,
             **kwargs,
         )
-        return self.engine.run_as_sync(coro)
+        return self.engine._run_as_sync(coro)
 
     def max_marginal_relevance_search_by_vector(
         self,
@@ -707,7 +709,7 @@ class PostgresVectorStore(VectorStore):
             lambda_mult=lambda_mult,
             **kwargs,
         )
-        return self.engine.run_as_sync(coro)
+        return self.engine._run_as_sync(coro)
 
     def max_marginal_relevance_search_with_score_by_vector(
         self,
@@ -726,7 +728,7 @@ class PostgresVectorStore(VectorStore):
             lambda_mult=lambda_mult,
             **kwargs,
         )
-        return self.engine.run_as_sync(coro)
+        return self.engine._run_as_sync(coro)
 
     async def aapply_vector_index(
         self,

@@ -29,9 +29,8 @@ from typing import (
 import sqlalchemy
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
-from sqlalchemy import Table
 
-from .engine import PostgreSQLEngine
+from .engine import PostgresEngine
 
 DEFAULT_CONTENT_COL = "page_content"
 DEFAULT_METADATA_COL = "langchain_metadata"
@@ -41,7 +40,7 @@ def text_formatter(row, content_columns) -> str:
     return " ".join(str(row[column]) for column in content_columns if column in row)
 
 
-def cvs_formatter(row, content_columns) -> str:
+def csv_formatter(row, content_columns) -> str:
     return ", ".join(str(row[column]) for column in content_columns if column in row)
 
 
@@ -81,10 +80,10 @@ def _parse_doc_from_row(
 
 
 def _parse_row_from_doc(
-    column_names: Iterable[str],
     doc: Document,
+    column_names: Iterable[str],
     content_column: str = DEFAULT_CONTENT_COL,
-    metadata_json_column: str = DEFAULT_METADATA_COL,
+    metadata_json_column: Optional[str] = DEFAULT_METADATA_COL,
 ) -> Dict:
     doc_metadata = doc.metadata.copy()
     row: Dict[str, Any] = {content_column: doc.page_content}
@@ -93,13 +92,13 @@ def _parse_row_from_doc(
             row[entry] = doc_metadata[entry]
             del doc_metadata[entry]
     # store extra metadata in langchain_metadata column in json format
-    if metadata_json_column in column_names and len(doc_metadata) > 0:
+    if metadata_json_column:
         row[metadata_json_column] = doc_metadata
     return row
 
 
-class PostgreSQLLoader(BaseLoader):
-    """Load documents from Cloud SQL`.
+class PostgresLoader(BaseLoader):
+    """Load documents from PostgreSQL`.
 
     Each document represents one row of the result. The `content_columns` are
     written into the `content_columns`of the document. The `metadata_columns` are written
@@ -112,14 +111,14 @@ class PostgreSQLLoader(BaseLoader):
     def __init__(
         self,
         key,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         query: str,
         content_columns: List[str],
         metadata_columns: List[str],
         formatter: Callable,
         metadata_json_column: Optional[str] = None,
     ) -> None:
-        if key != PostgreSQLLoader.__create_key:
+        if key != PostgresLoader.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
             )
@@ -134,7 +133,7 @@ class PostgreSQLLoader(BaseLoader):
     @classmethod
     async def create(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         query: Optional[str] = None,
         table_name: Optional[str] = None,
         content_columns: Optional[List[str]] = None,
@@ -143,10 +142,10 @@ class PostgreSQLLoader(BaseLoader):
         format: Optional[str] = None,
         formatter: Optional[Callable] = None,
     ):
-        """Constructor for PostgreSQLLoader
+        """Constructor for PostgresLoader
 
         Args:
-            engine (PostgreSQLEngine):AsyncEngine with pool connection to the postgres database
+            engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
             query (Optional[str], optional): SQL query. Defaults to None.
             table_name (Optional[str], optional): Name of table to query. Defaults to None.
             content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
@@ -156,7 +155,7 @@ class PostgreSQLLoader(BaseLoader):
             formatter (Optional[Callable], optional): A function to format page content (OneOf: format, formatter). Defaults to None.
 
         Returns:
-            PostgreSQLLoader
+            PostgresLoader
         """
         if table_name and query:
             raise ValueError("Only one of 'table_name' or 'query' should be specified.")
@@ -167,16 +166,15 @@ class PostgreSQLLoader(BaseLoader):
         if format and formatter:
             raise ValueError("Only one of 'format' or 'formatter' should be specified.")
 
-        if format and format.lower() not in ["csv", "text", "json", "yaml"]:
+        if format and format not in ["csv", "text", "JSON", "YAML"]:
             raise ValueError("format must be type: 'csv', 'text', 'JSON', 'YAML'")
-        format = format.lower() if format else format
         if formatter:
             formatter = formatter
         elif format == "csv":
-            formatter = cvs_formatter
-        elif format == "yaml":
+            formatter = csv_formatter
+        elif format == "YAML":
             formatter = yaml_formatter
-        elif format == "json":
+        elif format == "JSON":
             formatter = json_formatter
         else:
             formatter = text_formatter
@@ -228,7 +226,7 @@ class PostgreSQLLoader(BaseLoader):
     @classmethod
     def create_sync(
         cls,
-        engine: PostgreSQLEngine,
+        engine: PostgresEngine,
         query: Optional[str] = None,
         table_name: Optional[str] = None,
         content_columns: Optional[List[str]] = None,
@@ -247,14 +245,14 @@ class PostgreSQLLoader(BaseLoader):
             format,
             formatter,
         )
-        return engine.run_as_sync(coro)
+        return engine._run_as_sync(coro)
 
     async def _collect_async_items(self, docs_generator):
         return [doc async for doc in docs_generator]
 
     def load(self) -> List[Document]:
         """Load PostgreSQL data into Document objects."""
-        documents = self.engine.run_as_sync(
+        documents = self.engine._run_as_sync(
             self._collect_async_items(self.alazy_load())
         )
         return documents
@@ -265,7 +263,9 @@ class PostgreSQLLoader(BaseLoader):
 
     def lazy_load(self) -> Iterator[Document]:
         """Load PostgreSQL data into Document objects lazily."""
-        yield from self.engine.run_as_sync(self._collect_async_items(self.alazy_load()))
+        yield from self.engine._run_as_sync(
+            self._collect_async_items(self.alazy_load())
+        )
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Load PostgreSQL data into Document objects lazily."""
@@ -296,22 +296,92 @@ class PostgreSQLLoader(BaseLoader):
                 )
 
 
-class PostgreSQLDocumentSaver:
+class PostgresDocumentSaver:
     """A class for saving langchain documents into a PostgreSQL database table."""
+
+    __create_key = object()
 
     def __init__(
         self,
-        engine: PostgreSQLEngine,
+        key,
+        engine: PostgresEngine,
         table_name: str,
-        content_column: str = DEFAULT_CONTENT_COL,
+        content_column: str,
         metadata_columns: List[str] = [],
-        metadata_json_column: str = DEFAULT_METADATA_COL,
+        metadata_json_column: Optional[str] = None,
     ):
+        if key != PostgresDocumentSaver.__create_key:
+            raise Exception(
+                "Only create class through 'create' or 'create_sync' methods!"
+            )
         self.engine = engine
         self.table_name = table_name
         self.content_column = content_column
         self.metadata_columns = metadata_columns
         self.metadata_json_column = metadata_json_column
+
+    @classmethod
+    async def create(
+        cls,
+        engine: PostgresEngine,
+        table_name: str,
+        content_column: str = DEFAULT_CONTENT_COL,
+        metadata_columns: List[str] = [],
+        metadata_json_column: Optional[str] = DEFAULT_METADATA_COL,
+    ):
+        table_schema = await engine._aload_table_schema(table_name)
+        column_names = table_schema.columns.keys()
+        if content_column not in column_names:
+            raise ValueError(f"Content column, {content_column}, does not exist.")
+
+        # Set metadata columns to all columns if not set
+        if len(metadata_columns) == 0:
+            metadata_columns = [
+                column
+                for column in column_names
+                if column != content_column and column != metadata_json_column
+            ]
+
+        # Check and set metadata json column
+        for column in metadata_columns:
+            if column not in column_names:
+                raise ValueError(f"Metadata column, {column}, does not exist.")
+
+        if (
+            metadata_json_column
+            and metadata_json_column != DEFAULT_METADATA_COL
+            and metadata_json_column not in column_names
+        ):
+            raise ValueError(f"Metadata JSON column, {column}, does not exist.")
+        elif metadata_json_column not in column_names:
+            metadata_json_column = None
+
+        return cls(
+            cls.__create_key,
+            engine,
+            table_name,
+            content_column,
+            metadata_columns,
+            metadata_json_column,
+        )
+
+    @classmethod
+    def create_sync(
+        cls,
+        engine: PostgresEngine,
+        table_name: str,
+        content_column: str = DEFAULT_CONTENT_COL,
+        metadata_columns: List[str] = [],
+        metadata_json_column: str = DEFAULT_METADATA_COL,
+    ):
+        coro = cls.create(
+            engine,
+            table_name,
+            content_column,
+            metadata_columns,
+            metadata_json_column,
+        )
+        return engine._run_as_sync(coro)
 
     async def aadd_documents(self, docs: List[Document]) -> None:
         """
@@ -321,12 +391,11 @@ class PostgreSQLDocumentSaver:
         Args:
             docs (List[langchain_core.documents.Document]): a list of documents to be saved.
         """
-        table_schema = await self._aload_document_table()
 
         for doc in docs:
             row = _parse_row_from_doc(
-                table_schema.columns.keys(),
                 doc,
+                self.metadata_columns,
                 self.content_column,
                 self.metadata_json_column,
             )
@@ -334,35 +403,21 @@ class PostgreSQLDocumentSaver:
                 if isinstance(value, dict):
                     row[key] = json.dumps(value)
 
-            columns = (
-                self.metadata_columns
-                if len(self.metadata_columns) > 0
-                else table_schema.columns.keys()
-            )
-            # Filter columns
-            columns_filtered = [
-                column
-                for column in columns
-                if (column != self.content_column)
-                and (column != self.metadata_json_column)
-            ]
             # Create list of column names
             insert_stmt = f'INSERT INTO "{self.table_name}"({self.content_column}'
             values_stmt = f"VALUES (:{self.content_column}"
 
             # Add metadata
-            for metadata_column in columns_filtered:
+            for metadata_column in self.metadata_columns:
                 if metadata_column in doc.metadata:
                     insert_stmt += f", {metadata_column}"
                     values_stmt += f", :{metadata_column}"
 
             # Add JSON column and/or close statement
             insert_stmt += (
-                f", {self.metadata_json_column})"
-                if self.metadata_json_column in table_schema.columns.keys()
-                else ")"
+                f", {self.metadata_json_column})" if self.metadata_json_column else ")"
             )
-            if self.metadata_json_column in table_schema.columns.keys():
+            if self.metadata_json_column:
                 values_stmt += f", :{self.metadata_json_column})"
             else:
                 values_stmt += ")"
@@ -371,7 +426,7 @@ class PostgreSQLDocumentSaver:
             await self.engine._aexecute(query, row)
 
     def add_documents(self, docs: List[Document]) -> None:
-        self.engine.run_as_sync(self.aadd_documents(docs))
+        self.engine._run_as_sync(self.aadd_documents(docs))
 
     async def adelete(self, docs: List[Document]) -> None:
         """
@@ -381,11 +436,10 @@ class PostgreSQLDocumentSaver:
         Args:
             docs (List[langchain_core.documents.Document]): a list of documents to be deleted.
         """
-        table_schema = await self._aload_document_table()
         for doc in docs:
             row = _parse_row_from_doc(
-                table_schema.columns.keys(),
                 doc,
+                self.metadata_columns,
                 self.content_column,
                 self.metadata_json_column,
             )
@@ -412,9 +466,9 @@ class PostgreSQLDocumentSaver:
             await self.engine._aexecute(stmt, values)
 
     def delete(self, docs: List[Document]) -> None:
-        self.engine.run_as_sync(self.adelete(docs))
+        self.engine._run_as_sync(self.adelete(docs))
 
-    async def _aload_document_table(self) -> sqlalchemy.Table:
+    async def _aload_table_schema(self) -> sqlalchemy.Table:
         """
         Load table schema from existing table in PgSQL database.
 
@@ -425,7 +479,7 @@ class PostgreSQLDocumentSaver:
         async with self.engine._engine.connect() as conn:
             await conn.run_sync(metadata.reflect, only=[self.table_name])
 
-        table = Table(self.table_name, metadata)
+        table = sqlalchemy.Table(self.table_name, metadata)
         # Extract the schema information
         schema = []
         for column in table.columns:

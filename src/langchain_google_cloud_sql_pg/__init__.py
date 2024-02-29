@@ -13,19 +13,19 @@
 # limitations under the License.
 
 from . import indexes
-from .chat_message_history import PostgreSQLChatMessageHistory
-from .engine import Column, PostgreSQLEngine
-from .postgresql_loader import PostgreSQLDocumentSaver, PostgreSQLLoader
+from .chat_message_history import PostgresChatMessageHistory
+from .engine import Column, PostgresEngine
+from .postgresql_loader import PostgresDocumentSaver, PostgresLoader
 from .vectorstore import PostgresVectorStore
 from .version import __version__
 
 __all__ = [
     "indexes",
     "PostgresVectorStore",
-    "PostgreSQLChatMessageHistory",
+    "PostgresChatMessageHistory",
     "Column",
-    "PostgreSQLEngine",
-    "PostgreSQLLoader",
-    "PostgreSQLDocumentSaver",
+    "PostgresEngine",
+    "PostgresLoader",
+    "PostgresDocumentSaver",
     "__version__",
 ]

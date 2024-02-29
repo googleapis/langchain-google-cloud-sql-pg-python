@@ -38,11 +38,11 @@ source <your-env>/bin/activate
 Use a vector store to store embedded data and perform vector search.
 
 ```python
-from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
 from langchain.embeddings import VertexAIEmbeddings
 
 
-engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
+engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
 embeddings_service = VertexAIEmbeddings()
 vectorstore = PostgresVectorStore(
     engine,
@@ -58,10 +58,10 @@ See the full [Vector Store][vectorstore] tutorial.
 Use a document loader to load data as LangChain `Document`s.
 
 ```python
-from langchain_google_cloud_sql_pg import PostgreSQLEngine, PostgreSQLLoader
+from langchain_google_cloud_sql_pg import PostgresEngine, PostgresLoader
 
 
-engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
+engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
 loader = PostgresSQLLoader(
     engine,
     table_name="my-table-name"
@@ -76,11 +76,11 @@ See the full [Document Loader][loader] tutorial.
 Use `ChatMessageHistory` to store messages and provide conversation history to LLMs.
 
 ```python
-from langchain_google_cloud_sql_pg import PostgreSQLChatMessageHistory, PostgreSQLEngine
+from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
 
-engine = PostgreSQLEngine.from_instance("region", "my-instance", "my-database")
-history = PostgreSQLChatMessageHistory(
+engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
+history = PostgresChatMessageHistory(
     engine,
     table_name="my-message-store",
     session_id="my-session_id"
