@@ -15,8 +15,10 @@
 name: Lint
 on:
   pull_request:
-    paths:
+    paths: # These paths are the inverse of lint.yml
       - "*.md"
+      - ".kokoro/**"
+      - ".github/**"
 
 jobs:
   lint:
