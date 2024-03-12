@@ -259,9 +259,8 @@ class PostgresEngine:
             "{content_column}" TEXT NOT NULL,
             "{embedding_column}" vector({vector_size}) NOT NULL"""
         for column in metadata_columns:
-            query += f""",\n"{column.name}" {column.data_type}""" + (
-                "NOT NULL" if not column.nullable else ""
-            )
+            nullable = "NOT NULL" if not column.nullable else ""
+            query += f',\n"{column.name}" {column.data_type} {nullable}'
         if store_metadata:
             query += f""",\n"{metadata_json_column}" JSON"""
         query += "\n);"
@@ -333,9 +332,8 @@ class PostgresEngine:
             {content_column} TEXT NOT NULL
             """
         for column in metadata_columns:
-            query += f',\n"{column.name}" {column.data_type}' + (
-                "NOT NULL" if not column.nullable else ""
-            )
+            nullable = "NOT NULL" if not column.nullable else ""
+            query += f',\n"{column.name}" {column.data_type} {nullable}'
         metadata_json_column = metadata_json_column or "langchain_metadata"
         if store_metadata:
             query += f',\n"{metadata_json_column}" JSON'
