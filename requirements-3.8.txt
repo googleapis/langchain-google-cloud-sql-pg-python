@@ -1,0 +1,6 @@
+google-cloud-alloydb-connector[asyncpg]==0.4.0
+langchain-core==0.1.25
+langchain-community==0.0.21
+numpy==1.24.4
+pgvector==0.2.5
+SQLAlchemy==2.0.25
