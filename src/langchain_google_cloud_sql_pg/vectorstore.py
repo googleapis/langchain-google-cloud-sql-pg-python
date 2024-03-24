@@ -93,7 +93,7 @@ class PostgresVectorStore(VectorStore):
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
     ):
-        """Constructor for CloudSQLVectorStore.
+        """Constructor for PostgresVectorStore.
         Args:
             engine (PostgresEngine): AsyncEngine with pool connection to the postgres database. Required.
             embedding_service (Embeddings): Text embedding model to use.
