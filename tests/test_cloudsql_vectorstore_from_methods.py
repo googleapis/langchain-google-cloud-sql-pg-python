@@ -36,7 +36,7 @@ docs = [
     Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
 ]
 
-embeddings = [embeddings_service.embed_query("foo") for i in range(len(texts))]
+embeddings = [embeddings_service.embed_query(texts[i]) for i in range(len(texts))]
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -62,7 +62,7 @@ class TestVectorStoreFromMethods:
 
     @pytest.fixture(scope="module")
     def db_name(self) -> str:
-        return get_env_var("DATABASE_ID", "instance for cloud sql")
+        return get_env_var("DATABASE_ID", "database name on cloud sql instance")
 
     @pytest_asyncio.fixture
     async def engine(self, db_project, db_region, db_instance, db_name):
@@ -175,8 +175,6 @@ class TestVectorStoreFromMethods:
         assert results[0]["myembedding"]
         assert results[0]["page"] is None
         assert results[0]["source"] is None
-
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
 
     async def test_afrom_docs_custom(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
