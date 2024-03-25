@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.2.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.1.0...v0.2.0) (2024-03-25)
+
+
+### Features
+
+* **ci:** Test against multiple versions ([#86](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/86)) ([a3f410d](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/a3f410d1bfda87aa3904d153140937c8e2a415f2))
+
+
+### Bug Fixes
+
+* Sql statement for non-nullable column ([#85](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/85)) ([e143e14](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/e143e14cc8ea12399be81c49f579a6c9872119ea))
+
+
+### Documentation
+
+* Add check for database ([#79](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/79)) ([4959ceb](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/4959ceb78aae27c8b5d48168ec096b8cd01b6e82))
+* Add github links ([#84](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/84)) ([864f642](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/864f642c19b3409acffaea7c6479791b12dd059c))
+* Update langchain_quick_start.ipynb ([#81](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/81)) ([5e79043](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/5e790436073b8c6e37be905a6215dc9ea5602adc))
+* Update quickstart ([#76](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/76)) ([37b4380](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/37b4380871f50dc30274539d0f8a65664d023d35))
+
 ## 0.1.0 (2024-02-28)
 
 
