@@ -176,8 +176,6 @@ class TestVectorStoreFromMethods:
         assert results[0]["page"] is None
         assert results[0]["source"] is None
 
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
-
     async def test_afrom_docs_custom(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         docs = [
