@@ -249,6 +249,26 @@ class PostgresEngine:
         overwrite_existing: bool = False,
         store_metadata: bool = True,
     ) -> None:
+        """
+        Create a table for saving of vectors to be used with PostgresVectorStore.
+
+        Args:
+            table_name (str): The Postgres database table name.
+            vector_size (int): Vector size for the embedding model to be used.
+            content_column (str): Name of the column to store document content.
+                Default: "page_content".
+            embedding_column (str) : Name of the column to store vector embeddings.
+                Default: "embedding".
+            metadata_columns (List[Column]): A list of Columns to create for custom
+                metadata. Default: []. Optional.
+            metadata_json_column (str): The column to store extra metadata in JSON format.
+                Default: "langchain_metadata". Optional.
+            id_column (str):  Name of the column to store ids.
+                Default: "langchain_id". Optional,
+            overwrite_existing (bool): Whether to drop existing table. Default: False.
+            store_metadata (bool): Whether to store metadata in the table.
+                Default: True.
+        """
         await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
 
         if overwrite_existing:
