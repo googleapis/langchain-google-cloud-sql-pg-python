@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.2.0...v0.2.1) (2024-03-27)
+
+
+### Bug Fixes
+
+* Allow special characters in table name for vector store delete  ([#100](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/100)) ([7fc1c63](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/7fc1c635eee51864b70ad1fcfcec515cbf6ebea8))
+
 ## [0.2.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.1.0...v0.2.0) (2024-03-25)
 
 
