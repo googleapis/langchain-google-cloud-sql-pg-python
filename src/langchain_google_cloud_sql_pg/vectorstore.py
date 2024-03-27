@@ -312,7 +312,7 @@ class PostgresVectorStore(VectorStore):
             return False
 
         id_list = ", ".join([f"'{id}'" for id in ids])
-        query = f"DELETE FROM {self.table_name} WHERE {self.id_column} in ({id_list})"
+        query = f'DELETE FROM "{self.table_name}" WHERE {self.id_column} in ({id_list})'
         await self.engine._aexecute(query)
         return True
 
