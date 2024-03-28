@@ -95,7 +95,7 @@ class PostgresVectorStore(VectorStore):
     ):
         """Constructor for PostgresVectorStore.
         Args:
-            engine (MySQLEngine): Connection pool engine for managing connections to Cloud SQL for MySQL database.
+            engine (PostgresEngine): Connection pool engine for managing connections to Cloud SQL for PostgreSQL database.
             embedding_service (Embeddings): Text embedding model to use.
             table_name (str): Name of an existing table or table to be created.
             content_column (str): Column that represent a Document's page_content. Defaults to "content".
