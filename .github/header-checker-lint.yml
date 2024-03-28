@@ -9,7 +9,6 @@ sourceFileExtensions:
   - "proto"
   - "Dockerfile"
   - "py"
-  - "html"
   - "text"
 ignoreFiles:
   - ".github/release-please.yml"
