@@ -155,14 +155,6 @@ class PostgresEngine:
                 loop=asyncio.get_event_loop(), user_agent=USER_AGENT
             )
 
-        if isinstance(ip_type, str):
-            if ip_type.lower() == "public":
-                ip_type = IPTypes.PUBLIC
-            elif ip_type.lower() == "private":
-                ip_type = IPTypes.PRIVATE
-            else:
-                raise ValueError("ip_type is not one of: public, private.")
-
         # if user and password are given, use basic auth
         if user and password:
             enable_iam_auth = False
