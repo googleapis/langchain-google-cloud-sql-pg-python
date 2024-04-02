@@ -8,6 +8,7 @@ requires-python = ">=3.8"
 authors = [
     {name = "Google LLC", email = "googleapis-packages@google.com"}
 ]
+
 dependencies = [
     "cloud-sql-python-connector[asyncpg] >= 1.7.0, <2.0.0",
     "langchain-core>=0.1.1, <2.0.0 ",
@@ -15,6 +16,18 @@ dependencies = [
     "numpy>=1.24.4, <2.0.0",
     "pgvector>=0.2.5, <1.0.0",
     "SQLAlchemy>=2.0.25, <3.0.0"
+]
+
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 [tool.setuptools.dynamic]
@@ -48,3 +61,7 @@ profile = "black"
 [tool.mypy]
 python_version = 3.8
 warn_unused_configs = true
+exclude = [
+    'docs/*',
+    'noxfile.py'
+]
