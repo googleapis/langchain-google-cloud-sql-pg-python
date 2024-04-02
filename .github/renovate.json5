@@ -6,7 +6,6 @@
     "group:allNonMajor", // https://docs.renovatebot.com/presets-group/#groupallnonmajor
     ":separateMajorReleases", // https://docs.renovatebot.com/presets-default/#separatemajorreleases
     ":prConcurrentLimitNone", // View complete backlog as PRs. https://docs.renovatebot.com/presets-default/#prconcurrentlimitnone
-    ":prNotPending", // https://docs.renovatebot.com/presets-default/#prnotpending
     ":prHourlyLimitNone", // https://docs.renovatebot.com/presets-default/#prhourlylimitnone
     ":preserveSemverRanges",
   ],
