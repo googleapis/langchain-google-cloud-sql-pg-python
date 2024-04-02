@@ -78,5 +78,27 @@ Use `gcloud builds triggers import --source=trigger.yaml` create triggers via th
 
 To run Cloud Build tests on GitHub from external contributors, ie RenovateBot, comment: `/gcbrun`.
 
+## Documentation
 
+### LangChain Integration Docs
+
+Google hosts documentation on LangChain's site via the [Google Provider][provider] page and individual integration pages:
+[Vector Stores][vs], [Document Loaders][loaders], and [Memory][memory].
+
+Currently, manual PRs are made to the [Langchain GitHub repo](https://github.com/langchain-ai/langchain).
+
+### API Reference
+
+API docs are templated in the `docs/` directory. See `.kokoro/` for the release pipeline.
+
+To test locally, run: `nox -s`
+
+
+[provider]: https://python.langchain.com/docs/integrations/platforms/google
+[vs]: https://python.langchain.com/docs/integrations/vectorstores
+[memory]: https://python.langchain.com/docs/integrations/memory
+[loaders]: https://python.langchain.com/docs/integrations/document_loaders
 [triggers]: https://console.cloud.google.com/cloud-build/triggers?e=13802955&project=langchain-cloud-sql-testing
+[vectorstore]: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/vector_store.ipynb
+[loader]: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/document_loader.ipynb
+[history]: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/chat_message_history.ipynb
