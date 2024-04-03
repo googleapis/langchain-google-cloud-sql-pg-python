@@ -87,23 +87,22 @@ Vector Store Usage
 
 Use a Vector Store to store embedded data and perform vector search.
 
-.. code:: python
+.. code-block:: python
 
-    from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
-    from langchain.embeddings import VertexAIEmbeddings
+        from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
+        from langchain.embeddings import VertexAIEmbeddings
 
-
-    engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
-    engine.init_vectorstore_table(
-        table_name="my-table",
-        vector_size=768,  # Vector size for `VertexAIEmbeddings()`
-    )
-    embeddings_service = VertexAIEmbeddings()
-    vectorstore = PostgresVectorStore.create_sync(
-        engine,
-        table_name="my-table",
-        embeddings=embedding_service
-    )
+        engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
+        engine.init_vectorstore_table(
+            table_name="my-table",
+            vector_size=768,  # Vector size for `VertexAIEmbeddings()`
+        )
+        embeddings_service = VertexAIEmbeddings()
+        vectorstore = PostgresVectorStore.create_sync(
+            engine,
+            table_name="my-table",
+            embeddings=embedding_service
+        )
 
 See the full `Vector Store`_ tutorial.
 
@@ -114,17 +113,17 @@ Document Loader Usage
 
 Use a document loader to load data as Documents.
 
-.. code:: python
+.. code-block:: python
 
-    from langchain_google_cloud_sql_pg import PostgresEngine, PostgresLoader
+        from langchain_google_cloud_sql_pg import PostgresEngine, PostgresLoader
 
 
-    engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
-    loader = PostgresSQLLoader.create_sync(
-        engine,
-        table_name="my-table-name"
-    )
-    docs = loader.lazy_load()
+        engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
+        loader = PostgresSQLLoader.create_sync(
+            engine,
+            table_name="my-table-name"
+        )
+        docs = loader.lazy_load()
 
 See the full `Document Loader`_ tutorial.
 
@@ -135,18 +134,18 @@ Chat Message History Usage
 
 Use Chat Message History to store messages and provide conversation history to LLMs.
 
-.. code:: python
+.. code-block:: python
 
-    from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
+        from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
 
-    engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
-    engine.init_chat_history_table(table_name="my-message-store")
-    history = PostgresChatMessageHistory.create_sync(
-        engine,
-        table_name="my-message-store",
-        session_id="my-session_id"
-    )
+        engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
+        engine.init_chat_history_table(table_name="my-message-store")
+        history = PostgresChatMessageHistory.create_sync(
+            engine,
+            table_name="my-message-store",
+            session_id="my-session_id"
+        )
 
 See the full `Chat Message History`_ tutorial.
 
