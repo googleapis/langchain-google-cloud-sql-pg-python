@@ -58,7 +58,7 @@ Mac/Linux
     pip install virtualenv
     virtualenv <your-env>
     source <your-env>/bin/activate
-    <your-env>/bin/pip install google-cloud-bigquery
+    <your-env>/bin/pip install langchain-google-cloud-sql-pg
 
 
 Windows
@@ -69,7 +69,7 @@ Windows
     pip install virtualenv
     virtualenv <your-env>
     <your-env>\Scripts\activate
-    <your-env>\Scripts\pip.exe install google-cloud-bigquery
+    <your-env>\Scripts\pip.exe install langchain-google-cloud-sql-pg
 
 
 Example Usage
