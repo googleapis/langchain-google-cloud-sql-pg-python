@@ -19,6 +19,8 @@ from __future__ import absolute_import
 import os
 import pathlib
 import shutil
+from pathlib import Path
+from typing import Optional
 
 import nox
 
@@ -28,6 +30,7 @@ CURRENT_DIRECTORY = pathlib.Path(__file__).parent.absolute()
 # 'docfx' is excluded since it only needs to run in 'docs-presubmit'
 nox.options.sessions = [
     "docs",
+    "docfx",
 ]
 
 # Error if a python version is missing
