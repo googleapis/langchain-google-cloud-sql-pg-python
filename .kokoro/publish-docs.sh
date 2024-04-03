@@ -41,9 +41,9 @@ python3 -m docuploader create-metadata \
   --issue-tracker=$(jq --raw-output '.issue_tracker // empty' .repo-metadata.json)
 
 cat docs.metadata
-echo "${STAGING_BUCKET}"
+
 # upload docs
-python3 -m docuploader upload docs/_build/html --metadata-file docs.metadata --staging-bucket "${STAGING_BUCKET}"
+python3 -m docuploader upload docs/_build/html --metadata-file docs.metadata --staging-bucket "docs-staging"
 
 
 # docfx yaml files
@@ -60,6 +60,6 @@ python3 -m docuploader create-metadata \
   --issue-tracker=$(jq --raw-output '.issue_tracker // empty' .repo-metadata.json)
 
 cat docs.metadata
-echo "${V2_STAGING_BUCKET}"
+
 # upload docs
-python3 -m docuploader upload docs/_build/html/docfx_yaml --metadata-file docs.metadata --destination-prefix docfx --staging-bucket "${V2_STAGING_BUCKET}"
+python3 -m docuploader upload docs/_build/html/docfx_yaml --metadata-file docs.metadata --destination-prefix docfx --staging-bucket "docs-staging-v2-staging"
