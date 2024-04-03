@@ -4,7 +4,6 @@ Cloud SQL for PostgreSQL for LangChain
 |preview| |pypi| |versions|
 
 - `Client Library Documentation`_
-- `How-to Guides`_
 - `Product Documentation`_
 
 .. |preview| image:: https://img.shields.io/badge/support-preview-orange.svg
@@ -14,7 +13,6 @@ Cloud SQL for PostgreSQL for LangChain
 .. |versions| image:: https://img.shields.io/pypi/pyversions/langchain-google-cloud-sql-pg.svg
    :target: https://pypi.org/project/langchain-google-cloud-sql-pg/
 .. _Client Library Documentation: https://github.com/googleapis/langchain-google-cloud-sql-pg-python
-.. _How-to Guides: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples
 .. _Product Documentation: https://cloud.google.com/sql/docs
 
 Quick Start
@@ -92,6 +90,7 @@ Use a Vector Store to store embedded data and perform vector search.
         from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
         from langchain.embeddings import VertexAIEmbeddings
 
+
         engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
         engine.init_vectorstore_table(
             table_name="my-table",
@@ -106,7 +105,7 @@ Use a Vector Store to store embedded data and perform vector search.
 
 See the full `Vector Store`_ tutorial.
 
-.. _`Vector Store`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples/vector_store.ipynb
+.. _`Vector Store`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/vector_store.ipynb
 
 Document Loader Usage
 ~~~~~~~~~~~~~~~~~~~~~
@@ -127,7 +126,7 @@ Use a document loader to load data as Documents.
 
 See the full `Document Loader`_ tutorial.
 
-.. _`Document Loader`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples/document_loader.ipynb
+.. _`Document Loader`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/document_loader.ipynb
 
 Chat Message History Usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -149,7 +148,7 @@ Use Chat Message History to store messages and provide conversation history to L
 
 See the full `Chat Message History`_ tutorial.
 
-.. _`Chat Message History`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples/chat_message_history.ipynb
+.. _`Chat Message History`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/chat_message_history.ipynb
 
 Contributing
 ~~~~~~~~~~~~

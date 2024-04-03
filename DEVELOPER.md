@@ -99,6 +99,6 @@ To test locally, run: `nox -s`
 [memory]: https://python.langchain.com/docs/integrations/memory
 [loaders]: https://python.langchain.com/docs/integrations/document_loaders
 [triggers]: https://console.cloud.google.com/cloud-build/triggers?e=13802955&project=langchain-cloud-sql-testing
-[vectorstore]: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples/vector_store.ipynb
-[loader]: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples/document_loader.ipynb
-[history]: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples/chat_message_history.ipynb
+[vectorstore]: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/vector_store.ipynb
+[loader]: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/document_loader.ipynb
+[history]: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/chat_message_history.ipynb
