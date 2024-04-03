@@ -22,12 +22,12 @@ export PATH="${HOME}/.local/bin:${PATH}"
 
 # Install nox
 python3 -m pip install --require-hashes -r .kokoro/requirements.txt
-python3 -m pip install .
 python3 -m nox --version
 
 # build docs
 nox -s docs
 
+python3 -m pip install .
 VERSION=$(python3 -c "import langchain_google_cloud_sql_pg;print(langchain_google_cloud_sql_pg.__version__)")
 
 # create metadata
