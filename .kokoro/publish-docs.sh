@@ -22,12 +22,12 @@ export PATH="${HOME}/.local/bin:${PATH}"
 
 # Install nox
 python3 -m pip install --require-hashes -r .kokoro/requirements.txt
+python3 -m pip install .
 python3 -m nox --version
 
 # build docs
 nox -s docs
 
-python3 -m pip install .
 VERSION=$(python3 -c "import langchain_google_cloud_sql_pg;print(langchain_google_cloud_sql_pg.__version__)")
 
 # create metadata
@@ -35,13 +35,13 @@ python3 -m docuploader create-metadata \
   --name=$(jq --raw-output '.name // empty' .repo-metadata.json) \
   --version=$VERSION \
   --language=$(jq --raw-output '.language // empty' .repo-metadata.json) \
-  --distribution-name=$(yq -oy '.project.name'  pyproject.toml) \
+  --distribution-name=$(jq --raw-output '.distribution_name // empty' .repo-metadata.json) \
   --product-page=$(jq --raw-output '.product_documentation // empty' .repo-metadata.json) \
   --github-repository=$(jq --raw-output '.repo // empty' .repo-metadata.json) \
   --issue-tracker=$(jq --raw-output '.issue_tracker // empty' .repo-metadata.json)
 
 cat docs.metadata
-
+echo "${STAGING_BUCKET}"
 # upload docs
 python3 -m docuploader upload docs/_build/html --metadata-file docs.metadata --staging-bucket "${STAGING_BUCKET}"
 
@@ -54,12 +54,12 @@ python3 -m docuploader create-metadata \
   --name=$(jq --raw-output '.name // empty' .repo-metadata.json) \
   --version=$VERSION \
   --language=$(jq --raw-output '.language // empty' .repo-metadata.json) \
-  --distribution-name=$(yq -oy '.project.name'  pyproject.toml) \
+  --distribution-name=$(jq --raw-output '.distribution_name // empty' .repo-metadata.json) \
   --product-page=$(jq --raw-output '.product_documentation // empty' .repo-metadata.json) \
   --github-repository=$(jq --raw-output '.repo // empty' .repo-metadata.json) \
   --issue-tracker=$(jq --raw-output '.issue_tracker // empty' .repo-metadata.json)
 
 cat docs.metadata
-
+echo "${V2_STAGING_BUCKET}"
 # upload docs
 python3 -m docuploader upload docs/_build/html/docfx_yaml --metadata-file docs.metadata --destination-prefix docfx --staging-bucket "${V2_STAGING_BUCKET}"
