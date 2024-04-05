@@ -10,6 +10,9 @@
     ":preserveSemverRanges",
   ],
   "ignorePaths": [".kokoro/**"],
+  "pip_requirements": {
+    "fileMatch": ["requirements-3.8.txt"]
+  },
 
   // Give ecosystem time to catch up.
   // npm allows maintainers to unpublish a release up to 3 days later.
