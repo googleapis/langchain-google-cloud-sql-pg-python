@@ -44,23 +44,23 @@ cat docs.metadata
 
 # upload docs
 echo "Uploading docs to ${STAGING_BUCKET}"
-python3 -m docuploader upload docs/_build/html --metadata-file docs.metadata --staging-bucket ${STAGING_BUCKET}
+python3 -m docuploader upload docs/_build/html --metadata-file docs.metadata --staging-bucket "${STAGING_BUCKET}"
 
 
 # docfx yaml files for CGC
-# nox -s docfx
+nox -s docfx
 
-# # create metadata.
-# python3 -m docuploader create-metadata \
-#   --name=$(jq --raw-output '.name // empty' .repo-metadata.json) \
-#   --version=$VERSION \
-#   --language=$(jq --raw-output '.language // empty' .repo-metadata.json) \
-#   --distribution-name=$(jq --raw-output '.distribution_name // empty' .repo-metadata.json) \
-#   --product-page=$(jq --raw-output '.product_documentation // empty' .repo-metadata.json) \
-#   --github-repository=$(jq --raw-output '.repo // empty' .repo-metadata.json) \
-#   --issue-tracker=$(jq --raw-output '.issue_tracker // empty' .repo-metadata.json)
+# create metadata.
+python3 -m docuploader create-metadata \
+  --name=$(jq --raw-output '.name // empty' .repo-metadata.json) \
+  --version=$VERSION \
+  --language=$(jq --raw-output '.language // empty' .repo-metadata.json) \
+  --distribution-name=$(jq --raw-output '.distribution_name // empty' .repo-metadata.json) \
+  --product-page=$(jq --raw-output '.product_documentation // empty' .repo-metadata.json) \
+  --github-repository=$(jq --raw-output '.repo // empty' .repo-metadata.json) \
+  --issue-tracker=$(jq --raw-output '.issue_tracker // empty' .repo-metadata.json)
 
-# cat docs.metadata
+cat docs.metadata
 
-# # upload docs
-# python3 -m docuploader upload docs/_build/html/docfx_yaml --metadata-file docs.metadata --destination-prefix docfx --staging-bucket "${V2_STAGING_BUCKET}"
+# upload docs
+python3 -m docuploader upload docs/_build/html/docfx_yaml --metadata-file docs.metadata --destination-prefix docfx --staging-bucket "${V2_STAGING_BUCKET}"
