@@ -44,7 +44,7 @@ cat docs.metadata
 
 # upload docs
 echo "Uploading docs to ${STAGING_BUCKET}"
-python3 -m docuploader upload docs/_build/html --metadata-file docs.metadata --staging-bucket "${STAGING_BUCKET}"
+# python3 -m docuploader upload docs/_build/html --metadata-file docs.metadata --staging-bucket "${STAGING_BUCKET}"
 
 
 # docfx yaml files for CGC
