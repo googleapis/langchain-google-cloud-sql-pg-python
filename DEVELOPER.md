@@ -89,9 +89,17 @@ Currently, manual PRs are made to the [Langchain GitHub repo](https://github.com
 
 ### API Reference
 
-API docs are templated in the `docs/` directory. See `.kokoro/` for the release pipeline.
+#### Build the documentation
+API docs are templated in the `docs/` directory.
 
-To test locally, run: `nox -s`
+To test locally, run: `nox -s docs`
+
+The nox session, `docs`, is used to create HTML to publish to googleapis.dev
+The nox session, `docfx`, is used to create YAML to publish to CGC.
+
+#### Publish the documentation
+
+The kokoro docs pipeline runs when a new release is created. See `.kokoro/` for the release pipeline.
 
 
 [provider]: https://python.langchain.com/docs/integrations/platforms/google
