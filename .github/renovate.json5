@@ -6,14 +6,10 @@
     "group:allNonMajor", // https://docs.renovatebot.com/presets-group/#groupallnonmajor
     ":separateMajorReleases", // https://docs.renovatebot.com/presets-default/#separatemajorreleases
     ":prConcurrentLimitNone", // View complete backlog as PRs. https://docs.renovatebot.com/presets-default/#prconcurrentlimitnone
-    ":prNotPending", // https://docs.renovatebot.com/presets-default/#prnotpending
     ":prHourlyLimitNone", // https://docs.renovatebot.com/presets-default/#prhourlylimitnone
     ":preserveSemverRanges",
   ],
-
-  // Synchronized with a 2 week sprint cycle and outside business hours.
-  // https://docs.renovatebot.com/configuration-options/#schedule
-  "schedule": ["every 2 weeks on Saturday"],
+  "ignorePaths": [".kokoro/**"], // Dependabot will make security updates
 
   // Give ecosystem time to catch up.
   // npm allows maintainers to unpublish a release up to 3 days later.
