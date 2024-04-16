@@ -9,10 +9,7 @@
     ":prHourlyLimitNone", // https://docs.renovatebot.com/presets-default/#prhourlylimitnone
     ":preserveSemverRanges",
   ],
-  "ignorePaths": [".kokoro/**"],
-  "pip_requirements": {
-    "fileMatch": ["requirements-3.8.txt"]
-  },
+  "ignorePaths": [".kokoro/**"], // Dependabot will make security updates
 
   // Give ecosystem time to catch up.
   // npm allows maintainers to unpublish a release up to 3 days later.
