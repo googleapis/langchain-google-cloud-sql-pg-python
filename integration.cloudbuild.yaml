@@ -15,12 +15,8 @@
 steps:
   - id: Install dependencies
     name: python:${_VERSION}
-    entrypoint: /bin/bash
-    args:
-      - -c
-      - |
-        if [[ $_VERSION == "3.8" ]]; then version="-3.8"; fi
-        pip install --user -r requirements${version}.txt
+    entrypoint: pip
+    args: ["install", "--user", "-r", "requirements.txt"]
 
   - id: Install module (and test requirements)
     name: python:${_VERSION}

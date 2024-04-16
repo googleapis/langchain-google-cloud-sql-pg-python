@@ -60,11 +60,6 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/* \
   && rm -f /var/cache/apt/archives/*.deb
 
-ENV VERSION v4.2.0
-ENV BINARY yq_linux_amd64
-RUN wget https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY} -O /usr/bin/yq && \
-    chmod +x /usr/bin/yq
-
 ###################### Install python 3.9.13
 
 # Download python 3.9.13
@@ -84,5 +79,9 @@ RUN wget -O /tmp/get-pip.py 'https://bootstrap.pypa.io/get-pip.py' \
 
 # Test pip
 RUN python3 -m pip
+
+# Install build requirements
+COPY requirements.txt /requirements.txt
+RUN python3 -m pip install --require-hashes -r requirements.txt
 
 CMD ["python3.8"]

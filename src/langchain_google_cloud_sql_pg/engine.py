@@ -17,12 +17,12 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from threading import Thread
-from typing import TYPE_CHECKING, Awaitable, Dict, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Awaitable, Dict, List, Optional, TypeVar, Union
 
 import aiohttp
 import google.auth  # type: ignore
 import google.auth.transport.requests  # type: ignore
-from google.cloud.sql.connector import Connector
+from google.cloud.sql.connector import Connector, IPTypes
 from sqlalchemy import MetaData, Table, text
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -111,6 +111,7 @@ class PostgresEngine:
         database: str,
         user: Optional[str] = None,
         password: Optional[str] = None,
+        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
     ) -> PostgresEngine:
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
@@ -122,6 +123,7 @@ class PostgresEngine:
             region,
             instance,
             database,
+            ip_type,
             user,
             password,
             loop=loop,
@@ -136,6 +138,7 @@ class PostgresEngine:
         region: str,
         instance: str,
         database: str,
+        ip_type: Union[str, IPTypes],
         user: Optional[str] = None,
         password: Optional[str] = None,
         loop: Optional[asyncio.AbstractEventLoop] = None,
@@ -151,6 +154,7 @@ class PostgresEngine:
             cls._connector = Connector(
                 loop=asyncio.get_event_loop(), user_agent=USER_AGENT
             )
+
         # if user and password are given, use basic auth
         if user and password:
             enable_iam_auth = False
@@ -173,6 +177,7 @@ class PostgresEngine:
                 password=password,
                 db=database,
                 enable_iam_auth=enable_iam_auth,
+                ip_type=ip_type,
             )
             return conn
 
@@ -191,12 +196,14 @@ class PostgresEngine:
         database: str,
         user: Optional[str] = None,
         password: Optional[str] = None,
+        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
     ) -> PostgresEngine:
         return await cls._create(
             project_id,
             region,
             instance,
             database,
+            ip_type,
             user,
             password,
         )

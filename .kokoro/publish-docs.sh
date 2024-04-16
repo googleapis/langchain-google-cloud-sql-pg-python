@@ -27,14 +27,15 @@ python3 -m nox --version
 # build docs
 nox -s docs
 
-VERSION=$(python -c "import langchain_google_cloud_sql_pg;print(langchain_google_cloud_sql_pg.__version__)")
+python3 -m pip install .
+VERSION=$(python3 -c "import langchain_google_cloud_sql_pg;print(langchain_google_cloud_sql_pg.__version__)")
 
 # create metadata
 python3 -m docuploader create-metadata \
   --name=$(jq --raw-output '.name // empty' .repo-metadata.json) \
   --version=$VERSION \
   --language=$(jq --raw-output '.language // empty' .repo-metadata.json) \
-  --distribution-name=$(yq -oy '.project.name'  pyproject.toml) \
+  --distribution-name=$(jq --raw-output '.distribution_name // empty' .repo-metadata.json) \
   --product-page=$(jq --raw-output '.product_documentation // empty' .repo-metadata.json) \
   --github-repository=$(jq --raw-output '.repo // empty' .repo-metadata.json) \
   --issue-tracker=$(jq --raw-output '.issue_tracker // empty' .repo-metadata.json)
@@ -42,10 +43,11 @@ python3 -m docuploader create-metadata \
 cat docs.metadata
 
 # upload docs
+echo "Uploading docs to ${STAGING_BUCKET}"
 python3 -m docuploader upload docs/_build/html --metadata-file docs.metadata --staging-bucket "${STAGING_BUCKET}"
 
 
-# docfx yaml files
+# docfx yaml files for CGC
 nox -s docfx
 
 # create metadata.
@@ -53,7 +55,7 @@ python3 -m docuploader create-metadata \
   --name=$(jq --raw-output '.name // empty' .repo-metadata.json) \
   --version=$VERSION \
   --language=$(jq --raw-output '.language // empty' .repo-metadata.json) \
-  --distribution-name=$(yq -oy '.project.name'  pyproject.toml) \
+  --distribution-name=$(jq --raw-output '.distribution_name // empty' .repo-metadata.json) \
   --product-page=$(jq --raw-output '.product_documentation // empty' .repo-metadata.json) \
   --github-repository=$(jq --raw-output '.repo // empty' .repo-metadata.json) \
   --issue-tracker=$(jq --raw-output '.issue_tracker // empty' .repo-metadata.json)

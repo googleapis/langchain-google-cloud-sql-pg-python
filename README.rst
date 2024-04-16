@@ -4,7 +4,6 @@ Cloud SQL for PostgreSQL for LangChain
 |preview| |pypi| |versions|
 
 - `Client Library Documentation`_
-- `How-to Guides`_
 - `Product Documentation`_
 
 .. |preview| image:: https://img.shields.io/badge/support-preview-orange.svg
@@ -14,7 +13,6 @@ Cloud SQL for PostgreSQL for LangChain
 .. |versions| image:: https://img.shields.io/pypi/pyversions/langchain-google-cloud-sql-pg.svg
    :target: https://pypi.org/project/langchain-google-cloud-sql-pg/
 .. _Client Library Documentation: https://github.com/googleapis/langchain-google-cloud-sql-pg-python
-.. _How-to Guides: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples
 .. _Product Documentation: https://cloud.google.com/sql/docs
 
 Quick Start
@@ -60,7 +58,7 @@ Mac/Linux
     pip install virtualenv
     virtualenv <your-env>
     source <your-env>/bin/activate
-    <your-env>/bin/pip install google-cloud-bigquery
+    <your-env>/bin/pip install langchain-google-cloud-sql-pg
 
 
 Windows
@@ -71,7 +69,7 @@ Windows
     pip install virtualenv
     virtualenv <your-env>
     <your-env>\Scripts\activate
-    <your-env>\Scripts\pip.exe install google-cloud-bigquery
+    <your-env>\Scripts\pip.exe install langchain-google-cloud-sql-pg
 
 
 Example Usage
@@ -87,70 +85,70 @@ Vector Store Usage
 
 Use a Vector Store to store embedded data and perform vector search.
 
-.. code:: python
+.. code-block:: python
 
-    from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
-    from langchain.embeddings import VertexAIEmbeddings
+        from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
+        from langchain.embeddings import VertexAIEmbeddings
 
 
-    engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
-    engine.init_vectorstore_table(
-        table_name="my-table",
-        vector_size=768,  # Vector size for `VertexAIEmbeddings()`
-    )
-    embeddings_service = VertexAIEmbeddings()
-    vectorstore = PostgresVectorStore.create_sync(
-        engine,
-        table_name="my-table",
-        embeddings=embedding_service
-    )
+        engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
+        engine.init_vectorstore_table(
+            table_name="my-table",
+            vector_size=768,  # Vector size for `VertexAIEmbeddings()`
+        )
+        embeddings_service = VertexAIEmbeddings()
+        vectorstore = PostgresVectorStore.create_sync(
+            engine,
+            table_name="my-table",
+            embeddings=embedding_service
+        )
 
 See the full `Vector Store`_ tutorial.
 
-.. _`Vector Store`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples/vector_store.ipynb
+.. _`Vector Store`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/vector_store.ipynb
 
 Document Loader Usage
 ~~~~~~~~~~~~~~~~~~~~~
 
 Use a document loader to load data as Documents.
 
-.. code:: python
+.. code-block:: python
 
-    from langchain_google_cloud_sql_pg import PostgresEngine, PostgresLoader
+        from langchain_google_cloud_sql_pg import PostgresEngine, PostgresLoader
 
 
-    engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
-    loader = PostgresSQLLoader.create_sync(
-        engine,
-        table_name="my-table-name"
-    )
-    docs = loader.lazy_load()
+        engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
+        loader = PostgresSQLLoader.create_sync(
+            engine,
+            table_name="my-table-name"
+        )
+        docs = loader.lazy_load()
 
 See the full `Document Loader`_ tutorial.
 
-.. _`Document Loader`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples/document_loader.ipynb
+.. _`Document Loader`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/document_loader.ipynb
 
 Chat Message History Usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use Chat Message History to store messages and provide conversation history to LLMs.
 
-.. code:: python
+.. code-block:: python
 
-    from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
+        from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
 
-    engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
-    engine.init_chat_history_table(table_name="my-message-store")
-    history = PostgresChatMessageHistory.create_sync(
-        engine,
-        table_name="my-message-store",
-        session_id="my-session_id"
-    )
+        engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
+        engine.init_chat_history_table(table_name="my-message-store")
+        history = PostgresChatMessageHistory.create_sync(
+            engine,
+            table_name="my-message-store",
+            session_id="my-session_id"
+        )
 
 See the full `Chat Message History`_ tutorial.
 
-.. _`Chat Message History`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/samples/chat_message_history.ipynb
+.. _`Chat Message History`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/chat_message_history.ipynb
 
 Contributing
 ~~~~~~~~~~~~

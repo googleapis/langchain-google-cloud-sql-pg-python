@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.3.0...v0.4.0) (2024-04-03)
+
+
+### Features
+
+* Support private ip ([#106](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/106)) ([0b8df1e](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/0b8df1ebd803d5d648396291788f6cede538a042))
+
+
+### Bug Fixes
+
+* API reference doc pipeline ([#108](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/108)) ([6ab1a40](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/6ab1a409193ba49a85879b02f0234990f22c249f))
+
 ## [0.3.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.2.0...v0.3.0) (2024-04-02)
 
 
