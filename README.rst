@@ -12,7 +12,7 @@ Cloud SQL for PostgreSQL for LangChain
    :target: https://pypi.org/project/langchain-google-cloud-sql-pg/
 .. |versions| image:: https://img.shields.io/pypi/pyversions/langchain-google-cloud-sql-pg.svg
    :target: https://pypi.org/project/langchain-google-cloud-sql-pg/
-.. _Client Library Documentation: https://github.com/googleapis/langchain-google-cloud-sql-pg-python
+.. _Client Library Documentation: https://cloud.google.com/python/docs/reference/langchain-google-cloud-sql-pg/latest
 .. _Product Documentation: https://cloud.google.com/sql/docs
 
 Quick Start
