@@ -3,7 +3,8 @@
 API Reference
 -------------
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
+  :titlesonly:
 
   langchain_google_cloud_sql_pg/engine
   langchain_google_cloud_sql_pg/vectorstore
@@ -16,3 +17,8 @@ Changelog
   :maxdepth: 2
 
   changelog
+
+.. toctree::
+  :hidden:
+
+  summary_overview.md
