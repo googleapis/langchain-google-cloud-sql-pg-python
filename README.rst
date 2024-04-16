@@ -53,7 +53,7 @@ Python >= 3.8
 Mac/Linux
 ^^^^^^^^^
 
-.. code:: console
+.. code-block:: console
 
     pip install virtualenv
     virtualenv <your-env>
@@ -64,7 +64,7 @@ Mac/Linux
 Windows
 ^^^^^^^
 
-.. code:: console
+.. code-block:: console
 
     pip install virtualenv
     virtualenv <your-env>
@@ -85,7 +85,7 @@ Vector Store Usage
 
 Use a Vector Store to store embedded data and perform vector search.
 
-.. code::
+.. code-block::
 
         from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
         from langchain.embeddings import VertexAIEmbeddings
@@ -112,7 +112,7 @@ Document Loader Usage
 
 Use a document loader to load data as Documents.
 
-.. code::
+.. code-block::
 
         from langchain_google_cloud_sql_pg import PostgresEngine, PostgresLoader
 
@@ -133,7 +133,7 @@ Chat Message History Usage
 
 Use Chat Message History to store messages and provide conversation history to LLMs.
 
-.. code::
+.. code-block::
 
         from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
