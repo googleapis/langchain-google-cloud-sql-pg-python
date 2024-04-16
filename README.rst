@@ -85,7 +85,7 @@ Vector Store Usage
 
 Use a Vector Store to store embedded data and perform vector search.
 
-.. code-block:: python
+.. code-block::
 
         from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
         from langchain.embeddings import VertexAIEmbeddings
@@ -112,7 +112,7 @@ Document Loader Usage
 
 Use a document loader to load data as Documents.
 
-.. code-block:: python
+.. code-block::
 
         from langchain_google_cloud_sql_pg import PostgresEngine, PostgresLoader
 
@@ -133,7 +133,7 @@ Chat Message History Usage
 
 Use Chat Message History to store messages and provide conversation history to LLMs.
 
-.. code-block:: python
+.. code-block::
 
         from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
@@ -150,8 +150,8 @@ See the full `Chat Message History`_ tutorial.
 
 .. _`Chat Message History`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/chat_message_history.ipynb
 
-Contributing
-~~~~~~~~~~~~
+Contributions
+~~~~~~~~~~~~~
 
 Contributions to this library are always welcome and highly encouraged.
 
