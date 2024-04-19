@@ -44,4 +44,4 @@ permissionRules:
   - team: senseai-eco
     permission: admin
   - team: langchain-csql-pg
-    permission: maintainer
+    permission: push
