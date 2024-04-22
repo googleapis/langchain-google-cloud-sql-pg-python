@@ -18,10 +18,14 @@ import uuid
 import asyncpg  # type: ignore
 import pytest
 import pytest_asyncio
-from google.cloud.sql.connector import Connector, IPTypes
+from google.cloud.sql.connector import (
+    Connector,
+    IPTypes,
+    create_async_connector,
+)
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import VARCHAR
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
 
@@ -79,7 +83,7 @@ class TestEngineAsync:
     async def test_execute(self, engine):
         await engine._aexecute("SELECT 1")
 
-    async def test_init_table(self, engine):
+    async def test_ainit_table(self, engine):
         await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         id = str(uuid.uuid4())
         content = "coffee"
@@ -139,7 +143,7 @@ class TestEngineAsync:
         await engine._aexecute("SELECT 1")
         PostgresEngine._connector = None
 
-    async def test_from_engine(
+    async def test_afrom_engine(
         self,
         db_project,
         db_region,
@@ -167,7 +171,7 @@ class TestEngineAsync:
                 async_creator=getconn,
             )
 
-            engine = PostgresEngine.from_engine(engine)
+            engine = await PostgresEngine.afrom_engine(engine)
             await engine._aexecute("SELECT 1")
 
     async def test_column(self, engine):
@@ -215,11 +219,11 @@ class TestEngineSync:
     async def test_execute(self, engine):
         engine._execute("SELECT 1")
 
-    async def test_init_table(self, engine):
+    def test_init_table(self, engine):
         engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         id = str(uuid.uuid4())
         content = "coffee"
-        embedding = await embeddings_service.aembed_query(content)
+        embedding = embeddings_service.embed_query(content)
         stmt = f"INSERT INTO {DEFAULT_TABLE} (langchain_id, content, embedding) VALUES ('{id}', '{content}','{embedding}');"
         engine._execute(stmt)
 
@@ -253,7 +257,7 @@ class TestEngineSync:
 
         engine._execute(f"DROP TABLE {CUSTOM_TABLE}")
 
-    async def test_password(
+    def test_password(
         self,
         db_project,
         db_region,
@@ -274,3 +278,42 @@ class TestEngineSync:
         assert engine
         engine._execute("SELECT 1")
         PostgresEngine._connector = None
+
+    @pytest.mark.asyncio
+    async def test_from_engine_connector(
+        self,
+        db_project,
+        db_region,
+        db_instance,
+        db_name,
+        user,
+        password,
+    ):
+        async def init_connection_pool(
+            connector: Connector,
+        ) -> AsyncEngine:
+            # initialize Connector object for connections to Cloud SQL
+            async def getconn() -> asyncpg.Connection:
+                conn: asyncpg.Connection = await connector.connect_async(
+                    f"{db_project}:{db_region}:{db_instance}",
+                    "asyncpg",
+                    user=user,
+                    password=password,
+                    db=db_name,
+                )
+                return conn
+
+            pool = create_async_engine(
+                "postgresql+asyncpg://",
+                async_creator=getconn,
+            )
+            return pool
+
+        connector = await create_async_connector()
+
+        # initialize connection pool
+        pool = await init_connection_pool(connector)
+
+        engine = PostgresEngine.from_engine(pool)
+        assert engine
+        engine._execute("SELECT 1")
