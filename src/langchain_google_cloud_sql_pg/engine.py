@@ -213,6 +213,7 @@ class PostgresEngine:
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
         # loop = asyncio.new_event_loop()
+        # loop = asyncio.get_event_loop()
         loop = asyncio.get_running_loop()
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()

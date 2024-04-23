@@ -18,11 +18,7 @@ import uuid
 import asyncpg  # type: ignore
 import pytest
 import pytest_asyncio
-from google.cloud.sql.connector import (
-    Connector,
-    IPTypes,
-    create_async_connector,
-)
+from google.cloud.sql.connector import Connector, IPTypes, create_async_connector
 from langchain_community.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import VARCHAR
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -280,39 +276,19 @@ class TestEngineSync:
         PostgresEngine._connector = None
 
     @pytest.mark.asyncio
-    async def test_from_engine_connector(
+    async def test_from_engine(
         self,
-        db_project,
-        db_region,
-        db_instance,
         db_name,
         user,
         password,
     ):
-        async def init_connection_pool(
-            connector: Connector,
-        ) -> AsyncEngine:
-            # initialize Connector object for connections to Cloud SQL
-            async def getconn() -> asyncpg.Connection:
-                conn: asyncpg.Connection = await connector.connect_async(
-                    f"{db_project}:{db_region}:{db_instance}",
-                    "asyncpg",
-                    user=user,
-                    password=password,
-                    db=db_name,
-                )
-                return conn
+        host = os.getenv("DB_HOST")
+        assert host
+        conn_string = f"postgresql+asyncpg://{user}:{password}@{host}:5432/{db_name}"
 
-            pool = create_async_engine(
-                "postgresql+asyncpg://",
-                async_creator=getconn,
-            )
-            return pool
-
-        connector = await create_async_connector()
-
-        # initialize connection pool
-        pool = await init_connection_pool(connector)
+        pool = create_async_engine(
+            conn_string,
+        )
 
         engine = PostgresEngine.from_engine(pool)
         assert engine
