@@ -209,7 +209,11 @@ class PostgresEngine:
         )
 
     @classmethod
-    async def afrom_engine(cls, engine: AsyncEngine) -> PostgresEngine:
+    def from_engine_sync(cls, engine: AsyncEngine, loop) -> PostgresEngine:
+        return cls(engine, loop, None)
+
+    @classmethod
+    def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
         return cls(engine, None, None)
 
     async def _aexecute(self, query: str, params: Optional[dict] = None):

@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
+from threading import Thread
 
 import asyncpg  # type: ignore
 import pytest
@@ -167,8 +169,47 @@ class TestEngineAsync:
                 async_creator=getconn,
             )
 
-            engine = await PostgresEngine.afrom_engine(engine)
+            engine = PostgresEngine.from_engine(engine)
             await engine._aexecute("SELECT 1")
+
+    async def test_from_engin_sync(
+        self,
+        db_project,
+        db_region,
+        db_instance,
+        db_name,
+        user,
+        password,
+    ):
+        async def init_connection_pool(connector: Connector) -> AsyncEngine:
+            # initialize Connector object for connections to Cloud SQL
+            async def getconn() -> asyncpg.Connection:
+                conn = await connector.connect_async(  # type: ignore
+                    f"{db_project}:{db_region}:{db_instance}",
+                    "asyncpg",
+                    user=user,
+                    password=password,
+                    db=db_name,
+                    enable_iam_auth=False,
+                    ip_type=IPTypes.PUBLIC,
+                )
+                return conn
+
+            pool = create_async_engine(
+                "postgresql+asyncpg://",
+                async_creator=getconn,
+            )
+            return pool
+
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+
+        connector = Connector(loop=loop)
+        coro = init_connection_pool(connector)
+        pool = asyncio.run_coroutine_threadsafe(coro, loop).result()
+        engine = PostgresEngine.from_engine_sync(pool, loop)
+        engine._execute("SELECT 1")
 
     async def test_column(self, engine):
         with pytest.raises(ValueError):
