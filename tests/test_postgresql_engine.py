@@ -141,7 +141,7 @@ class TestEngineAsync:
         await engine._aexecute("SELECT 1")
         PostgresEngine._connector = None
 
-    async def test_afrom_engine(
+    async def test_from_engine(
         self,
         db_project,
         db_region,
@@ -172,7 +172,7 @@ class TestEngineAsync:
             engine = PostgresEngine.from_engine(engine)
             await engine._aexecute("SELECT 1")
 
-    async def test_from_engin_sync(
+    async def test_from_engine_sync(
         self,
         db_project,
         db_region,
