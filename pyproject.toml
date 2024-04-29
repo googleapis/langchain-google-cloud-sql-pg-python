@@ -15,7 +15,7 @@ dependencies = [
     "langchain-community>=0.0.18, <0.1.0",
     "numpy>=1.24.4, <2.0.0",
     "pgvector>=0.2.5, <1.0.0",
-    "SQLAlchemy>=2.0.25, <3.0.0"
+    "SQLAlchemy[asyncio]>=2.0.25, <3.0.0"
 ]
 
 classifiers = [
