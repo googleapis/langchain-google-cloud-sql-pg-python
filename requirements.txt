@@ -4,4 +4,4 @@ langchain-community==0.0.28
 numpy==1.24.4; python_version<='3.8'
 numpy==1.26.4; python_version>'3.8'
 pgvector==0.2.5
-SQLAlchemy==2.0.28
+SQLAlchemy[asyncio]==2.0.28
