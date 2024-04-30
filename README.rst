@@ -85,7 +85,7 @@ Vector Store Usage
 
 Use a Vector Store to store embedded data and perform vector search.
 
-.. code-block::
+.. code-block:: python
 
         from langchain_google_cloud_sql_pg import PostgresVectorstore, PostgresEngine
         from langchain.embeddings import VertexAIEmbeddings
@@ -96,7 +96,7 @@ Use a Vector Store to store embedded data and perform vector search.
             table_name="my-table",
             vector_size=768,  # Vector size for `VertexAIEmbeddings()`
         )
-        embeddings_service = VertexAIEmbeddings()
+        embeddings_service = VertexAIEmbeddings(model_name="textembedding-gecko@003")
         vectorstore = PostgresVectorStore.create_sync(
             engine,
             table_name="my-table",
@@ -112,7 +112,7 @@ Document Loader Usage
 
 Use a document loader to load data as Documents.
 
-.. code-block::
+.. code-block:: python
 
         from langchain_google_cloud_sql_pg import PostgresEngine, PostgresLoader
 
@@ -133,7 +133,7 @@ Chat Message History Usage
 
 Use Chat Message History to store messages and provide conversation history to LLMs.
 
-.. code-block::
+.. code-block:: python
 
         from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
