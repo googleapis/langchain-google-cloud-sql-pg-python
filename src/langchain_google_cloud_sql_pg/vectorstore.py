@@ -461,7 +461,7 @@ class PostgresVectorStore(VectorStore):
         search_function = self.distance_strategy.search_function
 
         filter = f"WHERE {filter}" if filter else ""
-        stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM '{self.table_name}' {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
+        stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM \"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
         if self.index_query_options:
             await self.engine._aexecute(
                 f"SET LOCAL {self.index_query_options.to_string()};"
@@ -742,7 +742,7 @@ class PostgresVectorStore(VectorStore):
         params = "WITH " + index.index_options()
         function = index.distance_strategy.index_function
         name = name or index.name
-        stmt = f"CREATE INDEX {'CONCURRENTLY' if concurrently else ''} {name} ON '{self.table_name}' USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};"
+        stmt = f"CREATE INDEX {'CONCURRENTLY' if concurrently else ''} {name} ON \"{self.table_name}\" USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};"
         if concurrently:
             await self.engine._aexecute_outside_tx(stmt)
         else:
