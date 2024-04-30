@@ -742,7 +742,7 @@ class PostgresVectorStore(VectorStore):
         params = "WITH " + index.index_options()
         function = index.distance_strategy.index_function
         name = name or index.name
-        stmt = f'CREATE INDEX {'CONCURRENTLY' if concurrently else ''} {name} ON "{self.table_name}" USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};'
+        stmt = f'CREATE INDEX {"CONCURRENTLY" if concurrently else ""} {name} ON "{self.table_name}" USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};'
         if concurrently:
             await self.engine._aexecute_outside_tx(stmt)
         else:
