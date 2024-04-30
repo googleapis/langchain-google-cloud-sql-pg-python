@@ -59,7 +59,7 @@ async def _get_iam_principal_email(
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
     if hasattr(credentials, "_service_account_email"):
-        email = credentials._service_account_email
+        return credentials._service_account_email.replace(".gserviceaccount.com", "")
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
