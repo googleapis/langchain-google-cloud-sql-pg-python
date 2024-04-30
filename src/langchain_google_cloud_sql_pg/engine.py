@@ -210,7 +210,9 @@ class PostgresEngine:
 
     @classmethod
     def from_engine(
-        cls, engine: AsyncEngine, loop: Optional[asyncio.AbstractEventLoop]
+        cls,
+        engine: AsyncEngine,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> PostgresEngine:
         return cls(engine, loop, None)
 
