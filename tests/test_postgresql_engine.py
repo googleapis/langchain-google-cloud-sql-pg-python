@@ -208,7 +208,7 @@ class TestEngineAsync:
         connector = Connector(loop=loop)
         coro = init_connection_pool(connector)
         pool = asyncio.run_coroutine_threadsafe(coro, loop).result()
-        engine = PostgresEngine.from_engine_sync(pool, loop)
+        engine = PostgresEngine.from_engine(pool, loop)
         engine._execute("SELECT 1")
 
     async def test_column(self, engine):
