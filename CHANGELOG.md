@@ -5,16 +5,14 @@
 
 ### Bug Fixes
 
-* Doc release pipeline ([#116](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/116)) ([1bc7684](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/1bc76842b88adbd3d7ecca142e2fac54046bd2c7))
 * Missing quote in table name ([#123](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/123)) ([b490c81](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/b490c81ea96abca5a8acff1ca10f6ea8380a8ff1))
-* Readme.rst rendering ([#114](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/114)) ([4790460](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/4790460880093df7d6a69fad0c7125fcd272ac22))
-* Update docs pipeline ([#109](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/109)) ([26c5342](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/26c534221dfb89a190bb1773b32493aae1ddf598))
 * Update required dep to SQLAlchemy[asyncio] ([#121](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/121)) ([d480760](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/d4807603d8573789199f2d277f59ef654e980198))
 
 
 ### Documentation
 
 * Update readme codeblocks ([#124](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/124)) ([1c59d6b](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/1c59d6bf880f2a2755ef5a4f8eab8f7be0b95dc0))
+* Update docs pipeline ([#109](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/109)) ([26c5342](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/26c534221dfb89a190bb1773b32493aae1ddf598))
 
 ## [0.4.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.3.0...v0.4.0) (2024-04-03)
 
