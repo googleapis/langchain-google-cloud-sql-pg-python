@@ -26,7 +26,7 @@ steps:
   - id: Run integration tests
     name: python:${_VERSION}
     entrypoint: python
-    args: ["-m", "pytest"]
+    args: ["-m", "pytest", "--cov=src", "--cov-fail-under=80", "tests"]
     env:
       - "PROJECT_ID=$PROJECT_ID"
       - "INSTANCE_ID=$_INSTANCE_ID"
