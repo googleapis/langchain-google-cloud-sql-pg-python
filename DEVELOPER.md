@@ -83,12 +83,12 @@ Please make sure your code is fully tested. The Cloud Build integration tests ar
 
 Check for code coverage report any Cloud Build integration test log. 
 Here is a breakdown of the report:
-- `Stmts`:  lines of executable code (statements)
+- `Stmts`:  lines of executable code (statements).
 - `Miss`: number of lines not covered by tests.
-- `Branch`: branches of executable code (e.g an if-else clause may count as 1 statement but 2 branches; test for both conditions to have both branches covered)
+- `Branch`: branches of executable code (e.g an if-else clause may count as 1 statement but 2 branches; test for both conditions to have both branches covered).
 - `BrPart`: number of branches not covered by tests.
-- `Cover`: average coverage of files
-- `Missing`: lines that are not covered by tests
+- `Cover`: average coverage of files.
+- `Missing`: lines that are not covered by tests.
 
 ## Documentation
 
