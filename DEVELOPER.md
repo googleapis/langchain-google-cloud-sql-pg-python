@@ -59,7 +59,7 @@ substitutions:
   _VERSION: "3.8"
 ```
 
-Use `gcloud builds triggers import --source=trigger.yaml` create triggers via the command line
+Use `gcloud builds triggers import --source=trigger.yaml` to create triggers via the command line
 
 #### Project Setup
 
@@ -81,7 +81,7 @@ To run Cloud Build tests on GitHub from external contributors, ie RenovateBot, c
 #### Code Coverage
 Please make sure your code is fully tested. The Cloud Build integration tests are run with the `pytest-cov` code coverage plugin. They fail for PRs with a code coverage less than the threshold specified in `.coveragerc`.  If your file is inside the main module and should be ignored by code coverage check, add it to the `omit` section of `.coveragerc`.
 
-Check for code coverage report any Cloud Build integration test log. 
+Check for code coverage report in any Cloud Build integration test log. 
 Here is a breakdown of the report:
 - `Stmts`:  lines of executable code (statements).
 - `Miss`: number of lines not covered by tests.
