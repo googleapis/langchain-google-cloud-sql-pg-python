@@ -11,6 +11,7 @@ sourceFileExtensions:
   - "py"
   - "text"
 ignoreFiles:
+  - ".github/blunderbuss.yml"
   - ".github/release-please.yml"
   - ".github/release-trigger.yml"
   - ".github/header-checker-lint.yml"
