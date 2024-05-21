@@ -1,0 +1,4 @@
+assign_issues:
+  - googleapis/langchain-csql-pg
+assign_prs:
+  - googleapis/langchain-csql-pg
