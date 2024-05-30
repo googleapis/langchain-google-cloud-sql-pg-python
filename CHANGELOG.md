@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.4.1...v0.5.0) (2024-05-30)
+
+
+### Features
+
+* Support LangChain v0.2 ([#133](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/133)) ([4364a04](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/4364a04bece61ab16f29cc37900dd79edc2128e2))
+
+
+### Documentation
+
+* Fix typo in developer.md ([#127](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/127)) ([3ec55df](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/3ec55df8dccef0a71692a1966de1beff7ac268f1))
+
 ## [0.4.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.4.0...v0.4.1) (2024-05-02)
 
 
