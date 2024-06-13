@@ -17,7 +17,15 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from threading import Thread
-from typing import TYPE_CHECKING, Awaitable, Dict, List, Optional, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Awaitable,
+    Dict,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 import aiohttp
 import google.auth  # type: ignore
@@ -59,7 +67,9 @@ async def _get_iam_principal_email(
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
     if hasattr(credentials, "_service_account_email"):
-        return credentials._service_account_email.replace(".gserviceaccount.com", "")
+        return credentials._service_account_email.replace(
+            ".gserviceaccount.com", ""
+        )
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -112,6 +122,7 @@ class PostgresEngine:
         user: Optional[str] = None,
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
+        quota_project: Optional[str] = None,
     ) -> PostgresEngine:
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
@@ -128,6 +139,7 @@ class PostgresEngine:
             password,
             loop=loop,
             thread=thread,
+            quota_project=quota_project,
         )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
@@ -143,6 +155,7 @@ class PostgresEngine:
         password: Optional[str] = None,
         loop: Optional[asyncio.AbstractEventLoop] = None,
         thread: Optional[Thread] = None,
+        quota_project: Optional[str] = None,
     ) -> PostgresEngine:
         if bool(user) ^ bool(password):
             raise ValueError(
@@ -152,7 +165,9 @@ class PostgresEngine:
             )
         if cls._connector is None:
             cls._connector = Connector(
-                loop=asyncio.get_event_loop(), user_agent=USER_AGENT
+                loop=asyncio.get_event_loop(),
+                user_agent=USER_AGENT,
+                quota_project=quota_project,
             )
 
         # if user and password are given, use basic auth
@@ -197,6 +212,7 @@ class PostgresEngine:
         user: Optional[str] = None,
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
+        quota_project: Optional[str] = None,
     ) -> PostgresEngine:
         return await cls._create(
             project_id,
@@ -206,6 +222,7 @@ class PostgresEngine:
             ip_type,
             user,
             password,
+            quota_project=quota_project,
         )
 
     @classmethod
@@ -400,7 +417,9 @@ class PostgresEngine:
             try:
                 await conn.run_sync(metadata.reflect, only=[table_name])
             except InvalidRequestError as e:
-                raise ValueError(f"Table, {table_name}, does not exist: " + str(e))
+                raise ValueError(
+                    f"Table, {table_name}, does not exist: " + str(e)
+                )
 
         table = Table(table_name, metadata)
         # Extract the schema information
