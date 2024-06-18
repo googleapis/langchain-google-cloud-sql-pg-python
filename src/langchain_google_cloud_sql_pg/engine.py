@@ -112,6 +112,7 @@ class PostgresEngine:
         user: Optional[str] = None,
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
+        quota_project: Optional[str] = None,
     ) -> PostgresEngine:
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
@@ -128,6 +129,7 @@ class PostgresEngine:
             password,
             loop=loop,
             thread=thread,
+            quota_project=quota_project,
         )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
@@ -143,6 +145,7 @@ class PostgresEngine:
         password: Optional[str] = None,
         loop: Optional[asyncio.AbstractEventLoop] = None,
         thread: Optional[Thread] = None,
+        quota_project: Optional[str] = None,
     ) -> PostgresEngine:
         if bool(user) ^ bool(password):
             raise ValueError(
@@ -152,7 +155,9 @@ class PostgresEngine:
             )
         if cls._connector is None:
             cls._connector = Connector(
-                loop=asyncio.get_event_loop(), user_agent=USER_AGENT
+                loop=asyncio.get_event_loop(),
+                user_agent=USER_AGENT,
+                quota_project=quota_project,
             )
 
         # if user and password are given, use basic auth
@@ -197,6 +202,7 @@ class PostgresEngine:
         user: Optional[str] = None,
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
+        quota_project: Optional[str] = None,
     ) -> PostgresEngine:
         return await cls._create(
             project_id,
@@ -206,6 +212,7 @@ class PostgresEngine:
             ip_type,
             user,
             password,
+            quota_project=quota_project,
         )
 
     @classmethod

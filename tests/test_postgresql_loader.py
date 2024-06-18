@@ -38,6 +38,7 @@ table_name = "test-table" + str(uuid.uuid4())
 class TestLoaderAsync:
     @pytest_asyncio.fixture
     async def engine(self):
+        PostgresEngine._connector = None
         engine = await PostgresEngine.afrom_instance(
             project_id=project_id,
             instance=instance_id,
@@ -48,6 +49,7 @@ class TestLoaderAsync:
 
     @pytest_asyncio.fixture
     def sync_engine(self):
+        PostgresEngine._connector = None
         engine = PostgresEngine.from_instance(
             project_id=project_id,
             instance=instance_id,
@@ -734,6 +736,7 @@ class TestLoaderAsync:
         assert len(await self._collect_async_items(loader.alazy_load())) == 0
 
     def test_sync_engine(self):
+        PostgresEngine._connector = None
         engine = PostgresEngine.from_instance(
             project_id=project_id,
             instance=instance_id,
