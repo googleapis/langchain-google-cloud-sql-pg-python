@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.5.0...v0.6.0) (2024-06-18)
+
+
+### Features
+
+* Add support for quota project ([#137](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/137)) ([4f950b9](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/4f950b90b53b7e1943744ab95a00cd6b4045a892))
+
 ## [0.5.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.4.1...v0.5.0) (2024-05-30)
 
 
