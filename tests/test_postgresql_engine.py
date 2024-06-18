@@ -270,6 +270,7 @@ class TestEngineSync:
             database=db_name,
             user=user,
             password=password,
+            quota_project=db_project,
         )
         assert engine
         engine._execute("SELECT 1")
