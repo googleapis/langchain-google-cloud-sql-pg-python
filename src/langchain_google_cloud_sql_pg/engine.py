@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Awaitable, Dict, List, Optional, TypeVar, Unio
 import aiohttp
 import google.auth  # type: ignore
 import google.auth.transport.requests  # type: ignore
-from google.cloud.sql.connector import Connector, IPTypes
+from google.cloud.sql.connector import Connector, IPTypes, RefreshStrategy
 from sqlalchemy import MetaData, Table, text
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -158,6 +158,7 @@ class PostgresEngine:
                 loop=asyncio.get_event_loop(),
                 user_agent=USER_AGENT,
                 quota_project=quota_project,
+                refresh_strategy=RefreshStrategy.LAZY,
             )
 
         # if user and password are given, use basic auth
