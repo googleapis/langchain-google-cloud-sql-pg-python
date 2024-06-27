@@ -18,7 +18,7 @@ import uuid
 from langchain_community.document_loaders import CSVLoader
 from langchain_google_vertexai import VertexAIEmbeddings
 
-from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore, Column
+from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
 EMBEDDING_COUNT = 100000
 
