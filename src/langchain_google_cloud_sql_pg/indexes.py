@@ -85,7 +85,7 @@ class HNSWQueryOptions(QueryOptions):
 @dataclass
 class IVFFlatIndex(BaseIndex):
     index_type: str = "ivfflat"
-    lists: int = 1
+    lists: int = 100
 
     def index_options(self) -> str:
         return f"(lists = {self.lists})"
