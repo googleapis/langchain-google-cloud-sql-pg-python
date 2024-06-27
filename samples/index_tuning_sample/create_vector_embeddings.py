@@ -20,16 +20,15 @@ from langchain_google_vertexai import VertexAIEmbeddings
 
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore, Column
 
-# EMBEDDING_COUNT = 100000
-EMBEDDING_COUNT = 100
+EMBEDDING_COUNT = 100000
 
 # Cloud SQL info
-PROJECT_ID = "duwenxin-space"
-REGION = "us-central1"
-INSTANCE_NAME = "ev-recommendation"
-DATABASE_NAME = "postgres"
-USER = "postgres"  # Use your super user `postgres`
-PASSWORD = "postgres"
+PROJECT_ID = ""
+REGION = ""
+INSTANCE_NAME = ""
+DATABASE_NAME = ""
+USER = ""  # Use your super user `postgres`
+PASSWORD = ""
 
 vector_table_name = "wine_reviews_vector"
 
