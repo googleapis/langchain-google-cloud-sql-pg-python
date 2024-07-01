@@ -217,8 +217,12 @@ class PostgresEngine:
         )
 
     @classmethod
-    def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
-        return cls(engine, None, None)
+    def from_engine(
+        cls,
+        engine: AsyncEngine,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+    ) -> PostgresEngine:
+        return cls(engine, loop, None)
 
     async def _aexecute(self, query: str, params: Optional[dict] = None):
         """Execute a SQL query."""
