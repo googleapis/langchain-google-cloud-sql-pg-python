@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.6.0...v0.6.1) (2024-07-01)
+
+
+### Bug Fixes
+
+* Change IVFFlat `lists` default to 100 ([#149](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/149)) ([45854a1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/45854a17929b07653acb641243db695f4cef9c7e))
+* Use lazy refresh for Cloud SQL Connector ([#144](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/144)) ([cbae094](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/cbae09466ac6d7f96dba795316ec758287aaea58))
+
+
+### Documentation
+
+* Update API reference link ([#147](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/147)) ([7ce9f80](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/7ce9f800ac72d3e363d7704d0d65871195bd0bfb))
+
 ## [0.6.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.5.0...v0.6.0) (2024-06-18)
 
 
