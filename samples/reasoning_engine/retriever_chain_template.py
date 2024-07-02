@@ -33,7 +33,6 @@ REGION = os.getenv("REGION") or "us-central1"
 INSTANCE = os.getenv("INSTANCE") or "my-instance"
 DATABASE = os.getenv("DATABASE") or "my_database"
 TABLE_NAME = os.getenv("TABLE_NAME") or "my_test_table"
-CHAT_TABLE_NAME = os.getenv("CHAT_TABLE_NAME") or "my_chat_table"
 USER = os.getenv("DB_USER") or "postgres"
 PASSWORD = os.getenv("DB_PASSWORD") or "password"
 
