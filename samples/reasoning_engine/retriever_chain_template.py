@@ -24,7 +24,8 @@ from vertexai.preview import reasoning_engines  # type: ignore
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 
 # This sample requires a vector store table
-# Create this table using `PostgresEngine` method: init_vectorstore_table()
+# Create this table using `PostgresEngine` method `init_vectorstore_table()`
+# or create and load the table using `create_embeddings.py`
 
 # Replace the following variables with your values
 PROJECT_ID = os.getenv("PROJECT_ID") or "my-project-id"

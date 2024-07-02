@@ -29,8 +29,9 @@ from langchain_google_cloud_sql_pg import (
 )
 
 # This sample requires a vector store table and a chat message table
-# Create these tables using `PostgresEngine` methods: init_vectorstore_table()
-# and init_chat_history_table()
+# Create these tables using `PostgresEngine` methods
+# `init_vectorstore_table()` and `init_chat_history_table()`
+# or create and load the tables using `create_embeddings.py`
 
 # Replace the following variables with your values
 PROJECT_ID = os.getenv("PROJECT_ID") or "my-project-id"

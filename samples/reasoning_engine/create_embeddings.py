@@ -37,7 +37,7 @@ async def create_databases():
         REGION,
         INSTANCE,
         database="postgres",
-        user="postgres",
+        user=USER,
         password=PASSWORD,
     )
     try:
@@ -52,7 +52,7 @@ async def create_vectorstore():
         REGION,
         INSTANCE,
         DATABASE,
-        user="postgres",
+        user=USER,
         password=PASSWORD,
     )
 

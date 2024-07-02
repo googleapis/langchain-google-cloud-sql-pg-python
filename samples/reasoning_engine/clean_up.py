@@ -35,7 +35,7 @@ async def delete_tables():
         REGION,
         INSTANCE,
         database=DATABASE,
-        user="postgres",
+        user=USER,
         password=PASSWORD,
     )
 
