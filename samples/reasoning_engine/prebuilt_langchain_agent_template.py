@@ -53,7 +53,7 @@ def similarity_search(query: str) -> List[Document]:
         # To use IAM authentication, remove user and password and ensure
         # the Reasoning Engine Agent service account is a database user
         # with access to the vector store table
-        user="postgres",
+        user=USER,
         password=PASSWORD,
     )
 
@@ -71,7 +71,7 @@ def similarity_search(query: str) -> List[Document]:
 # Uncomment to test locally
 
 # app = reasoning_engines.LangchainAgent(
-#     model="gemini-1.0-pro",
+#     model="gemini-pro",
 #     tools=[similarity_search],
 #     model_kwargs={
 #         "temperature": 0.1,
@@ -88,7 +88,7 @@ DISPLAY_NAME = os.getenv("DISPLAY_NAME") or "PrebuiltAgent"
 
 remote_app = reasoning_engines.ReasoningEngine.create(
     reasoning_engines.LangchainAgent(
-        model="gemini-1.0-pro",
+        model="gemini-pro",
         tools=[similarity_search],
         model_kwargs={
             "temperature": 0.1,
