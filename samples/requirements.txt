@@ -1,0 +1,4 @@
+google-cloud-aiplatform[reasoningengine,langchain]
+langchain-google-cloud-sql-pg
+langchain-google-vertexai
+langchain
