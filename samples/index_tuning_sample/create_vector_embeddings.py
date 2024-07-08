@@ -69,7 +69,7 @@ async def create_vector_store_table(documents):
         password=PASSWORD,
     )
     print("Successfully connected to Cloud SQL database.")
-    print("Initializaing Vectorstore tables...")
+    print("Initializing VectorStore table...")
     await engine.ainit_vectorstore_table(
         table_name=vector_table_name,
         vector_size=768,
