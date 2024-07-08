@@ -25,19 +25,10 @@ Build and deploy an Agent with RAG tool and Memory | [retriever_agent_with_histo
 1. [Create a database.](https://cloud.google.com/sql/docs/postgres/create-manage-databases)
 1. Create a [vector store table](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/blob/main/docs/vector_store.ipynb) and [chat message history table](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/blob/main/docs/chat_message_history.ipynb).
 1. Grant IAM permissions, `roles/cloudsql.client`, `roles/aiplatform.user`, and `serviceusage.serviceUsageConsumer` to the AI Platform Reasoning Engine Service Agent service account: `service-PROJECT_NUMBER@gcp-sa-aiplatform-re.iam.gserviceaccount.com` to connect to the Cloud SQL instance.
-1. Use `create_embeddings.py` to add data to your vector store.
-1. Open the template and add your project's values:
-    ```
-    PROJECT_ID = os.getenv("PROJECT_ID") or "my-project-id"
-    STAGING_BUCKET = os.getenv("STAGING_BUCKET") or "gs://my-bucket"
-    REGION = os.getenv("REGION") or "us-central1"
-    INSTANCE = os.getenv("INSTANCE") or "my-instance"
-    DATABASE = os.getenv("DATABASE") or "my_database"
-    TABLE_NAME = os.getenv("TABLE_NAME") or "my_test_table"
-    CHAT_TABLE_NAME = os.getenv("CHAT_TABLE_NAME") or "my_chat_table"
-    USER = os.getenv("DB_USER") or "postgres"
-    PASSWORD = os.getenv("DB_PASSWORD") or "password"
-    ```
+1. (Optional) [Add an IAM user or service account to a database instance](https://cloud.google.com/sql/docs/postgres/add-manage-iam-users) and
+[grant database privileges to the IAM user](https://cloud.google.com/sql/docs/postgres/add-manage-iam-users#grant-db-privileges).
+1. Add your project's values to [`config.py`](config.py).
+1. Use [`create_embeddings.py`](create_embeddings.py) to add data to your vector store.
 
 Learn more at [Deploying a RAG Application with Cloud SQL for Postgres with Reasoning Engine on Vertex AI](https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/reasoning-engine/tutorial_cloud_sql_pg_rag_agent.ipynb).
 

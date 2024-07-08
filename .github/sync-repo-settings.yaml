@@ -32,6 +32,7 @@ branchProtectionRules:
       - "pg-integration-test-pr-py310 (langchain-cloud-sql-testing)"
       - "pg-integration-test-pr-py311 (langchain-cloud-sql-testing)"
       - "pg-integration-test-pr-py312 (langchain-cloud-sql-testing)"
+      - "pg-reasoning-engine-integration-test-pr (langchain-cloud-sql-testing) "
       - "conventionalcommits.org"
       - "header-check"
     # - Add required status checks like presubmit tests
