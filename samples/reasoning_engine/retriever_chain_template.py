@@ -15,6 +15,16 @@ import os
 from typing import Optional
 
 import vertexai  # type: ignore
+from config import (
+    DATABASE,
+    INSTANCE,
+    PASSWORD,
+    PROJECT_ID,
+    REGION,
+    STAGING_BUCKET,
+    TABLE_NAME,
+    USER,
+)
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.retrieval import create_retrieval_chain
 from langchain_core.prompts import ChatPromptTemplate
@@ -26,16 +36,6 @@ from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 # This sample requires a vector store table
 # Create this table using `PostgresEngine` method `init_vectorstore_table()`
 # or create and load the table using `create_embeddings.py`
-
-# Replace the following variables with your values
-PROJECT_ID = os.getenv("PROJECT_ID") or "my-project-id"
-STAGING_BUCKET = os.getenv("STAGING_BUCKET") or "gs://my-bucket"
-REGION = os.getenv("REGION") or "us-central1"
-INSTANCE = os.getenv("INSTANCE") or "my-instance"
-DATABASE = os.getenv("DATABASE") or "my_database"
-TABLE_NAME = os.getenv("TABLE_NAME") or "my_test_table"
-USER = os.getenv("DB_USER") or "postgres"
-PASSWORD = os.getenv("DB_PASSWORD") or "password"
 
 
 class PostgresRetriever(reasoning_engines.Queryable):
@@ -162,6 +162,7 @@ remote_app = reasoning_engines.ReasoningEngine.create(
     ],
     display_name=DISPLAY_NAME,
     sys_version="3.11",
+    extra_packages=["config.py"],
 )
 
 print(remote_app.query(input="movies about engineers"))

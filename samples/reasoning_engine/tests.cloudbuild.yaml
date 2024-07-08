@@ -19,19 +19,35 @@ steps:
     dir: samples/reasoning_engine
     args: ["install", "--user", "-r", "requirements.txt"]
 
-  - id: Setup up
-    name: python:${_VERSION}
-    entrypoint: python
+  - id: Set up
+    name: ubuntu
     dir: samples/reasoning_engine
-    args: ["create_embeddings.py"]
+    script: |
+      #!/usr/bin/env bash
+      sed -i "s/my-project-id/${PROJECT_ID}/g" config.py
+      sed -i "s#gs://my-bucket#${STAGING_BUCKET}#g" config.py
+      sed -i "s/us-central1/${REGION}/g" config.py
+      sed -i "s/my-instance/${INSTANCE}/g" config.py
+      sed -i "s/my_database/${DATABASE}/g" config.py
+      sed -i "s/my_test_table/${TABLE_NAME}/g" config.py
+      sed -i "s/my_chat_table/${CHAT_TABLE_NAME}/g" config.py
+      sed -i "s/postgres/${DB_USER}/g" config.py
+      sed -i "s/password/${DB_PASSWORD}/g" config.py
     env:
       - PROJECT_ID=$PROJECT_ID
+      - STAGING_BUCKET=$_STAGING_BUCKET
       - REGION=$_REGION
       - INSTANCE=$_INSTANCE
       - DATABASE=$_DATABASE
       - TABLE_NAME=$_TABLE_NAME
       - CHAT_TABLE_NAME=$_CHAT_TABLE_NAME
     secretEnv: ["DB_USER", "DB_PASSWORD"]
+
+  - id: Upload embeddings
+    name: python:${_VERSION}
+    entrypoint: python
+    dir: samples/reasoning_engine
+    args: ["create_embeddings.py"]
 
   - id: Run integration tests - PrebuiltAgent
     name: python:${_VERSION}
@@ -39,14 +55,7 @@ steps:
     dir: samples/reasoning_engine
     args: ["prebuilt_langchain_agent_template.py"]
     env:
-      - PROJECT_ID=$PROJECT_ID
-      - STAGING_BUCKET=$_STAGING_BUCKET
-      - REGION=$_REGION
-      - INSTANCE=$_INSTANCE
-      - DATABASE=$_DATABASE
-      - TABLE_NAME=$_TABLE_NAME
       - DISPLAY_NAME=$_DISPLAY_NAME
-    secretEnv: ["DB_USER", "DB_PASSWORD"]
 
   - id: Run integration tests - Chain
     name: python:${_VERSION}
@@ -54,14 +63,7 @@ steps:
     dir: samples/reasoning_engine
     args: ["retriever_chain_template.py"]
     env:
-      - PROJECT_ID=$PROJECT_ID
-      - STAGING_BUCKET=$_STAGING_BUCKET
-      - REGION=$_REGION
-      - INSTANCE=$_INSTANCE
-      - DATABASE=$_DATABASE
-      - TABLE_NAME=$_TABLE_NAME
       - DISPLAY_NAME=$_DISPLAY_NAME
-    secretEnv: ["DB_USER", "DB_PASSWORD"]
 
   - id: Run integration tests - Agent
     name: python:${_VERSION}
@@ -69,15 +71,7 @@ steps:
     dir: samples/reasoning_engine
     args: ["retriever_agent_with_history_template.py"]
     env:
-      - PROJECT_ID=$PROJECT_ID
-      - STAGING_BUCKET=$_STAGING_BUCKET
-      - REGION=$_REGION
-      - INSTANCE=$_INSTANCE
-      - DATABASE=$_DATABASE
-      - TABLE_NAME=$_TABLE_NAME
-      - CHAT_TABLE_NAME=$_CHAT_TABLE_NAME
       - DISPLAY_NAME=$_DISPLAY_NAME
-    secretEnv: ["DB_USER", "DB_PASSWORD"]
 
   - id: Clean up
     name: python:${_VERSION}
@@ -85,14 +79,7 @@ steps:
     dir: samples/reasoning_engine
     args: ["clean_up.py"]
     env:
-      - PROJECT_ID=$PROJECT_ID
-      - REGION=$_REGION
-      - INSTANCE=$_INSTANCE
-      - DATABASE=$_DATABASE
-      - TABLE_NAME=$_TABLE_NAME
-      - CHAT_TABLE_NAME=$_CHAT_TABLE_NAME
       - DISPLAY_NAME=$_DISPLAY_NAME
-    secretEnv: ["DB_USER", "DB_PASSWORD"]
 
 availableSecrets:
   secretManager:
@@ -103,6 +90,7 @@ availableSecrets:
 
 options:
   dynamicSubstitutions: true
+  automapSubstitutions: true
 
 substitutions:
   _VERSION: "3.11"

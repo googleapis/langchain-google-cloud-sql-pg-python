@@ -15,20 +15,21 @@ import asyncio
 import os
 import uuid
 
+from config import (
+    CHAT_TABLE_NAME,
+    DATABASE,
+    INSTANCE,
+    PASSWORD,
+    PROJECT_ID,
+    REGION,
+    TABLE_NAME,
+    USER,
+)
 from google.cloud import resourcemanager_v3  # type: ignore
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_google_vertexai import VertexAIEmbeddings
 
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
-
-PROJECT_ID = os.getenv("PROJECT_ID") or "my-project-id"
-REGION = os.getenv("REGION") or "us-central1"
-INSTANCE = os.getenv("INSTANCE") or "my-primary"
-DATABASE = os.getenv("DATABASE") or "my_database"
-TABLE_NAME = os.getenv("TABLE_NAME") or "my_test_table"
-CHAT_TABLE_NAME = os.getenv("CHAT_TABLE_NAME") or "my_chat_table"
-USER = os.getenv("DB_USER") or "postgres"
-PASSWORD = os.getenv("DB_PASSWORD") or "password"
 
 
 async def create_databases():
@@ -40,10 +41,10 @@ async def create_databases():
         user=USER,
         password=PASSWORD,
     )
-    try:
-        await engine._aexecute_outside_tx(f"CREATE DATABASE {DATABASE}")
-    except Exception as e:
-        print(e)
+    await engine._aexecute_outside_tx(f'DROP DATABASE IF EXISTS "{DATABASE}"')
+    await engine._aexecute_outside_tx(f'CREATE DATABASE "{DATABASE}"')
+    await engine._connector.close_async()
+    await engine._engine.dispose()
 
 
 async def create_vectorstore():
@@ -93,6 +94,8 @@ async def create_vectorstore():
 
     ids = [str(uuid.uuid4()) for i in range(len(docs))]
     await vector_store.aadd_documents(docs, ids=ids)
+    await engine._connector.close_async()
+    await engine._engine.dispose()
 
 
 async def main():

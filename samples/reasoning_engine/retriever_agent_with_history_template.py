@@ -15,6 +15,17 @@ import os
 from typing import Optional
 
 import vertexai  # type: ignore
+from config import (
+    CHAT_TABLE_NAME,
+    DATABASE,
+    INSTANCE,
+    PASSWORD,
+    PROJECT_ID,
+    REGION,
+    STAGING_BUCKET,
+    TABLE_NAME,
+    USER,
+)
 from langchain import hub
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.tools.retriever import create_retriever_tool
@@ -32,17 +43,6 @@ from langchain_google_cloud_sql_pg import (
 # Create these tables using `PostgresEngine` methods
 # `init_vectorstore_table()` and `init_chat_history_table()`
 # or create and load the tables using `create_embeddings.py`
-
-# Replace the following variables with your values
-PROJECT_ID = os.getenv("PROJECT_ID") or "my-project-id"
-STAGING_BUCKET = os.getenv("STAGING_BUCKET") or "gs://my-bucket"
-REGION = os.getenv("REGION") or "us-central1"
-INSTANCE = os.getenv("INSTANCE") or "my-instance"
-DATABASE = os.getenv("DATABASE") or "my_database"
-TABLE_NAME = os.getenv("TABLE_NAME") or "my_test_table"
-CHAT_TABLE_NAME = os.getenv("CHAT_TABLE_NAME") or "my_chat_table"
-USER = os.getenv("DB_USER") or "postgres"
-PASSWORD = os.getenv("DB_PASSWORD") or "password"
 
 
 class PostgresAgent(reasoning_engines.Queryable):
@@ -194,6 +194,7 @@ remote_app = reasoning_engines.ReasoningEngine.create(
     ],
     display_name=DISPLAY_NAME,
     sys_version="3.11",
+    extra_packages=["config.py"],
 )
 
 print(remote_app.query(input="movies about engineers", session_id="abc123"))
