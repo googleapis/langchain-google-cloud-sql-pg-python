@@ -66,8 +66,7 @@ PASSWORD = ""
 
 ## Step 5: Generate Embeddings
 
-If you already have vector embeddings ready in your database, you can skip this step.
-Otherwise, create embeddings from the sample dataset `wine_reviews_dataset.csv` by running this command in your sample code directory:
+If you already have vector embeddings ready in your database, you can skip this step and update `vector_table_name` in `create_vector_embeddings.py` with your own table name. Otherwise, create embeddings from the sample dataset `wine_reviews_dataset.csv` by running this command in your sample code directory:
 
 ```bash
 python3 create_vector_embeddings.py
@@ -196,8 +195,7 @@ For HNSW index, there are several parameters that impact search recalls and late
 Our default values for `m` is 16 and `ef_construction` is 64. Modify your code to increase `m` to 64 and `ef_construciton` to 128. This will increase the node number of the graph and improve the index quality, while also increasing the index creation time:
 
     ```python
-    hnsw_index = HNSWIndex(
-            name="hnsw", m=64, ef_construction=128)
+    hnsw_index = HNSWIndex(name="hnsw", m=64, ef_construction=128)
     ```
 
 1. Now let us modify the vector store initialization to add a query parameter `ef_search`, which determines the size of the search candidate list, leading to an increase in recall but also a higher search latency:

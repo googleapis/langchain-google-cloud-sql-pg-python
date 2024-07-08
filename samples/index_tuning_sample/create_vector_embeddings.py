@@ -51,12 +51,12 @@ dataset_columns = [
 ]
 
 
-async def load_csv_documents(dataset_path=DATASET_PATH):
+def load_csv_documents(dataset_path=DATASET_PATH):
     """Loads documents directly from a CSV file using LangChain."""
 
     loader = CSVLoader(file_path=dataset_path)
     documents = loader.load()
-    return documents
+    return documents[0:EMBEDDING_COUNT]
 
 
 async def create_vector_store_table(documents):
@@ -103,13 +103,13 @@ async def create_vector_store_table(documents):
         metadata_columns=dataset_columns,
     )
 
-    ids = [str(uuid.uuid4()) for i in range(EMBEDDING_COUNT)]
+    ids = [str(uuid.uuid4()) for i in range(len(documents))]
     await vector_store.aadd_documents(documents, ids)
     print("Vector table created.")
 
 
 async def main():
-    documents = await load_csv_documents()
+    documents = load_csv_documents()
     await create_vector_store_table(documents)
 
 

@@ -133,9 +133,9 @@ async def knn_search(vector_store):
 
 
 def calculate_recall(base, target):
-    # size of intersection / total number of times
-    base = {doc.metadata["row"] for doc in base}
-    target = {doc.metadata["row"] for doc in target}
+    # size of intersection / total number of results
+    base = {doc.page_content for doc in base}
+    target = {doc.page_content for doc in target}
     return len(base & target) / len(base)
 
 
