@@ -76,6 +76,9 @@ jobs:
       - name: Install module (and test requirements)
         run: pip install -e .[test]
 
+      - name: Install sample requirements
+        run: pip install -r samples/index_tuning_sample/requirements.txt
+
       - name: Run linters
         run: |
           black --check .
