@@ -66,7 +66,7 @@ PASSWORD = ""
 
 ## Step 5: Generate Embeddings
 
-If you already have vector embeddings ready in your database, you can skip this step and update `vector_table_name` in `create_vector_embeddings.py` with your own table name. Otherwise, create embeddings from the sample dataset `wine_reviews_dataset.csv` by running this command in your sample code directory:
+If you already have vector embeddings ready in your database, you can skip this step and update `vector_table_name` in `create_vector_embeddings.py` with your own table name. Otherwise, create embeddings from the sample dataset `wine_reviews_dataset.csv` by running this command in your sample code directory(you may be prompted with a gapic client parallelization issue, which doesn't affect the program running):
 
 ```bash
 python3 create_vector_embeddings.py
