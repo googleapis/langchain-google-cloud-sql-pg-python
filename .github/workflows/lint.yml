@@ -67,14 +67,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install requirements
+      - name: Install Library requirements
         run: pip install -r requirements.txt
+
+      - name: Install Sample requirements
+        run: pip install -r samples/requirements.txt
 
       - name: Install module (and test requirements)
         run: pip install -e .[test]
-
-      - name: Install sample requirements
-        run: pip install -r samples/index_tuning_sample/requirements.txt
 
       - name: Run linters
         run: |

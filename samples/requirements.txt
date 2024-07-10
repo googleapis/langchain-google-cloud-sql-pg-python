@@ -1,0 +1,4 @@
+google-cloud-aiplatform[reasoningengine,langchain]
+langchain-google-vertexai
+langchain
+google-cloud-resource-manager
