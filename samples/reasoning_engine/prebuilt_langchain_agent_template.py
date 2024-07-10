@@ -35,6 +35,8 @@ from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 # Create this table using `PostgresEngine` method `init_vectorstore_table()`
 # or create and load the table using `create_embeddings.py`
 
+engine = None  # Use global variable to share connection pooling
+
 
 def similarity_search(query: str) -> List[Document]:
     """Searches and returns movies.
@@ -45,18 +47,20 @@ def similarity_search(query: str) -> List[Document]:
     Returns:
       List[Document]: A list of Documents
     """
-    engine = PostgresEngine.from_instance(
-        PROJECT_ID,
-        REGION,
-        INSTANCE,
-        DATABASE,
-        quota_project=PROJECT_ID,
-        # To use IAM authentication, remove user and password and ensure
-        # the Reasoning Engine Agent service account is a database user
-        # with access to the vector store table
-        user=USER,
-        password=PASSWORD,
-    )
+    global engine
+    if not engine:  # Reuse connection pool
+        engine = PostgresEngine.from_instance(
+            PROJECT_ID,
+            REGION,
+            INSTANCE,
+            DATABASE,
+            quota_project=PROJECT_ID,
+            # To use IAM authentication, remove user and password and ensure
+            # the Reasoning Engine Agent service account is a database user
+            # with access to the vector store table
+            user=USER,
+            password=PASSWORD,
+        )
 
     vector_store = PostgresVectorStore.create_sync(
         engine,
