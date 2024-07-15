@@ -16,7 +16,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Iterable, List, Optional, Tuple, Type, Union
+import uuid
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from langchain_core.documents import Document
@@ -219,7 +220,7 @@ class PostgresVectorStore(VectorStore):
         **kwargs: Any,
     ) -> List[str]:
         if not ids:
-            ids = ["NULL" for _ in texts]
+            ids = [str(uuid.uuid4()) for _ in texts]
         if not metadatas:
             metadatas = [{} for _ in texts]
         # Insert embeddings
