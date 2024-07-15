@@ -173,6 +173,8 @@ class TestEngineAsync:
     async def test_column(self, engine):
         with pytest.raises(ValueError):
             Column("test", VARCHAR)
+        with pytest.raises(ValueError):
+            Column(1, "INTEGER")
 
 
 @pytest.mark.asyncio
@@ -275,3 +277,11 @@ class TestEngineSync:
         assert engine
         engine._execute("SELECT 1")
         PostgresEngine._connector = None
+
+    async def test_engine_constructor_key(
+        self,
+        engine,
+    ):
+        key = object()
+        with pytest.raises(Exception):
+            PostgresEngine(key, engine)
