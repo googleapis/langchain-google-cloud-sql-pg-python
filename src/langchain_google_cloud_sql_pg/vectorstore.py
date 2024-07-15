@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Iterable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
 
 import numpy as np
 from langchain_core.documents import Document
@@ -55,6 +55,7 @@ class PostgresVectorStore(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
+        relevance_score_fn: Optional[Callable[[float], float]] = None,
     ):
         if key != PostgresVectorStore.__create_key:
             raise Exception(
@@ -74,6 +75,7 @@ class PostgresVectorStore(VectorStore):
         self.fetch_k = fetch_k
         self.lambda_mult = lambda_mult
         self.index_query_options = index_query_options
+        self.relevance_score_fn = relevance_score_fn
 
     @classmethod
     async def create(
@@ -92,6 +94,7 @@ class PostgresVectorStore(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
+        relevance_score_fn: Optional[Callable[[float], float]] = None,
     ):
         """Constructor for PostgresVectorStore.
         Args:
@@ -104,6 +107,7 @@ class PostgresVectorStore(VectorStore):
             ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            relevance_score_fn (Callable): custom function to overrides default relevance score calculation functions.
         """
         if metadata_columns and ignore_metadata_columns:
             raise ValueError(
@@ -168,6 +172,7 @@ class PostgresVectorStore(VectorStore):
             fetch_k,
             lambda_mult,
             index_query_options,
+            relevance_score_fn,
         )
 
     @classmethod
@@ -187,6 +192,7 @@ class PostgresVectorStore(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
+        relevance_score_fn: Optional[Callable[[float], float]] = None,
     ):
         coro = cls.create(
             engine,
@@ -203,6 +209,7 @@ class PostgresVectorStore(VectorStore):
             fetch_k,
             lambda_mult,
             index_query_options,
+            relevance_score_fn,
         )
         return engine._run_as_sync(coro)
 
@@ -455,6 +462,7 @@ class PostgresVectorStore(VectorStore):
         embedding: List[float],
         k: Optional[int] = None,
         filter: Optional[str] = None,
+        **kwargs: Any,
     ) -> List[Any]:
         k = k if k else self.k
         operator = self.distance_strategy.operator
@@ -492,6 +500,22 @@ class PostgresVectorStore(VectorStore):
         return await self.asimilarity_search_by_vector(
             embedding=embedding, k=k, filter=filter, **kwargs
         )
+
+    def _select_relevance_score_fn(self) -> Callable[[float], float]:
+        """
+        Select a relevance function based on distance strategy
+        """
+        if self.relevance_score_fn is not None:
+            return self.relevance_score_fn
+
+        # Calculate distance strategy provided in
+        # vectorstore constructor
+        if self.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
+            return self._cosine_relevance_score_fn
+        if self.distance_strategy == DistanceStrategy.INNER_PRODUCT:
+            return self._max_inner_product_relevance_score_fn
+        elif self.distance_strategy == DistanceStrategy.EUCLIDEAN:
+            return self._euclidean_relevance_score_fn
 
     async def asimilarity_search_with_score(
         self,
