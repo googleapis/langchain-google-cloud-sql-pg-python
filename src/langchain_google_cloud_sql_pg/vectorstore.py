@@ -456,6 +456,7 @@ class PostgresVectorStore(VectorStore):
         embedding: List[float],
         k: Optional[int] = None,
         filter: Optional[str] = None,
+        **kwargs: Any,
     ) -> List[Any]:
         k = k if k else self.k
         operator = self.distance_strategy.operator
@@ -493,6 +494,19 @@ class PostgresVectorStore(VectorStore):
         return await self.asimilarity_search_by_vector(
             embedding=embedding, k=k, filter=filter, **kwargs
         )
+
+    def _select_relevance_score_fn(self) -> Callable[[float], float]:
+        """
+        Select a relevance function based on distance strategy
+        """
+        # Calculate distance strategy provided in
+        # vectorstore constructor
+        if self.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
+            return self._cosine_relevance_score_fn
+        if self.distance_strategy == DistanceStrategy.INNER_PRODUCT:
+            return self._max_inner_product_relevance_score_fn
+        elif self.distance_strategy == DistanceStrategy.EUCLIDEAN:
+            return self._euclidean_relevance_score_fn
 
     async def asimilarity_search_with_score(
         self,
