@@ -65,6 +65,10 @@ class TestEngineAsync:
     def password(self) -> str:
         return get_env_var("DB_PASSWORD", "database password for cloud sql")
 
+    @pytest.fixture(scope="module")
+    def iam_account(self) -> str:
+        return get_env_var("IAM_ACCOUNT", "Cloud SQL IAM account email")
+
     @pytest_asyncio.fixture
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
@@ -176,6 +180,25 @@ class TestEngineAsync:
         with pytest.raises(ValueError):
             Column(1, "INTEGER")
 
+    async def test_iam_account_override(
+        db_project,
+        db_instance,
+        db_region,
+        db_name,
+        iam_account,
+    ):
+        engine = await PostgresEngine.afrom_instance(
+            project_id=db_project,
+            instance=db_instance,
+            region=db_region,
+            database=db_name,
+            iam_account_email=iam_account,
+        )
+        assert engine
+        await engine._aexecute("SELECT 1")
+        engine._connector.close()
+        await engine._engine.dispose()
+
 
 @pytest.mark.asyncio
 class TestEngineSync:
@@ -285,3 +308,22 @@ class TestEngineSync:
         key = object()
         with pytest.raises(Exception):
             PostgresEngine(key, engine)
+
+    async def test_iam_account_override(
+        db_project,
+        db_instance,
+        db_region,
+        db_name,
+        iam_account,
+    ):
+        engine = PostgresEngine.from_instance(
+            project_id=db_project,
+            instance=db_instance,
+            region=db_region,
+            database=db_name,
+            iam_account_email=iam_account,
+        )
+        assert engine
+        engine._aexecute("SELECT 1")
+        engine._connector.close()
+        await engine._engine.dispose()
