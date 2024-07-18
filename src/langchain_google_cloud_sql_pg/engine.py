@@ -119,7 +119,7 @@ class PostgresEngine:
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         quota_project: Optional[str] = None,
-        service_account_email: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
@@ -137,7 +137,7 @@ class PostgresEngine:
             loop=loop,
             thread=thread,
             quota_project=quota_project,
-            service_account_email=service_account_email,
+            iam_account_email=iam_account_email,
         )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
@@ -154,7 +154,7 @@ class PostgresEngine:
         loop: Optional[asyncio.AbstractEventLoop] = None,
         thread: Optional[Thread] = None,
         quota_project: Optional[str] = None,
-        service_account_email: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
         if bool(user) ^ bool(password):
             raise ValueError(
@@ -177,8 +177,8 @@ class PostgresEngine:
         # otherwise use automatic IAM database authentication
         else:
             enable_iam_auth = True
-            if service_account_email:
-                db_user = service_account_email
+            if iam_account_email:
+                db_user = iam_account_email
             else:
                 # get application default credentials
                 credentials, _ = google.auth.default(
@@ -216,7 +216,7 @@ class PostgresEngine:
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         quota_project: Optional[str] = None,
-        service_account_email: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
         return await cls._create(
             project_id,
@@ -227,7 +227,7 @@ class PostgresEngine:
             user,
             password,
             quota_project=quota_project,
-            service_account_email=service_account_email,
+            iam_account_email=iam_account_email,
         )
 
     @classmethod
