@@ -26,7 +26,7 @@ from .engine import PostgresEngine
 async def _aget_messages(
     engine: PostgresEngine, session_id: str, table_name: str
 ) -> List[BaseMessage]:
-    """Retrieve the messages from PostgreSQL"""
+    """Retrieve the messages from PostgreSQL."""
     query = f"""SELECT data, type FROM "{table_name}" WHERE session_id = :session_id ORDER BY id;"""
     results = await engine._afetch(query, {"session_id": session_id})
     if not results:
@@ -50,6 +50,18 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         table_name: str,
         messages: List[BaseMessage],
     ):
+        """PostgresChatMessageHistory constructor.
+
+        Args:
+            key (object): Key to prevent direct constructor usage.
+            engine (PostgresEngine): Postgres engine to use.
+            session_id (str): Retrieve the table content with this session ID.
+            table_name (str): Table name that stores the chat message history.
+            messages (List[BaseMessage]): Messages to store.
+
+        Raises:
+            Exception: If constructor is directly called by the user.
+        """
         if key != PostgresChatMessageHistory.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
@@ -66,6 +78,19 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         session_id: str,
         table_name: str,
     ):
+        """Create a new PostgresChatMessageHistory instance.
+
+        Args:
+            engine (PostgresEngine): Postgres engine to use.
+            session_id (str): Retrieve the table content with this session ID.
+            table_name (str): Table name that stores the chat message history.
+
+        Raises:
+            IndexError: If the table provided does not contain required schema.
+
+        Returns:
+            PostgresChatMessageHistory: A newly created instance of PostgresChatMessageHistory.
+        """
         table_schema = await engine._aload_table_schema(table_name)
         column_names = table_schema.columns.keys()
 
@@ -93,6 +118,19 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         session_id: str,
         table_name: str,
     ):
+        """Create a new PostgresChatMessageHistory instance.
+
+        Args:
+            engine (PostgresEngine): Postgres engine to use.
+            session_id (str): Retrieve the table content with this session ID.
+            table_name (str): Table name that stores the chat message history.
+
+        Raises:
+            IndexError: If the table provided does not contain required schema.
+
+        Returns:
+            PostgresChatMessageHistory: A newly created instance of PostgresChatMessageHistory.
+        """
         coro = cls.create(engine, session_id, table_name)
         return engine._run_as_sync(coro)
 
@@ -114,13 +152,16 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         )
 
     def add_message(self, message: BaseMessage) -> None:
+        """Append the message to the record in PostgreSQL"""
         self.engine._run_as_sync(self.aadd_message(message))
 
     async def aadd_messages(self, messages: Sequence[BaseMessage]) -> None:
+        """Append a list of messages to the record in PostgreSQL"""
         for message in messages:
             await self.aadd_message(message)
 
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
+        """Append a list of messages to the record in PostgreSQL"""
         self.engine._run_as_sync(self.aadd_messages(messages))
 
     async def aclear(self) -> None:
@@ -130,12 +171,15 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         self.messages = []
 
     def clear(self) -> None:
+        """Clear session memory from PostgreSQL"""
         self.engine._run_as_sync(self.aclear())
 
     async def async_messages(self) -> None:
+        """Retrieve the messages from Postgres."""
         self.messages = await _aget_messages(
             self.engine, self.session_id, self.table_name
         )
 
     def sync_messages(self) -> None:
+        """Retrieve the messages from Postgres."""
         self.engine._run_as_sync(self.async_messages())
