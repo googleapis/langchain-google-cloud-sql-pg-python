@@ -227,6 +227,10 @@ class TestEngineSync:
     def password(self) -> str:
         return get_env_var("DB_PASSWORD", "database password for cloud sql")
 
+    @pytest.fixture(scope="module")
+    def iam_account(self) -> str:
+        return get_env_var("IAM_ACCOUNT", "Cloud SQL IAM account email")
+
     @pytest_asyncio.fixture
     def engine(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
@@ -311,6 +315,7 @@ class TestEngineSync:
             PostgresEngine(key, engine)
 
     async def test_iam_account_override(
+        self,
         db_project,
         db_instance,
         db_region,
