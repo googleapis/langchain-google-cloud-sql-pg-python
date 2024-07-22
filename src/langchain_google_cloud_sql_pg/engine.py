@@ -433,6 +433,9 @@ class PostgresEngine:
 
         Args:
             table_name (str): Table name to store chat history.
+
+        Returns:
+            None
         """
         create_table_query = f"""CREATE TABLE IF NOT EXISTS "{table_name}"(
             id SERIAL PRIMARY KEY,
@@ -447,6 +450,9 @@ class PostgresEngine:
 
         Args:
             table_name (str): Table name to store chat history.
+
+        Returns:
+            None
         """
         return self._run_as_sync(
             self.ainit_chat_history_table(
