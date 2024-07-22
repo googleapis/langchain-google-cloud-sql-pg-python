@@ -43,7 +43,6 @@ def setup() -> Generator:
     # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
     engine._execute(query)
-    engine._connector.close()
     engine._engine.dispose()
 
 
