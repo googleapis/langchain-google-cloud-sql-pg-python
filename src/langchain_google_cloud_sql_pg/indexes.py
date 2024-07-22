@@ -48,6 +48,7 @@ class BaseIndex(ABC):
 
     @abstractmethod
     def index_options(self) -> str:
+        """Set index query options for vector store initialization."""
         raise NotImplementedError(
             "index_options method must be implemented by subclass"
         )
@@ -65,12 +66,14 @@ class HNSWIndex(BaseIndex):
     ef_construction: int = 64
 
     def index_options(self) -> str:
+        """Set index query options for vector store initialization."""
         return f"(m = {self.m}, ef_construction = {self.ef_construction})"
 
 
 @dataclass
 class QueryOptions(ABC):
     def to_string(self) -> str:
+        """Convert index attributes to string."""
         raise NotImplementedError("to_string method must be implemented by subclass")
 
 
@@ -79,6 +82,7 @@ class HNSWQueryOptions(QueryOptions):
     ef_search: int = 40
 
     def to_string(self):
+        """Convert index attributes to string."""
         return f"hnsw.ef_search = {self.ef_search}"
 
 
@@ -88,6 +92,7 @@ class IVFFlatIndex(BaseIndex):
     lists: int = 100
 
     def index_options(self) -> str:
+        """Set index query options for vector store initialization."""
         return f"(lists = {self.lists})"
 
 
@@ -96,4 +101,5 @@ class IVFFlatQueryOptions(QueryOptions):
     probes: int = 1
 
     def to_string(self):
+        """Convert index attributes to string."""
         return f"ivflfat.probes = {self.probes}"
