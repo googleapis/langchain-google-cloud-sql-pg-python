@@ -74,6 +74,7 @@ class TestEngineAsync:
             database=db_name,
         )
         yield engine
+        await engine._connector.close_async()
         await engine._engine.dispose()
 
     async def test_execute(self, engine):
@@ -138,6 +139,8 @@ class TestEngineAsync:
         assert engine
         await engine._aexecute("SELECT 1")
         PostgresEngine._connector = None
+        await engine._connector.close_async()
+        await engine._engine.dispose()
 
     async def test_from_engine(
         self,
@@ -169,6 +172,7 @@ class TestEngineAsync:
 
             engine = PostgresEngine.from_engine(engine)
             await engine._aexecute("SELECT 1")
+        await engine._engine.dispose()
 
     async def test_column(self, engine):
         with pytest.raises(ValueError):
@@ -212,6 +216,7 @@ class TestEngineSync:
             database=db_name,
         )
         yield engine
+        engine._connector.close()
         engine._engine.dispose()
 
     async def test_execute(self, engine):
@@ -277,6 +282,8 @@ class TestEngineSync:
         assert engine
         engine._execute("SELECT 1")
         PostgresEngine._connector = None
+        await engine._connector.close_async()
+        await engine._engine.dispose()
 
     async def test_engine_constructor_key(
         self,
