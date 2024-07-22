@@ -110,7 +110,7 @@ class PostgresEngine:
 
         Args:
             key(object): Prevent direct constructor usage.
-            engine(AsyncEngine): Async engine to create PostgresEngine from.
+            engine(AsyncEngine): Async engine connection pool.
             loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
             thread (Optional[Thread] = None): Thread used to create the engine async.
 
@@ -294,7 +294,7 @@ class PostgresEngine:
 
     @classmethod
     def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
-        """Create an PostgresEngine instance from engine."""
+        """Create an PostgresEngine instance from an AsyncEngine."""
         return cls(cls.__create_key, engine, None, None)
 
     async def _aexecute(self, query: str, params: Optional[dict] = None):
@@ -429,7 +429,11 @@ class PostgresEngine:
         )
 
     async def ainit_chat_history_table(self, table_name) -> None:
-        """Create a new chat history table."""
+        """Create a Cloud SQL table to store chat history.
+
+        Args:
+            table_name (str): Table name to store chat history.
+        """
         create_table_query = f"""CREATE TABLE IF NOT EXISTS "{table_name}"(
             id SERIAL PRIMARY KEY,
             session_id TEXT NOT NULL,
@@ -439,7 +443,11 @@ class PostgresEngine:
         await self._aexecute(create_table_query)
 
     def init_chat_history_table(self, table_name) -> None:
-        """Create a new chat history table."""
+        """Create a Cloud SQL table to store chat history.
+
+        Args:
+            table_name (str): Table name to store chat history.
+        """
         return self._run_as_sync(
             self.ainit_chat_history_table(
                 table_name,

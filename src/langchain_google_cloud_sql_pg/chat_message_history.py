@@ -54,7 +54,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
 
         Args:
             key (object): Key to prevent direct constructor usage.
-            engine (PostgresEngine): Postgres engine to use.
+            engine (PostgresEngine): Database connection pool.
             session_id (str): Retrieve the table content with this session ID.
             table_name (str): Table name that stores the chat message history.
             messages (List[BaseMessage]): Messages to store.
