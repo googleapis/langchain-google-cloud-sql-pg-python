@@ -36,24 +36,24 @@ DEFAULT_CONTENT_COL = "page_content"
 DEFAULT_METADATA_COL = "langchain_metadata"
 
 
-def text_formatter(row, content_columns) -> str:
+def text_formatter(row: dict, content_columns: List[str]) -> str:
     """txt document formatter."""
     return " ".join(str(row[column]) for column in content_columns if column in row)
 
 
-def csv_formatter(row, content_columns) -> str:
+def csv_formatter(row: dict, content_columns: List[str]) -> str:
     """CSV document formatter."""
     return ", ".join(str(row[column]) for column in content_columns if column in row)
 
 
-def yaml_formatter(row, content_columns) -> str:
+def yaml_formatter(row: dict, content_columns: List[str]) -> str:
     """YAML document formatter."""
     return "\n".join(
         f"{column}: {str(row[column])}" for column in content_columns if column in row
     )
 
 
-def json_formatter(row, content_columns) -> str:
+def json_formatter(row: dict, content_columns: List[str]) -> str:
     """JSON document formatter."""
     dictionary = {}
     for column in content_columns:
@@ -116,7 +116,7 @@ class PostgresLoader(BaseLoader):
 
     def __init__(
         self,
-        key,
+        key: object,
         engine: PostgresEngine,
         query: str,
         content_columns: List[str],
@@ -162,8 +162,8 @@ class PostgresLoader(BaseLoader):
         metadata_json_column: Optional[str] = None,
         format: Optional[str] = None,
         formatter: Optional[Callable] = None,
-    ):
-        """Create a new PostgresLoader instance.
+    ) -> PostgresLoader:
+        """Constructor for PostgresLoader
 
         Args:
             engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
@@ -255,7 +255,7 @@ class PostgresLoader(BaseLoader):
         metadata_json_column: Optional[str] = None,
         format: Optional[str] = None,
         formatter: Optional[Callable] = None,
-    ):
+    ) -> PostgresLoader:
         """Create a new PostgresLoader instance.
 
         Args:
@@ -340,7 +340,7 @@ class PostgresDocumentSaver:
 
     def __init__(
         self,
-        key,
+        key: object,
         engine: PostgresEngine,
         table_name: str,
         content_column: str,
@@ -378,7 +378,7 @@ class PostgresDocumentSaver:
         content_column: str = DEFAULT_CONTENT_COL,
         metadata_columns: List[str] = [],
         metadata_json_column: Optional[str] = DEFAULT_METADATA_COL,
-    ):
+    ) -> PostgresDocumentSaver:
         """Create an PostgresDocumentSaver instance.
 
         Args:
@@ -435,7 +435,7 @@ class PostgresDocumentSaver:
         content_column: str = DEFAULT_CONTENT_COL,
         metadata_columns: List[str] = [],
         metadata_json_column: str = DEFAULT_METADATA_COL,
-    ):
+    ) -> PostgresDocumentSaver:
         """Create an PostgresDocumentSaver instance.
 
         Args:

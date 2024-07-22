@@ -17,7 +17,16 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from threading import Thread
-from typing import TYPE_CHECKING, Awaitable, Dict, List, Optional, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Dict,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 import aiohttp
 import google.auth  # type: ignore
@@ -297,19 +306,19 @@ class PostgresEngine:
         """Create an PostgresEngine instance from an AsyncEngine."""
         return cls(cls.__create_key, engine, None, None)
 
-    async def _aexecute(self, query: str, params: Optional[dict] = None):
+    async def _aexecute(self, query: str, params: Optional[dict] = None) -> None:
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text(query), params)
             await conn.commit()
 
-    async def _aexecute_outside_tx(self, query: str):
+    async def _aexecute_outside_tx(self, query: str) -> None:
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text("COMMIT"))
             await conn.execute(text(query))
 
-    async def _afetch(self, query: str, params: Optional[dict] = None):
+    async def _afetch(self, query: str, params: Optional[dict] = None) -> List[Any]:
         """Fetch results from a SQL query."""
         async with self._engine.connect() as conn:
             result = await conn.execute(text(query), params)
@@ -318,11 +327,11 @@ class PostgresEngine:
 
         return result_fetch
 
-    def _execute(self, query: str, params: Optional[dict] = None):
+    def _execute(self, query: str, params: Optional[dict] = None) -> List[Any]:
         """Execute a SQL query."""
         return self._run_as_sync(self._aexecute(query, params))
 
-    def _fetch(self, query: str, params: Optional[dict] = None):
+    def _fetch(self, query: str, params: Optional[dict] = None) -> List[Any]:
         """Fetch results from a SQL query."""
         return self._run_as_sync(self._afetch(query, params))
 
@@ -428,7 +437,7 @@ class PostgresEngine:
             )
         )
 
-    async def ainit_chat_history_table(self, table_name) -> None:
+    async def ainit_chat_history_table(self, table_name: str) -> None:
         """Create a Cloud SQL table to store chat history.
 
         Args:
@@ -445,7 +454,7 @@ class PostgresEngine:
         );"""
         await self._aexecute(create_table_query)
 
-    def init_chat_history_table(self, table_name) -> None:
+    def init_chat_history_table(self, table_name: str) -> None:
         """Create a Cloud SQL table to store chat history.
 
         Args:

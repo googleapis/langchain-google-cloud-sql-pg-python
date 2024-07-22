@@ -44,7 +44,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
 
     def __init__(
         self,
-        key,
+        key: object,
         engine: PostgresEngine,
         session_id: str,
         table_name: str,

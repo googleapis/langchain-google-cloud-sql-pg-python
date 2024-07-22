@@ -42,7 +42,7 @@ class PostgresVectorStore(VectorStore):
 
     def __init__(
         self,
-        key,
+        key: object,
         engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
@@ -114,7 +114,7 @@ class PostgresVectorStore(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
-    ):
+    ) -> PostgresVectorStore:
         """Create a new PostgresVectorStore instance.
 
         Args:
@@ -218,7 +218,7 @@ class PostgresVectorStore(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
-    ):
+    ) -> PostgresVectorStore:
         """Create a new PostgresVectorStore instance.
 
         Args:
@@ -496,7 +496,7 @@ class PostgresVectorStore(VectorStore):
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         **kwargs: Any,
-    ):
+    ) -> PostgresVectorStore:
         """Create an PostgresVectorStore instance from texts.
         Args:
             texts (List[str]): Texts to add to the vector store.

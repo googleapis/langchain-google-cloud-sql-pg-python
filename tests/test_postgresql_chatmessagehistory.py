@@ -79,14 +79,14 @@ def test_chat_message_history(memory_engine: PostgresEngine) -> None:
     assert len(history.messages) == 0
 
 
-def test_chat_table(memory_engine: Any):
+def test_chat_table(memory_engine: Any) -> None:
     with pytest.raises(ValueError):
         PostgresChatMessageHistory.create_sync(
             engine=memory_engine, session_id="test", table_name="doesnotexist"
         )
 
 
-def test_chat_schema(memory_engine: Any):
+def test_chat_schema(memory_engine: Any) -> None:
     doc_table_name = "test_table" + str(uuid.uuid4())
     memory_engine.init_document_table(table_name=doc_table_name)
     with pytest.raises(IndexError):
