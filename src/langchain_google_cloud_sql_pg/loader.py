@@ -163,7 +163,7 @@ class PostgresLoader(BaseLoader):
         format: Optional[str] = None,
         formatter: Optional[Callable] = None,
     ) -> PostgresLoader:
-        """Constructor for PostgresLoader
+        """Create a new PostgresLoader instance.
 
         Args:
             engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
