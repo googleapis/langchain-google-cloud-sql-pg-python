@@ -197,7 +197,7 @@ class TestEngineAsync:
         )
         assert engine
         await engine._aexecute("SELECT 1")
-        engine._connector.close()
+        await engine._connector.close_async()
         await engine._engine.dispose()
 
 
@@ -314,7 +314,7 @@ class TestEngineSync:
         with pytest.raises(Exception):
             PostgresEngine(key, engine)
 
-    async def test_iam_account_override(
+    def test_iam_account_override(
         self,
         db_project,
         db_instance,
@@ -330,6 +330,6 @@ class TestEngineSync:
             iam_account_email=iam_account,
         )
         assert engine
-        engine._aexecute("SELECT 1")
+        engine._execute("SELECT 1")
         engine._connector.close()
-        await engine._engine.dispose()
+        engine._engine.dispose()
