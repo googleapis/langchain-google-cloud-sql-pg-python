@@ -46,6 +46,8 @@ class TestLoaderAsync:
             database=db_name,
         )
         yield engine
+        await engine._connector.close_async()
+        await engine._engine.dispose()
 
     @pytest_asyncio.fixture
     def sync_engine(self):
@@ -57,6 +59,8 @@ class TestLoaderAsync:
             database=db_name,
         )
         yield engine
+        engine._connector.close()
+        engine._engine.dispose()
 
     async def _collect_async_items(self, docs_generator):
         """Collects items from an async generator."""
@@ -744,6 +748,9 @@ class TestLoaderAsync:
             database=db_name,
         )
         assert engine
+
+        engine._connector.close()
+        engine._engine.dispose()
 
     async def test_load_from_query_default_sync(self, sync_engine):
         try:

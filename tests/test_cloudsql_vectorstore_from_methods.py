@@ -85,6 +85,7 @@ class TestVectorStoreFromMethods:
         yield engine
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await engine._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await engine._connector.close_async()
         await engine._engine.dispose()
 
     @pytest_asyncio.fixture

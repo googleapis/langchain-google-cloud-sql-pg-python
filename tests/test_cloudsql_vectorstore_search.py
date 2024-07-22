@@ -74,6 +74,9 @@ class TestVectorStoreSearch:
         )
         yield engine
 
+        await engine._connector.close_async()
+        await engine._engine.dispose()
+
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await engine.ainit_vectorstore_table(
@@ -99,6 +102,9 @@ class TestVectorStoreSearch:
             database=db_name,
         )
         yield engine
+
+        engine._connector.close()
+        engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine_sync):

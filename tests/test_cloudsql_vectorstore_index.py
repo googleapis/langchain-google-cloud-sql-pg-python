@@ -85,6 +85,9 @@ class TestIndex:
         )
         yield engine
 
+        await engine._connector.close_async()
+        await engine._engine.dispose()
+
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)

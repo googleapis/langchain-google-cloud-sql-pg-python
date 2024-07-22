@@ -43,6 +43,8 @@ def setup() -> Generator:
     # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
     engine._execute(query)
+    engine._connector.close()
+    engine._engine.dispose()
 
 
 @pytest_asyncio.fixture
@@ -58,6 +60,8 @@ async def async_engine():
     # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
     await engine._aexecute(query)
+    await engine._connector.close_async()
+    await engine._engine.dispose()
 
 
 def test_chat_message_history(memory_engine: PostgresEngine) -> None:
