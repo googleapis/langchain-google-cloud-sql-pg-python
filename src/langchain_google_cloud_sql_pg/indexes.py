@@ -30,7 +30,7 @@ class DistanceStrategy(StrategyMixin, enum.Enum):
 
     EUCLIDEAN = "<->", "l2_distance", "vector_l2_ops"
     COSINE_DISTANCE = "<=>", "cosine_distance", "vector_cosine_ops"
-    INNER_PRODUCT = "<#>", "ip_distance", "vector_ip_ops"
+    INNER_PRODUCT = "<#>", "inner_product", "vector_ip_ops"
 
 
 DEFAULT_DISTANCE_STRATEGY = DistanceStrategy.COSINE_DISTANCE
