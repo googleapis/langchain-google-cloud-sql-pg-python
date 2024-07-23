@@ -1,8 +1,7 @@
 # LangChain on Vertex AI RAG Templates
 
-[Reasoning Engine](https://cloud.google.com/vertex-ai/generative-ai/docs/reasoning-engine/overview)
-(LangChain on Vertex AI) is a managed service that helps you to build and deploy
-an agent reasoning framework.
+[LangChain on Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/reasoning-engine/overview)
+is a managed service that helps you to build and deploy LangChain apps to a managed Reasoning Engine runtime.
 
 ## Templates
 
@@ -10,7 +9,7 @@ Use the following templates to deploy Retrieval Augmented Generation (RAG) appli
 
 Description | Sample
 ----------- | ------
-Deploy a pre-built `LangchainAgent` with custom RAG tool | [prebuilt_lanchain_agent.py](prebuilt_lanchain_agent.py)
+Deploy a pre-built `LangchainAgent` with custom RAG tool | [prebuilt_langchain_agent.py](prebuilt_langchain_agent.py)
 Build and deploy a question-answering RAG application | [retriever_chain.py](retriever_chain.p)
 Build and deploy an Agent with RAG tool and Memory | [retriever_agent_with_history.py](retriever_agent_with_history.py)
 
@@ -30,6 +29,6 @@ Build and deploy an Agent with RAG tool and Memory | [retriever_agent_with_histo
 1. Add your project's values to [`config.py`](config.py).
 1. Use [`create_embeddings.py`](create_embeddings.py) to add data to your vector store.
 
-Learn more at [Deploying a RAG Application with Cloud SQL for Postgres with Reasoning Engine on Vertex AI](https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/reasoning-engine/tutorial_cloud_sql_pg_rag_agent.ipynb).
+Learn more at [Deploying a RAG Application with Cloud SQL for Postgres to LangChain on Vertex AI](https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/reasoning-engine/tutorial_cloud_sql_pg_rag_agent.ipynb).
 
 

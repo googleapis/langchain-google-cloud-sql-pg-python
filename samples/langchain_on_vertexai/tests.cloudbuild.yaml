@@ -16,12 +16,12 @@ steps:
   - id: Install dependencies
     name: python:${_VERSION}
     entrypoint: pip
-    dir: samples/reasoning_engine
+    dir: samples/langchain_on_vertexai
     args: ["install", "--user", "-r", "requirements.txt"]
 
   - id: Set up
     name: ubuntu
-    dir: samples/reasoning_engine
+    dir: samples/langchain_on_vertexai
     script: |
       #!/usr/bin/env bash
       sed -i "s/my-project-id/${PROJECT_ID}/g" config.py
@@ -46,13 +46,13 @@ steps:
   - id: Upload embeddings
     name: python:${_VERSION}
     entrypoint: python
-    dir: samples/reasoning_engine
+    dir: samples/langchain_on_vertexai
     args: ["create_embeddings.py"]
 
   - id: Run integration tests - PrebuiltAgent
     name: python:${_VERSION}
     entrypoint: python
-    dir: samples/reasoning_engine
+    dir: samples/langchain_on_vertexai
     args: ["prebuilt_langchain_agent_template.py"]
     env:
       - DISPLAY_NAME=$_DISPLAY_NAME
@@ -60,7 +60,7 @@ steps:
   - id: Run integration tests - Chain
     name: python:${_VERSION}
     entrypoint: python
-    dir: samples/reasoning_engine
+    dir: samples/langchain_on_vertexai
     args: ["retriever_chain_template.py"]
     env:
       - DISPLAY_NAME=$_DISPLAY_NAME
@@ -68,7 +68,7 @@ steps:
   - id: Run integration tests - Agent
     name: python:${_VERSION}
     entrypoint: python
-    dir: samples/reasoning_engine
+    dir: samples/langchain_on_vertexai
     args: ["retriever_agent_with_history_template.py"]
     env:
       - DISPLAY_NAME=$_DISPLAY_NAME
@@ -76,7 +76,7 @@ steps:
   - id: Clean up
     name: python:${_VERSION}
     entrypoint: python
-    dir: samples/reasoning_engine
+    dir: samples/langchain_on_vertexai
     args: ["clean_up.py"]
     env:
       - DISPLAY_NAME=$_DISPLAY_NAME
