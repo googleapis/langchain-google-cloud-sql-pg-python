@@ -239,7 +239,7 @@ class TestLoaderAsync:
                 )
             ]
 
-            loader = await AlloyDBLoader.create(
+            loader = await PostgresLoader.create(
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 content_columns=[
