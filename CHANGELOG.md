@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.7.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.6.1...v0.7.0) (2024-07-23)
+
+
+### Features
+
+* Add similarity search score threshold select function ([#157](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/157)) ([71789f0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/71789f06a9702ee2e037b084a88c1258b7232a4b))
+* Added example for document saver ([#164](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/164)) ([13b909e](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/13b909e1fbc518728103ae6de0a1d8c462df8144))
+* Auto-generate IDs upon adding embeddings ([#158](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/158)) ([a364514](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/a3645147f3d7fe0958d0420f948cf6afb8eb215b))
+* Support IAM account override ([#160](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/160)) ([2de3cba](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/2de3cbae40d267a7b038a7b421999b5bb60c03d8))
+
+
+### Bug Fixes
+
+* Add key to engine constructor ([c12ded9](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/c12ded92abcb6a44e374f7b00afc1e17588e0688))
+* Rename inner product distance search function to inner_product ([#168](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/168)) ([c5641c3](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/c5641c305e4c63d09f24c88dba679bcf1a4040b2))
+
+
+### Documentation
+
+* Add docstring to all methods ([#163](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/163)) ([61413f1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/61413f10d9cb074a1fc82a742000827285208750))
+
 ## [0.6.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.6.0...v0.6.1) (2024-07-01)
 
 
