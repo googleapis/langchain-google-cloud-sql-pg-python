@@ -81,6 +81,12 @@ class Column:
     nullable: bool = True
 
     def __post_init__(self):
+        """Check if initialization parameters are valid.
+
+        Raises:
+            ValueError: Raises error if Column name is not string.
+            ValueError: Raises error if data_type is not type string.
+        """
         if not isinstance(self.name, str):
             raise ValueError("Column name must be type string")
         if not isinstance(self.data_type, str):
@@ -100,6 +106,17 @@ class PostgresEngine:
         loop: Optional[asyncio.AbstractEventLoop],
         thread: Optional[Thread],
     ):
+        """PostgresEngine constructor.
+
+        Args:
+            key(object): Prevent direct constructor usage.
+            engine(AsyncEngine): Async engine connection pool.
+            loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
+            thread (Optional[Thread] = None): Thread used to create the engine async.
+
+        Raises:
+            Exception: If the constructor is called directly by the user.
+        """
         if key != PostgresEngine.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
@@ -119,7 +136,24 @@ class PostgresEngine:
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
+        """Create a PostgresEngine from a Postgres instance.
+
+        Args:
+            project_id (str): GCP project ID.
+            region (str): Postgres instance region.
+            instance (str): Postgres instance name.
+            database (str): Database name.
+            user (Optional[str], optional): Postgres user name. Defaults to None.
+            password (Optional[str], optional): Postgres user password. Defaults to None.
+            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
+            quota_project (Optional[str]): Project that provides quota for API calls.
+            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
+
+        Returns:
+            PostgresEngine: A newly created PostgresEngine instance.
+        """
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
         loop = asyncio.new_event_loop()
@@ -136,6 +170,7 @@ class PostgresEngine:
             loop=loop,
             thread=thread,
             quota_project=quota_project,
+            iam_account_email=iam_account_email,
         )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
@@ -152,7 +187,29 @@ class PostgresEngine:
         loop: Optional[asyncio.AbstractEventLoop] = None,
         thread: Optional[Thread] = None,
         quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
+        """Create a PostgresEngine instance.
+
+        Args:
+            project_id (str): GCP project ID.
+            region (str): Postgres instance region.
+            instance (str): Postgres instance name.
+            database (str): Database name.
+            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
+            user (Optional[str], optional): Postgres user name. Defaults to None.
+            password (Optional[str], optional): Postgres user password. Defaults to None.
+            loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
+            thread (Optional[Thread] = None): Thread used to create the engine async.
+            quota_project (Optional[str]): Project that provides quota for API calls.
+            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
+
+        Raises:
+            ValueError: If only one of `user` and `password` is specified.
+
+        Returns:
+            PostgresEngine
+        """
         if bool(user) ^ bool(password):
             raise ValueError(
                 "Only one of 'user' or 'password' were specified. Either "
@@ -173,12 +230,15 @@ class PostgresEngine:
             db_user = user
         # otherwise use automatic IAM database authentication
         else:
-            # get application default credentials
-            credentials, _ = google.auth.default(
-                scopes=["https://www.googleapis.com/auth/userinfo.email"]
-            )
-            db_user = await _get_iam_principal_email(credentials)
             enable_iam_auth = True
+            if iam_account_email:
+                db_user = iam_account_email
+            else:
+                # get application default credentials
+                credentials, _ = google.auth.default(
+                    scopes=["https://www.googleapis.com/auth/userinfo.email"]
+                )
+                db_user = await _get_iam_principal_email(credentials)
 
         # anonymous function to be used for SQLAlchemy 'creator' argument
         async def getconn() -> asyncpg.Connection:
@@ -210,7 +270,24 @@ class PostgresEngine:
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
+        """Create a PostgresEngine from a Postgres instance.
+
+        Args:
+            project_id (str): GCP project ID.
+            region (str): Postgres instance region.
+            instance (str): Postgres instance name.
+            database (str): Database name.
+            user (Optional[str], optional): Postgres user name. Defaults to None.
+            password (Optional[str], optional): Postgres user password. Defaults to None.
+            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
+            quota_project (Optional[str]): Project that provides quota for API calls.
+            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
+
+        Returns:
+            PostgresEngine: A newly created PostgresEngine instance.
+        """
         return await cls._create(
             project_id,
             region,
@@ -220,10 +297,12 @@ class PostgresEngine:
             user,
             password,
             quota_project=quota_project,
+            iam_account_email=iam_account_email,
         )
 
     @classmethod
     def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
+        """Create an PostgresEngine instance from an AsyncEngine."""
         return cls(cls.__create_key, engine, None, None)
 
     async def _aexecute(self, query: str, params: Optional[dict] = None):
@@ -239,8 +318,8 @@ class PostgresEngine:
             await conn.execute(text(query))
 
     async def _afetch(self, query: str, params: Optional[dict] = None):
+        """Fetch results from a SQL query."""
         async with self._engine.connect() as conn:
-            """Fetch results from a SQL query."""
             result = await conn.execute(text(query), params)
             result_map = result.mappings()
             result_fetch = result_map.fetchall()
@@ -248,12 +327,15 @@ class PostgresEngine:
         return result_fetch
 
     def _execute(self, query: str, params: Optional[dict] = None):
+        """Execute a SQL query."""
         return self._run_as_sync(self._aexecute(query, params))
 
     def _fetch(self, query: str, params: Optional[dict] = None):
+        """Fetch results from a SQL query."""
         return self._run_as_sync(self._afetch(query, params))
 
     def _run_as_sync(self, coro: Awaitable[T]) -> T:
+        """Run an async coroutine synchronously"""
         if not self._loop:
             raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
@@ -323,6 +405,26 @@ class PostgresEngine:
         overwrite_existing: bool = False,
         store_metadata: bool = True,
     ) -> None:
+        """
+        Create a table for saving of vectors to be used with PostgresVectorStore.
+
+        Args:
+            table_name (str): The Postgres database table name.
+            vector_size (int): Vector size for the embedding model to be used.
+            content_column (str): Name of the column to store document content.
+                Default: "page_content".
+            embedding_column (str) : Name of the column to store vector embeddings.
+                Default: "embedding".
+            metadata_columns (List[Column]): A list of Columns to create for custom
+                metadata. Default: []. Optional.
+            metadata_json_column (str): The column to store extra metadata in JSON format.
+                Default: "langchain_metadata". Optional.
+            id_column (str):  Name of the column to store ids.
+                Default: "langchain_id". Optional,
+            overwrite_existing (bool): Whether to drop existing table. Default: False.
+            store_metadata (bool): Whether to store metadata in the table.
+                Default: True.
+        """
         return self._run_as_sync(
             self.ainit_vectorstore_table(
                 table_name,
@@ -338,6 +440,14 @@ class PostgresEngine:
         )
 
     async def ainit_chat_history_table(self, table_name) -> None:
+        """Create a Cloud SQL table to store chat history.
+
+        Args:
+            table_name (str): Table name to store chat history.
+
+        Returns:
+            None
+        """
         create_table_query = f"""CREATE TABLE IF NOT EXISTS "{table_name}"(
             id SERIAL PRIMARY KEY,
             session_id TEXT NOT NULL,
@@ -347,6 +457,14 @@ class PostgresEngine:
         await self._aexecute(create_table_query)
 
     def init_chat_history_table(self, table_name) -> None:
+        """Create a Cloud SQL table to store chat history.
+
+        Args:
+            table_name (str): Table name to store chat history.
+
+        Returns:
+            None
+        """
         return self._run_as_sync(
             self.ainit_chat_history_table(
                 table_name,
@@ -400,6 +518,17 @@ class PostgresEngine:
         metadata_json_column: str = "langchain_metadata",
         store_metadata: bool = True,
     ) -> None:
+        """
+        Create a table for saving of langchain documents.
+
+        Args:
+            table_name (str): The PgSQL database table name.
+            content_column (str): Name of the column to store document content.
+            metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
+                to create for custom metadata. Optional.
+            store_metadata (bool): Whether to store extra metadata in a metadata column
+                if not described in 'metadata' field list (Default: True).
+        """
         return self._run_as_sync(
             self.ainit_document_table(
                 table_name,
