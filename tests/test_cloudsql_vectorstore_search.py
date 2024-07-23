@@ -21,7 +21,7 @@ from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
-from langchain_google_cloud_sql_pg.indexes import HNSWQueryOptions, IVFFlatQueryOptions
+from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOptions
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
@@ -151,7 +151,7 @@ class TestVectorStoreSearch:
         assert results[0][0] == Document(page_content="foo")
         assert results[0][1] == 0
 
-    async def test_similarity_search_with_relevance_scores_threshold(self, vs):
+    async def test_similarity_search_with_relevance_scores_threshold_cosine(self, vs):
         score_threshold = {"score_threshold": 0}
         results = await vs.asimilarity_search_with_relevance_scores(
             "foo", **score_threshold
@@ -163,6 +163,40 @@ class TestVectorStoreSearch:
             "foo", **score_threshold
         )
         assert len(results) == 2
+
+        score_threshold = {"score_threshold": 0.9}
+        results = await vs.asimilarity_search_with_relevance_scores(
+            "foo", **score_threshold
+        )
+        assert len(results) == 1
+        assert results[0][0] == Document(page_content="foo")
+
+    async def test_similarity_search_with_relevance_scores_threshold_euclidean(
+        self, engine
+    ):
+        vs = await PostgresVectorStore.create(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=DEFAULT_TABLE,
+            distance_strategy=DistanceStrategy.EUCLIDEAN,
+        )
+
+        score_threshold = {"score_threshold": 0.9}
+        results = await vs.asimilarity_search_with_relevance_scores(
+            "foo", **score_threshold
+        )
+        assert len(results) == 1
+        assert results[0][0] == Document(page_content="foo")
+
+    async def test_similarity_search_with_relevance_scores_threshold_inner_product(
+        self, engine
+    ):
+        vs = await PostgresVectorStore.create(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=DEFAULT_TABLE,
+            distance_strategy=DistanceStrategy.INNER_PRODUCT,
+        )
 
         score_threshold = {"score_threshold": 0.9}
         results = await vs.asimilarity_search_with_relevance_scores(
