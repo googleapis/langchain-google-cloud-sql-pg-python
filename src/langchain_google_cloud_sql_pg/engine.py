@@ -136,6 +136,7 @@ class PostgresEngine:
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
         """Create a PostgresEngine from a Postgres instance.
 
@@ -169,6 +170,7 @@ class PostgresEngine:
             loop=loop,
             thread=thread,
             quota_project=quota_project,
+            iam_account_email=iam_account_email,
         )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
@@ -185,6 +187,7 @@ class PostgresEngine:
         loop: Optional[asyncio.AbstractEventLoop] = None,
         thread: Optional[Thread] = None,
         quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
         """Create a PostgresEngine instance.
 
@@ -227,12 +230,15 @@ class PostgresEngine:
             db_user = user
         # otherwise use automatic IAM database authentication
         else:
-            # get application default credentials
-            credentials, _ = google.auth.default(
-                scopes=["https://www.googleapis.com/auth/userinfo.email"]
-            )
-            db_user = await _get_iam_principal_email(credentials)
             enable_iam_auth = True
+            if iam_account_email:
+                db_user = iam_account_email
+            else:
+                # get application default credentials
+                credentials, _ = google.auth.default(
+                    scopes=["https://www.googleapis.com/auth/userinfo.email"]
+                )
+                db_user = await _get_iam_principal_email(credentials)
 
         # anonymous function to be used for SQLAlchemy 'creator' argument
         async def getconn() -> asyncpg.Connection:
@@ -264,6 +270,7 @@ class PostgresEngine:
         password: Optional[str] = None,
         ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
         """Create a PostgresEngine from a Postgres instance.
 
@@ -290,6 +297,7 @@ class PostgresEngine:
             user,
             password,
             quota_project=quota_project,
+            iam_account_email=iam_account_email,
         )
 
     @classmethod
