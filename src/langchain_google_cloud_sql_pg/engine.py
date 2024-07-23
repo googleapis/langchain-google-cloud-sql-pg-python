@@ -24,6 +24,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Type,
     TypeVar,
     Union,
 )
@@ -36,6 +37,7 @@ from sqlalchemy import MetaData, Table, text
 from sqlalchemy.engine.row import RowMapping
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from .version import __version__
 
@@ -69,7 +71,9 @@ async def _get_iam_principal_email(
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
     if hasattr(credentials, "_service_account_email"):
-        return credentials._service_account_email.replace(".gserviceaccount.com", "")
+        return credentials._service_account_email.replace(
+            ".gserviceaccount.com", ""
+        )
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -113,8 +117,8 @@ class PostgresEngine:
         self,
         key: object,
         engine: AsyncEngine,
-        loop: Optional[asyncio.AbstractEventLoop],
-        thread: Optional[Thread],
+        loop: asyncio.AbstractEventLoop,
+        thread: Thread,
     ):
         """PostgresEngine constructor.
 
@@ -169,7 +173,7 @@ class PostgresEngine:
         loop = asyncio.new_event_loop()
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()
-        coro = cls._create(
+        coro = cls._create_engine(
             project_id,
             region,
             instance,
@@ -185,17 +189,17 @@ class PostgresEngine:
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
     @classmethod
-    async def _create(
+    async def _create_engine(
         cls,
         project_id: str,
         region: str,
         instance: str,
         database: str,
         ip_type: Union[str, IPTypes],
+        loop: asyncio.AbstractEventLoop,
+        thread: Thread,
         user: Optional[str] = None,
         password: Optional[str] = None,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
-        thread: Optional[Thread] = None,
         quota_project: Optional[str] = None,
         iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
@@ -265,7 +269,7 @@ class PostgresEngine:
 
         engine = create_async_engine(
             "postgresql+asyncpg://",
-            async_creator=getconn,
+            async_creator=getconn,  # poolclass=NullPool
         )
         return cls(cls.__create_key, engine, loop, thread)
 
@@ -276,9 +280,9 @@ class PostgresEngine:
         region: str,
         instance: str,
         database: str,
+        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         user: Optional[str] = None,
         password: Optional[str] = None,
-        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         quota_project: Optional[str] = None,
         iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
@@ -298,30 +302,85 @@ class PostgresEngine:
         Returns:
             PostgresEngine: A newly created PostgresEngine instance.
         """
-        return await cls._create(
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+
+        coro = cls._create_engine(
             project_id,
             region,
             instance,
             database,
             ip_type,
-            user,
-            password,
+            loop,
+            thread,
+            user=user,
+            password=password,
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
 
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        task = asyncio.wrap_future(future)
+        return await task
+
+    @classmethod
+    def from_instance(
+        cls,
+        project_id: str,
+        region: str,
+        instance: str,
+        database: str,
+        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        quota_project: Optional[str] = None,
+    ) -> PostgresEngine:
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+
+        coro = cls._create_engine(
+            project_id,
+            region,
+            instance,
+            database,
+            ip_type,
+            loop,
+            thread,
+            user=user,
+            password=password,
+            quota_project=quota_project,
+        )
+        return asyncio.run_coroutine_threadsafe(coro, loop).result()
+
     @classmethod
     def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
         """Create an PostgresEngine instance from an AsyncEngine."""
-        return cls(cls.__create_key, engine, None, None)
+        loop = asyncio.get_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+        return cls(cls.__create_key, engine, loop, thread)
 
-    async def _aexecute(self, query: str, params: Optional[dict] = None) -> None:
+    async def _aexecute(
+        self, query: str, params: Optional[dict] = None
+    ) -> None:
         """Execute a SQL query."""
+        return await self._run_on_loop(self.__aexecute(query, params))
+
+    async def __aexecute(self, query: str, params: Optional[dict] = None):
         async with self._engine.connect() as conn:
             await conn.execute(text(query), params)
             await conn.commit()
 
-    async def _aexecute_outside_tx(self, query: str) -> None:
+    # async def _aexecute_outside_tx(self, query: str):
+    #     future = asyncio.run_coroutine_threadsafe(
+    #         self.__aexecute_outside_tx(query), self._loop
+    #     )
+    #     task = asyncio.wrap_future(future)
+    #     await task
+
+    async def _aexecute_outside_tx(self, query: str):
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text("COMMIT"))
@@ -331,6 +390,9 @@ class PostgresEngine:
         self, query: str, params: Optional[dict] = None
     ) -> Sequence[RowMapping]:
         """Fetch results from a SQL query."""
+        return await self._run_on_loop(self.__afetch(query, params))
+
+    async def __afetch(self, query: str, params: Optional[dict] = None):
         async with self._engine.connect() as conn:
             result = await conn.execute(text(query), params)
             result_map = result.mappings()
@@ -342,15 +404,50 @@ class PostgresEngine:
         """Execute a SQL query."""
         return self._run_as_sync(self._aexecute(query, params))
 
-    def _fetch(self, query: str, params: Optional[dict] = None) -> Sequence[RowMapping]:
+    def _fetch(
+        self, query: str, params: Optional[dict] = None
+    ) -> Sequence[RowMapping]:
         """Fetch results from a SQL query."""
         return self._run_as_sync(self._afetch(query, params))
 
     def _run_as_sync(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine synchronously"""
-        if not self._loop:
-            raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
+
+    async def _run_on_loop(self, coro: Awaitable[T]) -> T:
+        """Run an async coroutine on background loop"""
+        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        task = asyncio.wrap_future(future)
+        return await task
+
+    # async def ainit_vectorstore_table(
+    #     self,
+    #     table_name: str,
+    #     vector_size: int,
+    #     content_column: str = "content",
+    #     embedding_column: str = "embedding",
+    #     metadata_columns: List[Column] = [],
+    #     metadata_json_column: str = "langchain_metadata",
+    #     id_column: str = "langchain_id",
+    #     overwrite_existing: bool = False,
+    #     store_metadata: bool = True,
+    # ) -> None:
+    #     future = asyncio.run_coroutine_threadsafe(
+    #         self.__ainit_vectorstore_table(
+    #             table_name,
+    #             vector_size,
+    #             content_column,
+    #             embedding_column,
+    #             metadata_columns,
+    #             metadata_json_column,
+    #             id_column,
+    #             overwrite_existing,
+    #             store_metadata,
+    #         ),
+    #         self._loop,
+    #     )
+    #     task = asyncio.wrap_future(future)
+    #     await task
 
     async def ainit_vectorstore_table(
         self,
@@ -565,7 +662,9 @@ class PostgresEngine:
             try:
                 await conn.run_sync(metadata.reflect, only=[table_name])
             except InvalidRequestError as e:
-                raise ValueError(f"Table, {table_name}, does not exist: " + str(e))
+                raise ValueError(
+                    f"Table, {table_name}, does not exist: " + str(e)
+                )
 
         table = Table(table_name, metadata)
         # Extract the schema information

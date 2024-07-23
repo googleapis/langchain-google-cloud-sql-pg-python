@@ -78,10 +78,15 @@ class TestEngineAsync:
             database=db_name,
         )
         yield engine
+
+        await engine._connector.close_async()
         await engine._engine.dispose()
 
     async def test_execute(self, engine):
         await engine._aexecute("SELECT 1")
+
+    async def test_cross_env_execute(self, engine):
+        engine._execute("SELECT 1")
 
     async def test_init_table(self, engine):
         await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
@@ -240,10 +245,14 @@ class TestEngineSync:
             database=db_name,
         )
         yield engine
-        engine._engine.dispose()
+        engine._run_as_sync(engine._connector.close_async())
+        engine._run_as_sync(engine._engine.dispose())
 
-    async def test_execute(self, engine):
+    def test_execute(self, engine):
         engine._execute("SELECT 1")
+
+    async def test_cross_env_execute(self, engine):
+        await engine._aexecute("SELECT 1")
 
     async def test_init_table(self, engine):
         engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)

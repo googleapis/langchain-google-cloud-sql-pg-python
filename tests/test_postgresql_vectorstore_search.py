@@ -20,8 +20,15 @@ import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 
-from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
-from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOptions
+from langchain_google_cloud_sql_pg import (
+    Column,
+    PostgresEngine,
+    PostgresVectorStore,
+)
+from langchain_google_cloud_sql_pg.indexes import (
+    DistanceStrategy,
+    HNSWQueryOptions,
+)
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
@@ -31,9 +38,12 @@ embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz", "boo"]
 ids = [str(uuid.uuid4()) for i in range(len(texts))]
-metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
+metadatas = [
+    {"page": str(i), "source": "google.com"} for i in range(len(texts))
+]
 docs = [
-    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
+    Document(page_content=texts[i], metadata=metadatas[i])
+    for i in range(len(texts))
 ]
 
 embeddings = [embeddings_service.embed_query("foo") for i in range(len(texts))]
@@ -74,6 +84,9 @@ class TestVectorStoreSearch:
         )
         yield engine
 
+        await engine._connector.close_async()
+        await engine._engine.dispose()
+
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await engine.ainit_vectorstore_table(
@@ -88,7 +101,6 @@ class TestVectorStoreSearch:
         await vs.aadd_documents(docs, ids=ids)
         yield vs
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     def engine_sync(self, db_project, db_region, db_instance, db_name):
@@ -99,6 +111,9 @@ class TestVectorStoreSearch:
             database=db_name,
         )
         yield engine
+
+        engine._run_as_sync(engine._connector.close_async())
+        engine._run_as_sync(engine._engine.dispose())
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine_sync):
@@ -127,13 +142,14 @@ class TestVectorStoreSearch:
         vs_custom.add_documents(docs, ids=ids)
         yield vs_custom
         engine_sync._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
-        engine_sync._engine.dispose()
 
     async def test_asimilarity_search(self, vs):
         results = await vs.asimilarity_search("foo", k=1)
         assert len(results) == 1
         assert results == [Document(page_content="foo")]
-        results = await vs.asimilarity_search("foo", k=1, filter="content = 'bar'")
+        results = await vs.asimilarity_search(
+            "foo", k=1, filter="content = 'bar'"
+        )
         assert results == [Document(page_content="bar")]
 
     async def test_asimilarity_search_score(self, vs):
@@ -151,7 +167,9 @@ class TestVectorStoreSearch:
         assert results[0][0] == Document(page_content="foo")
         assert results[0][1] == 0
 
-    async def test_similarity_search_with_relevance_scores_threshold_cosine(self, vs):
+    async def test_similarity_search_with_relevance_scores_threshold_cosine(
+        self, vs
+    ):
         score_threshold = {"score_threshold": 0}
         results = await vs.asimilarity_search_with_relevance_scores(
             "foo", **score_threshold
@@ -217,7 +235,9 @@ class TestVectorStoreSearch:
         results = vs_custom.similarity_search("foo", k=1)
         assert len(results) == 1
         assert results == [Document(page_content="foo")]
-        results = vs_custom.similarity_search("foo", k=1, filter="mycontent = 'bar'")
+        results = vs_custom.similarity_search(
+            "foo", k=1, filter="mycontent = 'bar'"
+        )
         assert results == [Document(page_content="bar")]
 
     def test_similarity_search_score(self, vs_custom):
