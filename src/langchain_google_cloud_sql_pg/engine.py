@@ -383,6 +383,9 @@ class PostgresEngine:
             overwrite_existing (bool): Whether to drop existing table. Default: False.
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
+
+        Raises:
+            :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists and overwrite flag is not set.
         """
         await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
 
@@ -494,10 +497,16 @@ class PostgresEngine:
         Args:
             table_name (str): The PgSQL database table name.
             content_column (str): Name of the column to store document content.
+                Default: "page_content".
             metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
                 to create for custom metadata. Optional.
+            metadata_json_column (str): The column to store extra metadata in JSON format.
+                Default: "langchain_metadata". Optional.
             store_metadata (bool): Whether to store extra metadata in a metadata column
                 if not described in 'metadata' field list (Default: True).
+
+        Raises:
+            :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
 
         query = f"""CREATE TABLE "{table_name}"(
