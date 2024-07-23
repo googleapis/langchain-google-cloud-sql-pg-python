@@ -117,7 +117,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         engine: PostgresEngine,
         session_id: str,
         table_name: str,
-    ):
+    ) -> None:
         """Create a new PostgresChatMessageHistory instance.
 
         Args:
