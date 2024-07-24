@@ -129,3 +129,7 @@ class TestIndex:
         await vs.aapply_vector_index(index)
         assert await vs.is_valid_index("secondindex")
         await vs.adrop_vector_index("secondindex")
+
+    async def test_is_valid_index(self, vs):
+        is_valid = await vs.is_valid_index("invalid_index")
+        assert is_valid == False
