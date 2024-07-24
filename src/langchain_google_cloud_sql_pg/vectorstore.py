@@ -28,7 +28,7 @@ from sqlalchemy.engine.row import RowMapping
 from .engine import PostgresEngine
 from .indexes import (
     DEFAULT_DISTANCE_STRATEGY,
-    DEFAULT_INDEX_NAME,
+    DEFAULT_INDEX_NAME_SUFFIX,
     BaseIndex,
     DistanceStrategy,
     ExactNearestNeighbor,
@@ -902,31 +902,37 @@ class PostgresVectorStore(VectorStore):
         filter = f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
         params = "WITH " + index.index_options()
         function = index.distance_strategy.index_function
-        name = name or index.name
+        if name is None:
+            if index.name == None:
+                index.name = self.table_name + DEFAULT_INDEX_NAME_SUFFIX
+            name = index.name
         stmt = f'CREATE INDEX {"CONCURRENTLY" if concurrently else ""} {name} ON "{self.table_name}" USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};'
         if concurrently:
             await self.engine._aexecute_outside_tx(stmt)
         else:
             await self.engine._aexecute(stmt)
 
-    async def areindex(self, index_name: str = DEFAULT_INDEX_NAME) -> None:
+    async def areindex(self, index_name: Optional[str] = None) -> None:
         """Re-index the vector store table."""
+        index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"REINDEX INDEX {index_name};"
         await self.engine._aexecute(query)
 
     async def adrop_vector_index(
         self,
-        index_name: str = DEFAULT_INDEX_NAME,
+        index_name: Optional[str] = None,
     ) -> None:
         """Drop the vector index."""
+        index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"DROP INDEX IF EXISTS {index_name};"
         await self.engine._aexecute(query)
 
     async def is_valid_index(
         self,
-        index_name: str = DEFAULT_INDEX_NAME,
+        index_name: Optional[str] = None,
     ) -> bool:
         """Check if index exists in the table."""
+        index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"""
         SELECT tablename, indexname
         FROM pg_indexes

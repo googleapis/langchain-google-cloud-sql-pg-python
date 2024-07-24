@@ -24,7 +24,7 @@ from langchain_core.documents import Document
 
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import (
-    DEFAULT_INDEX_NAME,
+    DEFAULT_INDEX_NAME_SUFFIX,
     DistanceStrategy,
     HNSWIndex,
     IVFFlatIndex,
@@ -32,6 +32,7 @@ from langchain_google_cloud_sql_pg.indexes import (
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+DEFAULT_INDEX_NAME = DEFAULT_TABLE + DEFAULT_INDEX_NAME_SUFFIX
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
