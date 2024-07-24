@@ -54,10 +54,6 @@ def get_env_var(key: str, desc: str) -> str:
 
 
 @pytest.mark.asyncio(scope="class")
-@pytest.mark.skipif(
-    sys.version_info != (3, 11),
-    reason="To prevent index clashes only run on python3.11 or higher",
-)
 class TestIndex:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
