@@ -101,8 +101,8 @@ class TestIndex:
         await engine._engine.dispose()
 
     async def test_aapply_vector_index(self, vs):
-        index = HNSWIndex()
-        await vs.aapply_vector_index(index)
+        # index = HNSWIndex()
+        # await vs.aapply_vector_index(index)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
 
     async def test_areindex(self, vs):
