@@ -17,12 +17,13 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type, Union
 
 import numpy as np
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
+from sqlalchemy.engine.row import RowMapping
 
 from .engine import PostgresEngine
 from .indexes import (
@@ -42,7 +43,7 @@ class PostgresVectorStore(VectorStore):
 
     def __init__(
         self,
-        key,
+        key: object,
         engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
@@ -114,7 +115,7 @@ class PostgresVectorStore(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
-    ):
+    ) -> PostgresVectorStore:
         """Create a new PostgresVectorStore instance.
 
         Args:
@@ -218,7 +219,7 @@ class PostgresVectorStore(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
-    ):
+    ) -> PostgresVectorStore:
         """Create a new PostgresVectorStore instance.
 
         Args:
@@ -496,7 +497,7 @@ class PostgresVectorStore(VectorStore):
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         **kwargs: Any,
-    ):
+    ) -> PostgresVectorStore:
         """Create an PostgresVectorStore instance from texts.
         Args:
             texts (List[str]): Texts to add to the vector store.
@@ -589,7 +590,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Any]:
+    ) -> Sequence[RowMapping]:
         """Perform similarity search query on the vector store table."""
         k = k if k else self.k
         operator = self.distance_strategy.operator
