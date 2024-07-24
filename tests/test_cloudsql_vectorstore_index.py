@@ -100,11 +100,13 @@ class TestIndex:
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await engine._engine.dispose()
 
+    @pytest.mark.run(order=1)
     async def test_aapply_vector_index(self, vs):
-        # index = HNSWIndex()
-        # await vs.aapply_vector_index(index)
+        index = HNSWIndex()
+        await vs.aapply_vector_index(index)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
 
+    @pytest.mark.run(order=2)
     async def test_areindex(self, vs):
         if not await vs.is_valid_index(DEFAULT_INDEX_NAME):
             index = HNSWIndex()
@@ -113,6 +115,7 @@ class TestIndex:
         await vs.areindex(DEFAULT_INDEX_NAME)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
 
+    @pytest.mark.run(order=3)
     async def test_dropindex(self, vs):
         await vs.adrop_vector_index()
         result = await vs.is_valid_index(DEFAULT_INDEX_NAME)
