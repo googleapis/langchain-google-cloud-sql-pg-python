@@ -182,7 +182,7 @@ class PostgresVectorStore(VectorStore):
             del all_columns[id_column]
             del all_columns[content_column]
             del all_columns[embedding_column]
-            metadata_columns = [k for k, _ in all_columns.keys()]
+            metadata_columns = [k for k in all_columns.keys()]
 
         return cls(
             cls.__create_key,
