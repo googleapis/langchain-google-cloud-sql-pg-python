@@ -44,7 +44,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
 
     def __init__(
         self,
-        key,
+        key: object,
         engine: PostgresEngine,
         session_id: str,
         table_name: str,
@@ -77,7 +77,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         engine: PostgresEngine,
         session_id: str,
         table_name: str,
-    ):
+    ) -> PostgresChatMessageHistory:
         """Create a new PostgresChatMessageHistory instance.
 
         Args:
@@ -117,7 +117,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         engine: PostgresEngine,
         session_id: str,
         table_name: str,
-    ):
+    ) -> PostgresChatMessageHistory:
         """Create a new PostgresChatMessageHistory instance.
 
         Args:

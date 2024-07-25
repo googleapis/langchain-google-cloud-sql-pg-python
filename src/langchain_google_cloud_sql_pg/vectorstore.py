@@ -17,17 +17,18 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type, Union
 
 import numpy as np
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
+from sqlalchemy.engine.row import RowMapping
 
 from .engine import PostgresEngine
 from .indexes import (
     DEFAULT_DISTANCE_STRATEGY,
-    DEFAULT_INDEX_NAME,
+    DEFAULT_INDEX_NAME_SUFFIX,
     BaseIndex,
     DistanceStrategy,
     ExactNearestNeighbor,
@@ -42,7 +43,7 @@ class PostgresVectorStore(VectorStore):
 
     def __init__(
         self,
-        key,
+        key: object,
         engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
@@ -114,7 +115,7 @@ class PostgresVectorStore(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
-    ):
+    ) -> PostgresVectorStore:
         """Create a new PostgresVectorStore instance.
 
         Args:
@@ -218,7 +219,7 @@ class PostgresVectorStore(VectorStore):
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
         index_query_options: Optional[QueryOptions] = None,
-    ):
+    ) -> PostgresVectorStore:
         """Create a new PostgresVectorStore instance.
 
         Args:
@@ -496,7 +497,7 @@ class PostgresVectorStore(VectorStore):
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         **kwargs: Any,
-    ):
+    ) -> PostgresVectorStore:
         """Create an PostgresVectorStore instance from texts.
         Args:
             texts (List[str]): Texts to add to the vector store.
@@ -589,7 +590,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Any]:
+    ) -> Sequence[RowMapping]:
         """Perform similarity search query on the vector store table."""
         k = k if k else self.k
         operator = self.distance_strategy.operator
@@ -901,31 +902,37 @@ class PostgresVectorStore(VectorStore):
         filter = f"WHERE ({index.partial_indexes})" if index.partial_indexes else ""
         params = "WITH " + index.index_options()
         function = index.distance_strategy.index_function
-        name = name or index.name
+        if name is None:
+            if index.name == None:
+                index.name = self.table_name + DEFAULT_INDEX_NAME_SUFFIX
+            name = index.name
         stmt = f'CREATE INDEX {"CONCURRENTLY" if concurrently else ""} {name} ON "{self.table_name}" USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};'
         if concurrently:
             await self.engine._aexecute_outside_tx(stmt)
         else:
             await self.engine._aexecute(stmt)
 
-    async def areindex(self, index_name: str = DEFAULT_INDEX_NAME) -> None:
+    async def areindex(self, index_name: Optional[str] = None) -> None:
         """Re-index the vector store table."""
+        index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"REINDEX INDEX {index_name};"
         await self.engine._aexecute(query)
 
     async def adrop_vector_index(
         self,
-        index_name: str = DEFAULT_INDEX_NAME,
+        index_name: Optional[str] = None,
     ) -> None:
         """Drop the vector index."""
+        index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"DROP INDEX IF EXISTS {index_name};"
         await self.engine._aexecute(query)
 
     async def is_valid_index(
         self,
-        index_name: str = DEFAULT_INDEX_NAME,
+        index_name: Optional[str] = None,
     ) -> bool:
         """Check if index exists in the table."""
+        index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"""
         SELECT tablename, indexname
         FROM pg_indexes
