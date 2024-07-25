@@ -34,12 +34,12 @@ class DistanceStrategy(StrategyMixin, enum.Enum):
 
 
 DEFAULT_DISTANCE_STRATEGY = DistanceStrategy.COSINE_DISTANCE
-DEFAULT_INDEX_NAME = "langchainvectorindex"
+DEFAULT_INDEX_NAME_SUFFIX: str = "langchainvectorindex"
 
 
 @dataclass
 class BaseIndex(ABC):
-    name: str = DEFAULT_INDEX_NAME
+    name: Optional[str] = None
     index_type: str = "base"
     distance_strategy: DistanceStrategy = field(
         default_factory=lambda: DistanceStrategy.COSINE_DISTANCE
