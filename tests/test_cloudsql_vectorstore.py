@@ -133,6 +133,19 @@ class TestVectorStore:
         yield vs
         await engine._aexecute(f'DROP TABLE IF EXISTS "{CUSTOM_TABLE}"')
 
+    async def test_init_with_constructor(self, engine):
+        with pytest.raises(Exception):
+            PostgresVectorStore(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="noname",
+                embedding_column="myembedding",
+                metadata_columns=["page", "source"],
+                metadata_json_column="mymeta",
+            )
+
     async def test_post_init(self, engine):
         with pytest.raises(ValueError):
             await PostgresVectorStore.create(
@@ -264,5 +277,61 @@ class TestVectorStore:
         vs_sync.add_texts(texts, ids=ids)
         results = engine_sync._fetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
         assert len(results) == 6
+
+    async def test_ignore_metadata_columns(self, vs_custom):
+        column_to_ignore = "source"
+        vs = await PostgresVectorStore.create(
+            vs_custom.engine,
+            embedding_service=embeddings_service,
+            table_name=CUSTOM_TABLE,
+            ignore_metadata_columns=[column_to_ignore],
+            id_column="myid",
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadata_json_column="mymeta",
+        )
+        assert column_to_ignore not in vs.metadata_columns
+
+    async def test_create_vectorstore_with_invalid_parameters(self, vs_custom):
+        with pytest.raises(ValueError):
+            await PostgresVectorStore.create(
+                vs_custom.engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=["random_column"],  # invalid metadata column
+            )
+        with pytest.raises(ValueError):
+            await PostgresVectorStore.create(
+                vs_custom.engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="langchain_id",  # invalid content column type
+                embedding_column="myembedding",
+                metadata_columns=["random_column"],
+            )
+        with pytest.raises(ValueError):
+            await PostgresVectorStore.create(
+                vs_custom.engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="random_column",  # invalid embedding column
+                metadata_columns=["random_column"],
+            )
+        with pytest.raises(ValueError):
+            await PostgresVectorStore.create(
+                vs_custom.engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="langchain_id",  # invalid embedding column data type
+                metadata_columns=["random_column"],
+            )
 
     # Need tests for store metadata=False
