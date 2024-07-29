@@ -19,8 +19,8 @@ import uuid
 
 import pytest
 import pytest_asyncio
-from langchain_community.embeddings import DeterministicFakeEmbedding
 from langchain_core.documents import Document
+from langchain_core.embeddings import DeterministicFakeEmbedding
 
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import (

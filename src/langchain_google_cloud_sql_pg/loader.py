@@ -27,7 +27,7 @@ from typing import (
 )
 
 import sqlalchemy
-from langchain_community.document_loaders.base import BaseLoader
+from langchain_core.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
 from .engine import PostgresEngine
