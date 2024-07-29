@@ -24,7 +24,7 @@ from langchain_core.embeddings import DeterministicFakeEmbedding
 
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import (
-    DEFAULT_INDEX_NAME,
+    DEFAULT_INDEX_NAME_SUFFIX,
     DistanceStrategy,
     HNSWIndex,
     IVFFlatIndex,
@@ -32,6 +32,7 @@ from langchain_google_cloud_sql_pg.indexes import (
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+DEFAULT_INDEX_NAME = DEFAULT_TABLE + DEFAULT_INDEX_NAME_SUFFIX
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
@@ -54,10 +55,6 @@ def get_env_var(key: str, desc: str) -> str:
 
 
 @pytest.mark.asyncio(scope="class")
-@pytest.mark.skipif(
-    sys.version_info != (3, 11),
-    reason="To prevent index clashes only run on python3.11 or higher",
-)
 class TestIndex:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -100,11 +97,13 @@ class TestIndex:
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await engine._engine.dispose()
 
+    @pytest.mark.run(order=1)
     async def test_aapply_vector_index(self, vs):
         index = HNSWIndex()
         await vs.aapply_vector_index(index)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
 
+    @pytest.mark.run(order=2)
     async def test_areindex(self, vs):
         if not await vs.is_valid_index(DEFAULT_INDEX_NAME):
             index = HNSWIndex()
@@ -113,6 +112,7 @@ class TestIndex:
         await vs.areindex(DEFAULT_INDEX_NAME)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
 
+    @pytest.mark.run(order=3)
     async def test_dropindex(self, vs):
         await vs.adrop_vector_index()
         result = await vs.is_valid_index(DEFAULT_INDEX_NAME)
@@ -129,3 +129,7 @@ class TestIndex:
         await vs.aapply_vector_index(index)
         assert await vs.is_valid_index("secondindex")
         await vs.adrop_vector_index("secondindex")
+
+    async def test_is_valid_index(self, vs):
+        is_valid = await vs.is_valid_index("invalid_index")
+        assert is_valid == False

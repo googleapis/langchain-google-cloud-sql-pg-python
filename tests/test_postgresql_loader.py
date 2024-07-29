@@ -69,6 +69,29 @@ class TestLoaderAsync:
         query = f'DROP TABLE IF EXISTS "{table_name}"'
         await engine._aexecute(query)
 
+    async def test_create_loader_with_invalid_parameters(self, engine):
+        with pytest.raises(ValueError):
+            await PostgresLoader.create(
+                engine=engine,
+            )
+        with pytest.raises(ValueError):
+
+            def fake_formatter():
+                return None
+
+            await PostgresLoader.create(
+                engine=engine,
+                table_name=table_name,
+                format="text",
+                formatter=fake_formatter,
+            )
+        with pytest.raises(ValueError):
+            await PostgresLoader.create(
+                engine=engine,
+                table_name=table_name,
+                format="fake_format",
+            )
+
     async def test_load_from_query_default(self, engine):
         try:
             await self._cleanup_table(engine)
@@ -208,6 +231,30 @@ class TestLoaderAsync:
             assert documents == [
                 Document(
                     page_content="Granny Smith 150 1",
+                    metadata={
+                        "fruit_id": 1,
+                        "fruit_name": "Apple",
+                        "organic": 1,
+                    },
+                )
+            ]
+
+            loader = await PostgresLoader.create(
+                engine=engine,
+                query=f'SELECT * FROM "{table_name}";',
+                content_columns=[
+                    "variety",
+                    "quantity_in_stock",
+                    "price_per_unit",
+                ],
+                format="JSON",
+            )
+
+            documents = await self._collect_async_items(loader.alazy_load())
+
+            assert documents == [
+                Document(
+                    page_content='{"variety": "Granny Smith", "quantity_in_stock": 150, "price_per_unit": 1}',
                     metadata={
                         "fruit_id": 1,
                         "fruit_name": "Apple",

@@ -28,7 +28,7 @@ Learn more by reading [How should I write my commits?](https://github.com/google
 
 ### CI Platform Setup
 
-Cloud Build is used to run tests against Google Cloud resources in test project: langchain-alloydb-testing.
+Cloud Build is used to run tests against Google Cloud resources in test project: langchain-cloud-sql-testing.
 Each test has a corresponding Cloud Build trigger, see [all triggers][triggers].
 These tests are registered as required tests in `.github/sync-repo-settings.yaml`.
 
@@ -41,7 +41,7 @@ name: pg-integration-test-pr-py38
 description: Run integration tests on PR for Python 3.8
 filename: integration.cloudbuild.yaml
 github:
-  name: langchain-google-alloydb-pg-python
+  name: langchain-google-cloud-sql-pg-python
   owner: googleapis
   pullRequest:
     branch: .*

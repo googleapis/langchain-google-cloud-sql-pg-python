@@ -555,29 +555,3 @@ class PostgresDocumentSaver:
             docs (List[langchain_core.documents.Document]): a list of documents to be deleted.
         """
         self.engine._run_as_sync(self.adelete(docs))
-
-    async def _aload_table_schema(self) -> sqlalchemy.Table:
-        """
-        Load table schema from existing table in PgSQL database.
-
-        Returns:
-            (sqlalchemy.Table): The loaded table.
-        """
-        metadata = sqlalchemy.MetaData()
-        async with self.engine._engine.connect() as conn:
-            await conn.run_sync(metadata.reflect, only=[self.table_name])
-
-        table = sqlalchemy.Table(self.table_name, metadata)
-        # Extract the schema information
-        schema = []
-        for column in table.columns:
-            schema.append(
-                {
-                    "name": column.name,
-                    "type": column.type.python_type,
-                    "max_length": getattr(column.type, "length", None),
-                    "nullable": not column.nullable,
-                }
-            )
-
-        return metadata.tables[self.table_name]
