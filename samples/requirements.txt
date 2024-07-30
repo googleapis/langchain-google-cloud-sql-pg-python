@@ -1,4 +1,4 @@
 google-cloud-aiplatform[reasoningengine,langchain]
 langchain-google-vertexai
-langchain
+langchain-community
 google-cloud-resource-manager
