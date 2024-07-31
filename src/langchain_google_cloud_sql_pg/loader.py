@@ -314,14 +314,8 @@ class PostgresLoader(BaseLoader):
 
     def load(self) -> List[Document]:
         """Load PostgreSQL data into Document objects."""
-        # documents = self.engine._run_as_sync(
-        #     self._collect_async_items(self.alazy_load())
-        # )
         documents = self.engine._run_as_sync(self.aload())
         return documents
-
-    # async def aload(self) -> List[Document]:
-    #     return await self.engine._run_on_loop(self._aload())
 
     async def aload(self) -> List[Document]:
         """Load PostgreSQL data into Document objects."""
@@ -333,14 +327,8 @@ class PostgresLoader(BaseLoader):
             self._collect_async_items(self.alazy_load())
         )
 
-    # async def alazy_load(self) -> AsyncIterator[Document]:
-    #     return await self.engine._run_on_loop(self.alazy_load())
-
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Load PostgreSQL data into Document objects lazily."""
-        # stmt = sqlalchemy.text(self.query)
-        # async with self.engine._engine.connect() as connection:
-        #     result_proxy = await connection.execute(stmt)
         # load document one by one
         result_proxy = await self.engine._afetchone(self.query)
         while True:

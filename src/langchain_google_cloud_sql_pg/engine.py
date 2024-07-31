@@ -37,7 +37,6 @@ from sqlalchemy import MetaData, Table, text
 from sqlalchemy.engine.row import RowMapping
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-from sqlalchemy.pool import NullPool
 
 from .version import __version__
 
@@ -267,7 +266,7 @@ class PostgresEngine:
 
         engine = create_async_engine(
             "postgresql+asyncpg://",
-            async_creator=getconn,  # poolclass=NullPool
+            async_creator=getconn,
         )
         return cls(cls.__create_key, engine, loop, thread)
 
@@ -417,35 +416,6 @@ class PostgresEngine:
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
         task = asyncio.wrap_future(future)
         return await task
-
-    # async def ainit_vectorstore_table(
-    #     self,
-    #     table_name: str,
-    #     vector_size: int,
-    #     content_column: str = "content",
-    #     embedding_column: str = "embedding",
-    #     metadata_columns: List[Column] = [],
-    #     metadata_json_column: str = "langchain_metadata",
-    #     id_column: str = "langchain_id",
-    #     overwrite_existing: bool = False,
-    #     store_metadata: bool = True,
-    # ) -> None:
-    #     future = asyncio.run_coroutine_threadsafe(
-    #         self.__ainit_vectorstore_table(
-    #             table_name,
-    #             vector_size,
-    #             content_column,
-    #             embedding_column,
-    #             metadata_columns,
-    #             metadata_json_column,
-    #             id_column,
-    #             overwrite_existing,
-    #             store_metadata,
-    #         ),
-    #         self._loop,
-    #     )
-    #     task = asyncio.wrap_future(future)
-    #     await task
 
     async def ainit_vectorstore_table(
         self,
@@ -651,46 +621,6 @@ class PostgresEngine:
         table_name: str,
     ) -> Table:
         return await self._run_on_loop(self.__aload_table_schema(table_name))
-
-    # async def _aload_table_schema(
-    #     self,
-    #     table_name: str,
-    # ) -> List[str]:
-    #     """
-    #     Load table schema from existing table in PgSQL database.
-    #     Returns:
-    #         (sqlalchemy.Table): The loaded table.
-    #     """
-    #     query = f"""
-    #     SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
-    #     FROM INFORMATION_SCHEMA.COLUMNS
-    #     WHERE table_name = '{table_name}';
-    #     """
-    #     results = await self._afetch(query)
-    #     return results
-    # metadata = MetaData()
-    # async with self._engine.connect() as conn:
-    #     try:
-    #         await conn.run_sync(metadata.reflect, only=[table_name])
-    #     except InvalidRequestError as e:
-    #         raise ValueError(
-    #             f"Table, {table_name}, does not exist: " + str(e)
-    #         )
-
-    # table = Table(table_name, metadata)
-    # # Extract the schema information
-    # schema = []
-    # for column in table.columns:
-    #     schema.append(
-    #         {
-    #             "name": column.name,
-    #             "type": column.type.python_type,
-    #             "max_length": getattr(column.type, "length", None),
-    #             "nullable": not column.nullable,
-    #         }
-    #     )
-
-    # return metadata.tables[table_name]
 
     async def __aload_table_schema(
         self,
