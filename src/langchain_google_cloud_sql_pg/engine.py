@@ -71,9 +71,7 @@ async def _get_iam_principal_email(
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
     if hasattr(credentials, "_service_account_email"):
-        return credentials._service_account_email.replace(
-            ".gserviceaccount.com", ""
-        )
+        return credentials._service_account_email.replace(".gserviceaccount.com", "")
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -362,9 +360,7 @@ class PostgresEngine:
         thread.start()
         return cls(cls.__create_key, engine, loop, thread)
 
-    async def _aexecute(
-        self, query: str, params: Optional[dict] = None
-    ) -> None:
+    async def _aexecute(self, query: str, params: Optional[dict] = None) -> None:
         """Execute a SQL query."""
         return await self._run_on_loop(self.__aexecute(query, params))
 
@@ -400,11 +396,17 @@ class PostgresEngine:
         """Execute a SQL query."""
         return self._run_as_sync(self._aexecute(query, params))
 
-    def _fetch(
-        self, query: str, params: Optional[dict] = None
-    ) -> Sequence[RowMapping]:
+    def _fetch(self, query: str, params: Optional[dict] = None) -> Sequence[RowMapping]:
         """Fetch results from a SQL query."""
         return self._run_as_sync(self._afetch(query, params))
+
+    async def _afetchone(self, query):
+        return await self._run_on_loop(self.__afetchone(query))
+
+    async def __afetchone(self, query):
+        async with self._engine.connect() as conn:
+            result = await conn.execute(text(query))
+        return result
 
     def _run_as_sync(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine synchronously"""
@@ -650,6 +652,46 @@ class PostgresEngine:
     ) -> Table:
         return await self._run_on_loop(self.__aload_table_schema(table_name))
 
+    # async def _aload_table_schema(
+    #     self,
+    #     table_name: str,
+    # ) -> List[str]:
+    #     """
+    #     Load table schema from existing table in PgSQL database.
+    #     Returns:
+    #         (sqlalchemy.Table): The loaded table.
+    #     """
+    #     query = f"""
+    #     SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
+    #     FROM INFORMATION_SCHEMA.COLUMNS
+    #     WHERE table_name = '{table_name}';
+    #     """
+    #     results = await self._afetch(query)
+    #     return results
+    # metadata = MetaData()
+    # async with self._engine.connect() as conn:
+    #     try:
+    #         await conn.run_sync(metadata.reflect, only=[table_name])
+    #     except InvalidRequestError as e:
+    #         raise ValueError(
+    #             f"Table, {table_name}, does not exist: " + str(e)
+    #         )
+
+    # table = Table(table_name, metadata)
+    # # Extract the schema information
+    # schema = []
+    # for column in table.columns:
+    #     schema.append(
+    #         {
+    #             "name": column.name,
+    #             "type": column.type.python_type,
+    #             "max_length": getattr(column.type, "length", None),
+    #             "nullable": not column.nullable,
+    #         }
+    #     )
+
+    # return metadata.tables[table_name]
+
     async def __aload_table_schema(
         self,
         table_name: str,
@@ -664,9 +706,7 @@ class PostgresEngine:
             try:
                 await conn.run_sync(metadata.reflect, only=[table_name])
             except InvalidRequestError as e:
-                raise ValueError(
-                    f"Table, {table_name}, does not exist: " + str(e)
-                )
+                raise ValueError(f"Table, {table_name}, does not exist: " + str(e))
 
         table = Table(table_name, metadata)
         # Extract the schema information

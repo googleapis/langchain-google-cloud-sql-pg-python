@@ -176,14 +176,14 @@ class TestEngineAsync:
         await engine.ainit_chat_history_table(table_name=table_name_async)
         yield engine
 
-        await engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
+        await engine._aexecute(f'DROP TABLE IF EXISTS "{table_name_async}"')
         await engine._connector.close_async()
         await engine._engine.dispose()
 
     @pytest.mark.asyncio
     async def test_cross_env_engine(self, async_engine: PostgresEngine):
         history = PostgresChatMessageHistory.create_sync(
-            engine=async_engine, session_id="test", table_name=table_name
+            engine=async_engine, session_id="test", table_name=table_name_async
         )
         await history.aadd_message(HumanMessage(content="hi!"))
         messages = history.messages

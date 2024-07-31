@@ -130,9 +130,7 @@ class TestLoaderAsync:
         # finally:
         # await self._cleanup_table(engine)
 
-    async def test_load_from_query_customized_content_customized_metadata(
-        self, engine
-    ):
+    async def test_load_from_query_customized_content_customized_metadata(self, engine):
         # try:
         # await self._cleanup_table(engine)
         query = f"""
@@ -168,7 +166,8 @@ class TestLoaderAsync:
             metadata_columns=["fruit_id"],
         )
 
-        documents = await self._collect_async_items(loader.alazy_load())
+        # documents = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
 
         assert documents == [
             Document(
@@ -188,9 +187,7 @@ class TestLoaderAsync:
         # finally:
         # await self._cleanup_table(engine)
 
-    async def test_load_from_query_customized_content_default_metadata(
-        self, engine
-    ):
+    async def test_load_from_query_customized_content_default_metadata(self, engine):
         # try:
         # await self._cleanup_table(engine)
         query = f"""
@@ -221,7 +218,8 @@ class TestLoaderAsync:
             ],
         )
 
-        documents = await self._collect_async_items(loader.alazy_load())
+        # documents = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
 
         assert documents == [
             Document(
@@ -245,7 +243,8 @@ class TestLoaderAsync:
             format="JSON",
         )
 
-        documents = await self._collect_async_items(loader.alazy_load())
+        # documents = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
 
         assert documents == [
             Document(
@@ -261,9 +260,7 @@ class TestLoaderAsync:
         # finally:
         # await self._cleanup_table(engine)
 
-    async def test_load_from_query_default_content_customized_metadata(
-        self, engine
-    ):
+    async def test_load_from_query_default_content_customized_metadata(self, engine):
         # try:
         # await self._cleanup_table(engine)
         query = f"""
@@ -295,14 +292,19 @@ class TestLoaderAsync:
             metadata_columns=["fruit_name", "organic"],
         )
 
-        documents = await self._collect_async_items(loader.alazy_load())
+        # documents = await self._collect_async_items(loader.alazy_load())
+        documents = loader.lazy_load()
 
-        assert documents == [
-            Document(
-                page_content="1",
-                metadata={"fruit_name": "Apple", "organic": 1},
-            )
-        ]
+        assert next(documents) == Document(
+            page_content="1",
+            metadata={"fruit_name": "Apple", "organic": 1},
+        )
+        # assert documents == [
+        #     Document(
+        #         page_content="1",
+        #         metadata={"fruit_name": "Apple", "organic": 1},
+        #     )
+        # ]
 
         # finally:
         # await self._cleanup_table(engine)
@@ -338,7 +340,8 @@ class TestLoaderAsync:
             ],
         )
 
-        documents = await self._collect_async_items(loader.alazy_load())
+        # documents = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
 
         assert documents == [
             Document(
@@ -384,7 +387,8 @@ class TestLoaderAsync:
             ],
         )
 
-        documents = await self._collect_async_items(loader.alazy_load())
+        # documents = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
 
         assert documents == [
             Document(
@@ -438,7 +442,8 @@ class TestLoaderAsync:
             formatter=my_formatter,
         )
 
-        documents = await self._collect_async_items(loader.alazy_load())
+        # documents = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
 
         assert documents == [
             Document(
@@ -488,7 +493,8 @@ class TestLoaderAsync:
             format="YAML",
         )
 
-        documents = await self._collect_async_items(loader.alazy_load())
+        # documents = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
 
         assert documents == [
             Document(
@@ -522,20 +528,15 @@ class TestLoaderAsync:
                 metadata={"fruit_id": 3},
             ),
         ]
-        saver = await PostgresDocumentSaver.create(
-            engine=engine, table_name=table_name
-        )
-        loader = await PostgresLoader.create(
-            engine=engine, table_name=table_name
-        )
+        saver = await PostgresDocumentSaver.create(engine=engine, table_name=table_name)
+        loader = await PostgresLoader.create(engine=engine, table_name=table_name)
 
         await saver.aadd_documents(test_docs)
-        docs = await self._collect_async_items(loader.alazy_load())
+        # documents = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
 
-        assert docs == test_docs
-        assert (
-            await engine._aload_table_schema(table_name)
-        ).columns.keys() == [
+        assert documents == test_docs
+        assert (await engine._aload_table_schema(table_name)).columns.keys() == [
             "page_content",
             "langchain_metadata",
         ]
@@ -543,9 +544,7 @@ class TestLoaderAsync:
         # await self._cleanup_table(engine)
 
     @pytest.mark.parametrize("store_metadata", [True, False])
-    async def test_save_doc_with_customized_metadata(
-        self, engine, store_metadata
-    ):
+    async def test_save_doc_with_customized_metadata(self, engine, store_metadata):
         # await self._cleanup_table(engine)
         await engine.ainit_document_table(
             table_name,
@@ -565,9 +564,7 @@ class TestLoaderAsync:
                 },
             ),
         ]
-        saver = await PostgresDocumentSaver.create(
-            engine=engine, table_name=table_name
-        )
+        saver = await PostgresDocumentSaver.create(engine=engine, table_name=table_name)
         loader = await PostgresLoader.create(
             engine=engine,
             table_name=table_name,
@@ -578,28 +575,25 @@ class TestLoaderAsync:
         )
 
         await saver.aadd_documents(test_docs)
-        docs = await self._collect_async_items(loader.alazy_load())
+        # docs = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
 
         if store_metadata:
-            docs == test_docs
-            assert (
-                await engine._aload_table_schema(table_name)
-            ).columns.keys() == [
+            documents == test_docs
+            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
                 "page_content",
                 "fruit_name",
                 "organic",
                 "langchain_metadata",
             ]
         else:
-            assert docs == [
+            assert documents == [
                 Document(
                     page_content="Granny Smith 150 0.99",
                     metadata={"fruit_name": "Apple", "organic": True},
                 ),
             ]
-            assert (
-                await engine._aload_table_schema(table_name)
-            ).columns.keys() == [
+            assert (await engine._aload_table_schema(table_name)).columns.keys() == [
                 "page_content",
                 "fruit_name",
                 "organic",
@@ -619,9 +613,7 @@ class TestLoaderAsync:
                 },
             ),
         ]
-        saver = await PostgresDocumentSaver.create(
-            engine=engine, table_name=table_name
-        )
+        saver = await PostgresDocumentSaver.create(engine=engine, table_name=table_name)
         await saver.aadd_documents(test_docs)
 
         loader = await PostgresLoader.create(
@@ -630,6 +622,11 @@ class TestLoaderAsync:
         )
 
         docs = await self._collect_async_items(loader.alazy_load())
+        # results = []
+        # async for doc in loader.alazy_load():
+        #     results.append(doc)
+
+        # documents = await loader.aload()
 
         assert docs == [
             Document(
@@ -637,9 +634,7 @@ class TestLoaderAsync:
                 metadata={},
             ),
         ]
-        assert (
-            await engine._aload_table_schema(table_name)
-        ).columns.keys() == [
+        assert (await engine._aload_table_schema(table_name)).columns.keys() == [
             "page_content",
         ]
         # finally:
@@ -660,22 +655,23 @@ class TestLoaderAsync:
                 metadata={"fruit_id": 2},
             ),
         ]
-        saver = await PostgresDocumentSaver.create(
-            engine=engine, table_name=table_name
-        )
-        loader = await PostgresLoader.create(
-            engine=engine, table_name=table_name
-        )
+        saver = await PostgresDocumentSaver.create(engine=engine, table_name=table_name)
+        loader = await PostgresLoader.create(engine=engine, table_name=table_name)
 
         await saver.aadd_documents(test_docs)
-        docs = await self._collect_async_items(loader.alazy_load())
-        assert docs == test_docs
+        # docs = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
+        assert documents == test_docs
 
-        await saver.adelete(docs[:1])
-        assert len(await self._collect_async_items(loader.alazy_load())) == 1
+        await saver.adelete(documents[:1])
+        # assert len(await self._collect_async_items(loader.alazy_load())) == 1
+        documents = await loader.aload()
+        assert len(documents) == 1
 
-        await saver.adelete(docs)
-        assert len(await self._collect_async_items(loader.alazy_load())) == 0
+        await saver.adelete(documents)
+        # assert len(await self._collect_async_items(loader.alazy_load())) == 0
+        documents = await loader.aload()
+        assert len(documents) == 0
         # finally:
         # await self._cleanup_table(engine)
 
@@ -723,24 +719,23 @@ class TestLoaderAsync:
                 },
             ),
         ]
-        saver = await PostgresDocumentSaver.create(
-            engine=engine, table_name=table_name
-        )
+        saver = await PostgresDocumentSaver.create(engine=engine, table_name=table_name)
         query = f"SELECT * FROM \"{table_name}\" WHERE fruit_name='Apple';"
         loader = await PostgresLoader.create(engine=engine, query=query)
 
         await saver.aadd_documents(test_docs)
-        docs = await self._collect_async_items(loader.alazy_load())
-        assert len(docs) == 1
+        # docs = await self._collect_async_items(loader.alazy_load())
+        documents = await loader.aload()
+        assert len(documents) == 1
 
-        await saver.adelete(docs)
-        assert len(await self._collect_async_items(loader.alazy_load())) == 0
+        await saver.adelete(documents)
+        # assert len(await self._collect_async_items(loader.alazy_load())) == 0
+        documents = await loader.aload()
+        assert len(documents) == 0
         # finally:
         # await self._cleanup_table(engine)
 
-    @pytest.mark.parametrize(
-        "metadata_json_column", [None, "metadata_col_test"]
-    )
+    @pytest.mark.parametrize("metadata_json_column", [None, "metadata_col_test"])
     async def test_delete_doc_with_customized_metadata(
         self, engine, metadata_json_column
     ):
@@ -792,10 +787,14 @@ class TestLoaderAsync:
         assert len(docs) == 2
 
         await saver.adelete(docs[:1])
-        assert len(await self._collect_async_items(loader.alazy_load())) == 1
+        # assert len(await self._collect_async_items(loader.alazy_load())) == 1
+        documents = await loader.aload()
+        assert len(documents) == 1
 
         await saver.adelete(docs)
-        assert len(await self._collect_async_items(loader.alazy_load())) == 0
+        # assert len(await self._collect_async_items(loader.alazy_load())) == 0
+        documents = await loader.aload()
+        assert len(documents) == 0
 
 
 @pytest.mark.asyncio

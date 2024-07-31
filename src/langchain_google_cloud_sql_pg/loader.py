@@ -163,6 +163,31 @@ class PostgresLoader(BaseLoader):
         format: Optional[str] = None,
         formatter: Optional[Callable] = None,
     ) -> PostgresLoader:
+        return await engine._run_on_loop(
+            cls._create(
+                engine,
+                query,
+                table_name,
+                content_columns,
+                metadata_columns,
+                metadata_json_column,
+                format,
+                formatter,
+            )
+        )
+
+    @classmethod
+    async def _create(
+        cls,
+        engine: PostgresEngine,
+        query: Optional[str] = None,
+        table_name: Optional[str] = None,
+        content_columns: Optional[List[str]] = None,
+        metadata_columns: Optional[List[str]] = None,
+        metadata_json_column: Optional[str] = None,
+        format: Optional[str] = None,
+        formatter: Optional[Callable] = None,
+    ) -> PostgresLoader:
         """Create a new PostgresLoader instance.
 
         Args:
@@ -289,10 +314,14 @@ class PostgresLoader(BaseLoader):
 
     def load(self) -> List[Document]:
         """Load PostgreSQL data into Document objects."""
-        documents = self.engine._run_as_sync(
-            self._collect_async_items(self.alazy_load())
-        )
+        # documents = self.engine._run_as_sync(
+        #     self._collect_async_items(self.alazy_load())
+        # )
+        documents = self.engine._run_as_sync(self.aload())
         return documents
+
+    # async def aload(self) -> List[Document]:
+    #     return await self.engine._run_on_loop(self._aload())
 
     async def aload(self) -> List[Document]:
         """Load PostgreSQL data into Document objects."""
@@ -304,33 +333,37 @@ class PostgresLoader(BaseLoader):
             self._collect_async_items(self.alazy_load())
         )
 
+    # async def alazy_load(self) -> AsyncIterator[Document]:
+    #     return await self.engine._run_on_loop(self.alazy_load())
+
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Load PostgreSQL data into Document objects lazily."""
-        stmt = sqlalchemy.text(self.query)
-        async with self.engine._engine.connect() as connection:
-            result_proxy = await connection.execute(stmt)
-            # load document one by one
-            while True:
-                row = result_proxy.fetchone()
-                if not row:
-                    break
+        # stmt = sqlalchemy.text(self.query)
+        # async with self.engine._engine.connect() as connection:
+        #     result_proxy = await connection.execute(stmt)
+        # load document one by one
+        result_proxy = await self.engine._afetchone(self.query)
+        while True:
+            row = result_proxy.fetchone()
+            if not row:
+                break
 
-                row_data = {}
-                column_names = self.content_columns + self.metadata_columns
-                column_names += (
-                    [self.metadata_json_column] if self.metadata_json_column else []
-                )
-                for column in column_names:
-                    value = getattr(row, column)
-                    row_data[column] = value
+            row_data = {}
+            column_names = self.content_columns + self.metadata_columns
+            column_names += (
+                [self.metadata_json_column] if self.metadata_json_column else []
+            )
+            for column in column_names:
+                value = getattr(row, column)
+                row_data[column] = value
 
-                yield _parse_doc_from_row(
-                    self.content_columns,
-                    self.metadata_columns,
-                    row_data,
-                    self.metadata_json_column,
-                    self.formatter,
-                )
+            yield _parse_doc_from_row(
+                self.content_columns,
+                self.metadata_columns,
+                row_data,
+                self.metadata_json_column,
+                self.formatter,
+            )
 
 
 class PostgresDocumentSaver:
