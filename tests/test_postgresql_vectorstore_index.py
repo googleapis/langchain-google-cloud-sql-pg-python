@@ -135,6 +135,12 @@ class TestIndex:
         assert await vs.is_valid_index("secondindex")
         await vs.adrop_vector_index("secondindex")
 
+    async def test_aapply_vector_index_cross_env(self, vs):
+        index = IVFFlatIndex(distance_strategy=DistanceStrategy.EUCLIDEAN)
+        vs.apply_vector_index(index, concurrently=True)
+        assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
+        vs.drop_vector_index()
+
     async def test_is_valid_index(self, vs):
         is_valid = await vs.is_valid_index("invalid_index")
         assert is_valid == False

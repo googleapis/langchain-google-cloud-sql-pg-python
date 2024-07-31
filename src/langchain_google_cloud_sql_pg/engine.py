@@ -373,14 +373,10 @@ class PostgresEngine:
             await conn.execute(text(query), params)
             await conn.commit()
 
-    # async def _aexecute_outside_tx(self, query: str):
-    #     future = asyncio.run_coroutine_threadsafe(
-    #         self.__aexecute_outside_tx(query), self._loop
-    #     )
-    #     task = asyncio.wrap_future(future)
-    #     await task
-
     async def _aexecute_outside_tx(self, query: str):
+        return await self._run_on_loop(self.__aexecute_outside_tx(query))
+
+    async def __aexecute_outside_tx(self, query: str):
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text("COMMIT"))
@@ -649,6 +645,12 @@ class PostgresEngine:
         )
 
     async def _aload_table_schema(
+        self,
+        table_name: str,
+    ) -> Table:
+        return await self._run_on_loop(self.__aload_table_schema(table_name))
+
+    async def __aload_table_schema(
         self,
         table_name: str,
     ) -> Table:

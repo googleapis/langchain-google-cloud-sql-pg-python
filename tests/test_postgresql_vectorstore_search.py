@@ -152,6 +152,11 @@ class TestVectorStoreSearch:
         )
         assert results == [Document(page_content="bar")]
 
+    def test_asimilarity_search_cross_env(self, vs):
+        results = vs.similarity_search("foo", k=1)
+        assert len(results) == 1
+        assert results == [Document(page_content="foo")]
+
     async def test_asimilarity_search_score(self, vs):
         results = await vs.asimilarity_search_with_score("foo")
         assert len(results) == 4

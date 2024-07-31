@@ -20,10 +20,7 @@ import pytest_asyncio
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 
-from langchain_google_cloud_sql_pg import (
-    PostgresChatMessageHistory,
-    PostgresEngine,
-)
+from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
 table_name = "message_store" + str(uuid.uuid4())
 table_name_async = "message_store" + str(uuid.uuid4())
@@ -63,9 +60,7 @@ class TestEngineSync:
         return get_env_var("DB_PASSWORD", "database password for cloud sql")
 
     @pytest_asyncio.fixture
-    def memory_engine(
-        self, project_id, region, instance_id, db_name
-    ) -> Generator:
+    def memory_engine(self, project_id, region, instance_id, db_name) -> Generator:
         engine = PostgresEngine.from_instance(
             project_id=project_id,
             region=region,
@@ -99,9 +94,7 @@ class TestEngineSync:
         assert len(history.messages) == 0
 
     @pytest.mark.asyncio
-    async def test_cross_env_chat_message_history(
-        self, memory_engine: PostgresEngine
-    ):
+    async def test_cross_env_chat_message_history(self, memory_engine: PostgresEngine):
         history = PostgresChatMessageHistory.create_sync(
             engine=memory_engine, session_id="test", table_name=table_name
         )
