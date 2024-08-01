@@ -13,7 +13,7 @@
 # limitations under the License.
 import os
 import uuid
-from typing import Any, Generator
+from typing import Any, AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
@@ -173,7 +173,7 @@ class TestEngineAsync:
     @pytest_asyncio.fixture
     async def async_engine(
         self, project_id: str, region: str, instance_id: str, db_name: str
-    ) -> Generator:
+    ) -> AsyncGenerator:
         engine = await PostgresEngine.afrom_instance(
             project_id=project_id,
             region=region,
