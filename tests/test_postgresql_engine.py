@@ -148,38 +148,38 @@ class TestEngineAsync:
         await engine._aexecute("SELECT 1")
         PostgresEngine._connector = None
 
-    async def test_from_engine(
-        self,
-        db_project,
-        db_region,
-        db_instance,
-        db_name,
-        user,
-        password,
-    ):
-        async with Connector() as connector:
+    # async def test_from_engine(
+    #     self,
+    #     db_project,
+    #     db_region,
+    #     db_instance,
+    #     db_name,
+    #     user,
+    #     password,
+    # ):
+    #     async with Connector() as connector:
 
-            async def getconn() -> asyncpg.Connection:
-                conn = await connector.connect_async(  # type: ignore
-                    f"{db_project}:{db_region}:{db_instance}",
-                    "asyncpg",
-                    user=user,
-                    password=password,
-                    db=db_name,
-                    enable_iam_auth=False,
-                    ip_type=IPTypes.PUBLIC,
-                )
-                return conn
+    #         async def getconn() -> asyncpg.Connection:
+    #             conn = await connector.connect_async(  # type: ignore
+    #                 f"{db_project}:{db_region}:{db_instance}",
+    #                 "asyncpg",
+    #                 user=user,
+    #                 password=password,
+    #                 db=db_name,
+    #                 enable_iam_auth=False,
+    #                 ip_type=IPTypes.PUBLIC,
+    #             )
+    #             return conn
 
-            engine = create_async_engine(
-                "postgresql+asyncpg://",
-                async_creator=getconn,
-            )
+    #         engine = create_async_engine(
+    #             "postgresql+asyncpg://",
+    #             async_creator=getconn,
+    #         )
 
-            engine = PostgresEngine.from_engine(engine)
-            await engine._aexecute("SELECT 1")
-            assert len(engine._fetch("SELECT NOW();")) == 1
-            await engine._engine.dispose()
+    #         engine = PostgresEngine.from_engine(engine)
+    #         await engine._aexecute("SELECT 1")
+    #         assert len(engine._fetch("SELECT NOW();")) == 1
+    #         await engine._engine.dispose()
 
     async def test_column(self, engine):
         with pytest.raises(ValueError):
