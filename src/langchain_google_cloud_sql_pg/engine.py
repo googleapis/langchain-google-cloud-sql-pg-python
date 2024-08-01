@@ -176,10 +176,10 @@ class PostgresEngine:
             instance,
             database,
             ip_type,
-            user,
-            password,
-            loop=loop,
-            thread=thread,
+            loop,
+            thread,
+            user=user,
+            password=password,
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
@@ -316,40 +316,9 @@ class PostgresEngine:
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
-
         future = asyncio.run_coroutine_threadsafe(coro, loop)
         task = asyncio.wrap_future(future)
         return await task
-
-    @classmethod
-    def from_instance(
-        cls,
-        project_id: str,
-        region: str,
-        instance: str,
-        database: str,
-        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        quota_project: Optional[str] = None,
-    ) -> PostgresEngine:
-        loop = asyncio.new_event_loop()
-        thread = Thread(target=loop.run_forever, daemon=True)
-        thread.start()
-
-        coro = cls._create_engine(
-            project_id,
-            region,
-            instance,
-            database,
-            ip_type,
-            loop,
-            thread,
-            user=user,
-            password=password,
-            quota_project=quota_project,
-        )
-        return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
     @classmethod
     def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
