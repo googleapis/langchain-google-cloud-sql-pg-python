@@ -60,7 +60,9 @@ class TestEngineSync:
         return get_env_var("DB_PASSWORD", "database password for cloud sql")
 
     @pytest_asyncio.fixture
-    def memory_engine(self, project_id, region, instance_id, db_name) -> Generator:
+    def memory_engine(
+        self, project_id: str, region: str, instance_id: str, db_name: str
+    ) -> Generator:
         engine = PostgresEngine.from_instance(
             project_id=project_id,
             region=region,
@@ -72,7 +74,8 @@ class TestEngineSync:
         # use default table for PostgresChatMessageHistory
         query = f'DROP TABLE IF EXISTS "{table_name}"'
         engine._execute(query)
-        engine._run_as_sync(engine._connector.close_async())
+        if engine._connector:
+            engine._run_as_sync(engine._connector.close_async())
         engine._run_as_sync(engine._engine.dispose())
 
     def test_chat_message_history(self, memory_engine: PostgresEngine) -> None:
@@ -168,7 +171,9 @@ class TestEngineAsync:
         return get_env_var("DB_PASSWORD", "database password for cloud sql")
 
     @pytest_asyncio.fixture
-    async def async_engine(self, project_id, region, instance_id, db_name):
+    async def async_engine(
+        self, project_id: str, region: str, instance_id: str, db_name: str
+    ) -> Generator:
         engine = await PostgresEngine.afrom_instance(
             project_id=project_id,
             region=region,
@@ -179,7 +184,8 @@ class TestEngineAsync:
         yield engine
 
         await engine._aexecute(f'DROP TABLE IF EXISTS "{table_name_async}"')
-        await engine._connector.close_async()
+        if engine._connector:
+            await engine._connector.close_async()
         await engine._engine.dispose()
 
     @pytest.mark.asyncio
