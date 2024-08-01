@@ -332,15 +332,15 @@ class PostgresEngine:
         """Execute a SQL query."""
         return await self._run_on_loop(self.__aexecute(query, params))
 
-    async def __aexecute(self, query: str, params: Optional[dict] = None):
+    async def __aexecute(self, query: str, params: Optional[dict] = None) -> None:
         async with self._engine.connect() as conn:
             await conn.execute(text(query), params)
             await conn.commit()
 
-    async def _aexecute_outside_tx(self, query: str):
+    async def _aexecute_outside_tx(self, query: str) -> None:
         return await self._run_on_loop(self.__aexecute_outside_tx(query))
 
-    async def __aexecute_outside_tx(self, query: str):
+    async def __aexecute_outside_tx(self, query: str) -> None:
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text("COMMIT"))
@@ -352,7 +352,9 @@ class PostgresEngine:
         """Fetch results from a SQL query."""
         return await self._run_on_loop(self.__afetch(query, params))
 
-    async def __afetch(self, query: str, params: Optional[dict] = None):
+    async def __afetch(
+        self, query: str, params: Optional[dict] = None
+    ) -> Sequence[RowMapping]:
         async with self._engine.connect() as conn:
             result = await conn.execute(text(query), params)
             result_map = result.mappings()

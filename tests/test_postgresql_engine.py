@@ -178,6 +178,7 @@ class TestEngineAsync:
 
             engine = PostgresEngine.from_engine(engine)
             await engine._aexecute("SELECT 1")
+            await engine._engine.dispose()
 
     async def test_column(self, engine):
         with pytest.raises(ValueError):

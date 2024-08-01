@@ -17,8 +17,11 @@ import uuid
 
 import pytest
 import pytest_asyncio
+import sqlalchemy
+from google.cloud.sql.connector import Connector, create_async_connector
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
@@ -354,5 +357,51 @@ class TestVectorStore:
                 embedding_column="langchain_id",  # invalid embedding column data type
                 metadata_columns=["random_column"],
             )
+
+    async def test_from_engine(
+        self,
+        db_project,
+        db_region,
+        db_instance,
+        db_name,
+        user,
+        password,
+    ):
+        async def init_connection_pool(connector: Connector) -> AsyncEngine:
+            # initialize Connector object for connections to Cloud SQL
+            async def getconn():
+                conn = await connector.connect_async(
+                    f"{db_project}:{db_region}:{db_instance}",
+                    "asyncpg",
+                    user=user,
+                    password=password,
+                    db=db_name,
+                    enable_iam_auth=False,
+                    ip_type="PUBLIC",
+                )
+                return conn
+
+            # The Cloud SQL Python Connector can be used along with SQLAlchemy using the
+            # 'async_creator' argument to 'create_async_engine'
+            pool = create_async_engine(
+                "postgresql+asyncpg://",
+                async_creator=getconn,
+            )
+            return pool
+
+        connector = await create_async_connector()
+        pool = await init_connection_pool(connector)
+        engine = PostgresEngine.from_engine(pool)
+        table_name = "from_engine_test" + str(uuid.uuid4())
+        engine.init_vectorstore_table(table_name, VECTOR_SIZE)
+
+        vs = await PostgresVectorStore.create(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=table_name,
+        )
+        await vs.aadd_texts(["foo"])
+        assert len(await vs.similarity_search("foo")) == 1
+        await engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
 
     # Need tests for store metadata=False

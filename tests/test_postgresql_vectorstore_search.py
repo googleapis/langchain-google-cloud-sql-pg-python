@@ -131,7 +131,7 @@ class TestVectorStoreSearch:
         )
         vs_custom.add_documents(docs, ids=ids)
         yield vs_custom
-        engine_sync._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        engine_sync._execute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
 
     async def test_asimilarity_search(self, vs):
         results = await vs.asimilarity_search("foo", k=1)
