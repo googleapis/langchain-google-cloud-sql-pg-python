@@ -66,6 +66,14 @@ class TestVectorStore:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "database name on cloud sql instance")
 
+    @pytest.fixture(scope="module")
+    def user(self) -> str:
+        return get_env_var("DB_USER", "database user for cloud sql")
+
+    @pytest.fixture(scope="module")
+    def password(self) -> str:
+        return get_env_var("DB_PASSWORD", "database password for cloud sql")
+
     @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
