@@ -178,6 +178,7 @@ class TestEngineAsync:
 
             engine = PostgresEngine.from_engine(engine)
             await engine._aexecute("SELECT 1")
+            assert len(engine._fetch("SELECT NOW();")) == 1
             await engine._engine.dispose()
 
     async def test_column(self, engine):
@@ -342,4 +343,4 @@ class TestEngineSync:
         assert engine
         engine._execute("SELECT 1")
         engine._connector.close()
-        engine._engine.dispose()
+        engine._run_as_sync(engine._engine.dispose())

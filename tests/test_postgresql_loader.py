@@ -106,7 +106,6 @@ class TestLoaderAsync:
         loader = await PostgresLoader.create(
             engine=engine,
             query=f'SELECT * FROM "{table_name}";',
-            table_name=table_name,
         )
 
         documents = await self._collect_async_items(loader.alazy_load())
