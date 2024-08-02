@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
 
 import pytest
 import pytest_asyncio
-import sqlalchemy
 from google.cloud.sql.connector import Connector, create_async_connector
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
@@ -366,7 +367,7 @@ class TestVectorStore:
                 metadata_columns=["random_column"],
             )
 
-    async def test_from_engine(
+    async def test_from_engine_null(
         self,
         db_project,
         db_region,
@@ -394,6 +395,7 @@ class TestVectorStore:
             pool = create_async_engine(
                 "postgresql+asyncpg://",
                 async_creator=getconn,
+                # poolclass=NullPool,
             )
             return pool
 
@@ -409,9 +411,10 @@ class TestVectorStore:
             table_name=table_name,
         )
         await vs.aadd_texts(["foo"])
-        r = await vs.asimilarity_search("foo")
-        r = vs.similarity_search("foo")
-        assert len(r) == 1
+        r1 = await vs.asimilarity_search("foo")
+        assert len(r1) == 1
+        r2 = vs.similarity_search("foo")
+        assert len(r2) == 1
         await engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
 
     # Need tests for store metadata=False
