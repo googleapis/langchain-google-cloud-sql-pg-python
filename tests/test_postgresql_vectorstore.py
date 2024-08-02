@@ -15,6 +15,7 @@
 import asyncio
 import os
 import uuid
+from threading import Thread
 
 import pytest
 import pytest_asyncio
@@ -392,12 +393,16 @@ class TestVectorStore:
             pool = create_async_engine(
                 "postgresql+asyncpg://",
                 async_creator=getconn,
-                poolclass=NullPool,
             )
             return pool
 
-        connector = await create_async_connector()
-        pool = await init_connection_pool(connector)
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+
+        connector = Connector(loop=loop)
+        coro = init_connection_pool(connector)
+        pool = asyncio.run_coroutine_threadsafe(coro, loop).result()
         engine = PostgresEngine.from_engine(pool)
         table_name = "from_engine_test" + str(uuid.uuid4())
         await engine.ainit_vectorstore_table(table_name, VECTOR_SIZE)

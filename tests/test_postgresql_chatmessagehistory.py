@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
 import os
 import uuid
+from threading import Thread
 from typing import Any, AsyncGenerator, Generator
 
 import pytest
@@ -20,13 +22,9 @@ import pytest_asyncio
 from google.cloud.sql.connector import Connector, create_async_connector
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from langchain_google_cloud_sql_pg import (
-    PostgresChatMessageHistory,
-    PostgresEngine,
-)
+from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
 table_name = "message_store" + str(uuid.uuid4())
 table_name_async = "message_store" + str(uuid.uuid4())
@@ -302,7 +300,7 @@ class TestEngineAsync:
         user: str,
         password: str,
     ) -> None:
-        async def init_connection_pool(connector: Connector):
+        async def init_connection_pool(connector: Connector) -> AsyncEngine:
             async def getconn():
                 conn = await connector.connect_async(
                     f"{project_id}:{region}:{instance_id}",
@@ -318,12 +316,16 @@ class TestEngineAsync:
             pool = create_async_engine(
                 "postgresql+asyncpg://",
                 async_creator=getconn,
-                poolclass=NullPool,
             )
             return pool
 
-        connector = await create_async_connector()
-        pool = await init_connection_pool(connector)
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+
+        connector = Connector(loop=loop)
+        coro = init_connection_pool(connector)
+        pool = asyncio.run_coroutine_threadsafe(coro, loop).result()
         engine = PostgresEngine.from_engine(pool)
         table_name = "from_engine_test" + str(uuid.uuid4())
         await engine.ainit_chat_history_table(table_name)
