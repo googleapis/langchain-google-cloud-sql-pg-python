@@ -15,13 +15,13 @@
 import os
 import uuid
 
-import asyncpg  # type: ignore
 import pytest
 import pytest_asyncio
 from google.cloud.sql.connector import Connector, create_async_connector
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import VARCHAR
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
 
@@ -173,6 +173,7 @@ class TestEngineAsync:
             pool = create_async_engine(
                 "postgresql+asyncpg://",
                 async_creator=getconn,
+                poolclass=NullPool,
             )
             return pool
 

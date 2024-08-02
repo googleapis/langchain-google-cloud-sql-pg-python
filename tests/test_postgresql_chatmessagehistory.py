@@ -21,6 +21,7 @@ from google.cloud.sql.connector import Connector, create_async_connector
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
 from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
@@ -314,6 +315,7 @@ class TestEngineAsync:
             pool = create_async_engine(
                 "postgresql+asyncpg://",
                 async_creator=getconn,
+                poolclass=NullPool,
             )
             return pool
 
