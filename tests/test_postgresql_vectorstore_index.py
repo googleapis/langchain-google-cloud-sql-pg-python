@@ -82,6 +82,9 @@ class TestIndex:
         )
         yield engine
 
+        await engine._connector.close_async()
+        await engine._engine.dispose()
+
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
@@ -95,7 +98,6 @@ class TestIndex:
         await vs.adrop_vector_index()
         yield vs
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine._engine.dispose()
 
     @pytest.mark.run(order=1)
     async def test_aapply_vector_index(self, vs):

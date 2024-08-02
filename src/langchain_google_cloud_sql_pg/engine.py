@@ -24,6 +24,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Type,
     TypeVar,
     Union,
 )
@@ -113,8 +114,8 @@ class PostgresEngine:
         self,
         key: object,
         engine: AsyncEngine,
-        loop: Optional[asyncio.AbstractEventLoop],
-        thread: Optional[Thread],
+        loop: asyncio.AbstractEventLoop,
+        thread: Thread,
     ):
         """PostgresEngine constructor.
 
@@ -169,33 +170,33 @@ class PostgresEngine:
         loop = asyncio.new_event_loop()
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()
-        coro = cls._create(
+        coro = cls._create_engine(
             project_id,
             region,
             instance,
             database,
             ip_type,
-            user,
-            password,
-            loop=loop,
-            thread=thread,
+            loop,
+            thread,
+            user=user,
+            password=password,
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
         return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
     @classmethod
-    async def _create(
+    async def _create_engine(
         cls,
         project_id: str,
         region: str,
         instance: str,
         database: str,
         ip_type: Union[str, IPTypes],
+        loop: asyncio.AbstractEventLoop,
+        thread: Thread,
         user: Optional[str] = None,
         password: Optional[str] = None,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
-        thread: Optional[Thread] = None,
         quota_project: Optional[str] = None,
         iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
@@ -276,9 +277,9 @@ class PostgresEngine:
         region: str,
         instance: str,
         database: str,
+        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         user: Optional[str] = None,
         password: Optional[str] = None,
-        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
         quota_project: Optional[str] = None,
         iam_account_email: Optional[str] = None,
     ) -> PostgresEngine:
@@ -298,30 +299,48 @@ class PostgresEngine:
         Returns:
             PostgresEngine: A newly created PostgresEngine instance.
         """
-        return await cls._create(
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+
+        coro = cls._create_engine(
             project_id,
             region,
             instance,
             database,
             ip_type,
-            user,
-            password,
+            loop,
+            thread,
+            user=user,
+            password=password,
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        task = asyncio.wrap_future(future)
+        return await task
 
     @classmethod
     def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
         """Create an PostgresEngine instance from an AsyncEngine."""
-        return cls(cls.__create_key, engine, None, None)
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+        return cls(cls.__create_key, engine, loop, thread)
 
     async def _aexecute(self, query: str, params: Optional[dict] = None) -> None:
         """Execute a SQL query."""
+        return await self._run_on_loop(self.__aexecute(query, params))
+
+    async def __aexecute(self, query: str, params: Optional[dict] = None) -> None:
         async with self._engine.connect() as conn:
             await conn.execute(text(query), params)
             await conn.commit()
 
     async def _aexecute_outside_tx(self, query: str) -> None:
+        return await self._run_on_loop(self.__aexecute_outside_tx(query))
+
+    async def __aexecute_outside_tx(self, query: str) -> None:
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text("COMMIT"))
@@ -331,6 +350,11 @@ class PostgresEngine:
         self, query: str, params: Optional[dict] = None
     ) -> Sequence[RowMapping]:
         """Fetch results from a SQL query."""
+        return await self._run_on_loop(self.__afetch(query, params))
+
+    async def __afetch(
+        self, query: str, params: Optional[dict] = None
+    ) -> Sequence[RowMapping]:
         async with self._engine.connect() as conn:
             result = await conn.execute(text(query), params)
             result_map = result.mappings()
@@ -346,11 +370,23 @@ class PostgresEngine:
         """Fetch results from a SQL query."""
         return self._run_as_sync(self._afetch(query, params))
 
+    async def _afetchone(self, query):
+        return await self._run_on_loop(self.__afetchone(query))
+
+    async def __afetchone(self, query):
+        async with self._engine.connect() as conn:
+            result = await conn.execute(text(query))
+        return result
+
     def _run_as_sync(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine synchronously"""
-        if not self._loop:
-            raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
+
+    async def _run_on_loop(self, coro: Awaitable[T]) -> T:
+        """Run an async coroutine on background loop"""
+        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        task = asyncio.wrap_future(future)
+        return await task
 
     async def ainit_vectorstore_table(
         self,
@@ -552,6 +588,12 @@ class PostgresEngine:
         )
 
     async def _aload_table_schema(
+        self,
+        table_name: str,
+    ) -> Table:
+        return await self._run_on_loop(self.__aload_table_schema(table_name))
+
+    async def __aload_table_schema(
         self,
         table_name: str,
     ) -> Table:

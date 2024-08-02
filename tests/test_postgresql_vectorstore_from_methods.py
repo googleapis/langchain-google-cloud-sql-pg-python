@@ -85,6 +85,7 @@ class TestVectorStoreFromMethods:
         yield engine
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await engine._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await engine._connector.close_async()
         await engine._engine.dispose()
 
     @pytest_asyncio.fixture
@@ -100,7 +101,8 @@ class TestVectorStoreFromMethods:
         yield engine
         engine._execute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
 
-        engine._engine.dispose()
+        engine._run_as_sync(engine._connector.close_async())
+        engine._run_as_sync(engine._engine.dispose())
 
     async def test_afrom_texts(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -155,6 +157,32 @@ class TestVectorStoreFromMethods:
         results = engine_sync._fetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 3
         engine_sync._execute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+
+    async def test_afrom_docs_cross_env(self, engine_sync):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        await PostgresVectorStore.afrom_documents(
+            docs,
+            embeddings_service,
+            engine_sync,
+            DEFAULT_TABLE_SYNC,
+            ids=ids,
+        )
+        results = engine_sync._fetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        assert len(results) == 3
+        engine_sync._execute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+
+    async def test_from_docs_cross_env(self, engine, engine_sync):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        PostgresVectorStore.from_documents(
+            docs,
+            embeddings_service,
+            engine,
+            DEFAULT_TABLE_SYNC,
+            ids=ids,
+        )
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        assert len(results) == 3
+        await engine._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
 
     async def test_afrom_texts_custom(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]

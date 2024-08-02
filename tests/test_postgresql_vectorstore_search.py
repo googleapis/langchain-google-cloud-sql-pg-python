@@ -74,6 +74,9 @@ class TestVectorStoreSearch:
         )
         yield engine
 
+        await engine._connector.close_async()
+        await engine._engine.dispose()
+
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await engine.ainit_vectorstore_table(
@@ -88,7 +91,6 @@ class TestVectorStoreSearch:
         await vs.aadd_documents(docs, ids=ids)
         yield vs
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     def engine_sync(self, db_project, db_region, db_instance, db_name):
@@ -99,6 +101,9 @@ class TestVectorStoreSearch:
             database=db_name,
         )
         yield engine
+
+        engine._run_as_sync(engine._connector.close_async())
+        engine._run_as_sync(engine._engine.dispose())
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine_sync):
@@ -126,8 +131,7 @@ class TestVectorStoreSearch:
         )
         vs_custom.add_documents(docs, ids=ids)
         yield vs_custom
-        engine_sync._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
-        engine_sync._engine.dispose()
+        engine_sync._execute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
 
     async def test_asimilarity_search(self, vs):
         results = await vs.asimilarity_search("foo", k=1)
@@ -135,6 +139,11 @@ class TestVectorStoreSearch:
         assert results == [Document(page_content="foo")]
         results = await vs.asimilarity_search("foo", k=1, filter="content = 'bar'")
         assert results == [Document(page_content="bar")]
+
+    def test_asimilarity_search_cross_env(self, vs):
+        results = vs.similarity_search("foo", k=1)
+        assert len(results) == 1
+        assert results == [Document(page_content="foo")]
 
     async def test_asimilarity_search_score(self, vs):
         results = await vs.asimilarity_search_with_score("foo")

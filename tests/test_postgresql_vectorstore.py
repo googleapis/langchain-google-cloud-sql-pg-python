@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
+from threading import Thread
 
 import pytest
 import pytest_asyncio
+from google.cloud.sql.connector import Connector, create_async_connector
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
@@ -63,6 +68,14 @@ class TestVectorStore:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "database name on cloud sql instance")
 
+    @pytest.fixture(scope="module")
+    def user(self) -> str:
+        return get_env_var("DB_USER", "database user for cloud sql")
+
+    @pytest.fixture(scope="module")
+    def password(self) -> str:
+        return get_env_var("DB_PASSWORD", "database password for cloud sql")
+
     @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
@@ -74,6 +87,9 @@ class TestVectorStore:
 
         yield engine
 
+        await engine._connector.close_async()
+        await engine._engine.dispose()
+
     @pytest_asyncio.fixture(scope="class")
     def engine_sync(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
@@ -83,6 +99,9 @@ class TestVectorStore:
             database=db_name,
         )
         yield engine
+
+        engine._run_as_sync(engine._connector.close_async())
+        engine._run_as_sync(engine._engine.dispose())
 
     @pytest_asyncio.fixture(scope="class")
     def vs_sync(self, engine_sync):
@@ -95,7 +114,6 @@ class TestVectorStore:
         )
         yield vs
         engine_sync._execute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"')
-        engine_sync._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
@@ -107,7 +125,6 @@ class TestVectorStore:
         )
         yield vs
         await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
-        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
@@ -170,6 +187,13 @@ class TestVectorStore:
         results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 6
         await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
+
+    async def test_cross_env_add_texts(self, engine, vs):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        vs.add_texts(texts, ids=ids)
+        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
+        assert len(results) == 3
+        vs.delete(ids)
 
     async def test_aadd_texts_edge_cases(self, engine, vs):
         texts = ["Taylor's", '"Swift"', "best-friend"]
@@ -271,12 +295,22 @@ class TestVectorStore:
         vs_sync.add_documents(docs, ids=ids)
         results = engine_sync._fetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
         assert len(results) == 3
+        vs_sync.delete(ids)
 
     async def test_add_texts(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_texts(texts, ids=ids)
         results = engine_sync._fetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
-        assert len(results) == 6
+        assert len(results) == 3
+        # engine_sync._execute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
+        vs_sync.delete(ids)
+
+    async def test_cross_env(self, engine_sync, vs_sync):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        await vs_sync.aadd_texts(texts, ids=ids)
+        results = engine_sync._fetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
+        assert len(results) == 3
+        await vs_sync.adelete(ids)
 
     async def test_ignore_metadata_columns(self, vs_custom):
         column_to_ignore = "source"
@@ -334,4 +368,53 @@ class TestVectorStore:
                 metadata_columns=["random_column"],
             )
 
-    # Need tests for store metadata=False
+    async def test_from_engine(
+        self,
+        db_project,
+        db_region,
+        db_instance,
+        db_name,
+        user,
+        password,
+    ):
+        async def init_connection_pool(connector: Connector) -> AsyncEngine:
+            async def getconn():
+                conn = await connector.connect_async(
+                    f"{db_project}:{db_region}:{db_instance}",
+                    "asyncpg",
+                    user=user,
+                    password=password,
+                    db=db_name,
+                    enable_iam_auth=False,
+                    ip_type="PUBLIC",
+                )
+                return conn
+
+            pool = create_async_engine(
+                "postgresql+asyncpg://",
+                async_creator=getconn,
+            )
+            return pool
+
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+
+        connector = Connector(loop=loop)
+        coro = init_connection_pool(connector)
+        pool = asyncio.run_coroutine_threadsafe(coro, loop).result()
+        engine = PostgresEngine.from_engine(pool)
+        table_name = "from_engine_test" + str(uuid.uuid4())
+        await engine.ainit_vectorstore_table(table_name, VECTOR_SIZE)
+
+        vs = await PostgresVectorStore.create(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=table_name,
+        )
+        await vs.aadd_texts(["foo"])
+        r1 = await vs.asimilarity_search("foo")
+        assert len(r1) == 1
+        r2 = vs.similarity_search("foo")
+        assert len(r2) == 1
+        await engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
