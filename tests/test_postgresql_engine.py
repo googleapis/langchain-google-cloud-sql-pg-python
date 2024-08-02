@@ -157,7 +157,7 @@ class TestEngineAsync:
         db_name,
         user,
         password,
-    ) -> None:
+    ):
         async def init_connection_pool(connector: Connector) -> AsyncEngine:
             async def getconn():
                 conn = await connector.connect_async(
