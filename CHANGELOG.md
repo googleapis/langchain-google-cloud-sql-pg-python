@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.8.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.7.0...v0.8.0) (2024-08-02)
+
+
+### Features
+
+* Add table name to default index name ([#171](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/171)) ([8e61bc7](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/8e61bc779bc8f803e40e76aaeffdb93c35a5c90f))
+* Remove langchain-community dependency ([#172](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/172)) ([b4f40bb](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/b4f40bb389b40853e3deed37e1385a7866741231))
+
+
+### Documentation
+
+* Added vector store initialization from documents ([#174](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/174)) ([eb2eac3](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/eb2eac303f64e809e6f3fc9bc3307be163602a4e))
+
 ## [0.7.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.6.1...v0.7.0) (2024-07-23)
 
 
