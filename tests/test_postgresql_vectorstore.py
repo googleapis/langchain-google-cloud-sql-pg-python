@@ -367,7 +367,7 @@ class TestVectorStore:
                 metadata_columns=["random_column"],
             )
 
-    async def test_from_engine_null(
+    async def test_from_engine(
         self,
         db_project,
         db_region,
@@ -377,7 +377,6 @@ class TestVectorStore:
         password,
     ):
         async def init_connection_pool(connector: Connector) -> AsyncEngine:
-            # initialize Connector object for connections to Cloud SQL
             async def getconn():
                 conn = await connector.connect_async(
                     f"{db_project}:{db_region}:{db_instance}",
@@ -390,12 +389,9 @@ class TestVectorStore:
                 )
                 return conn
 
-            # The Cloud SQL Python Connector can be used along with SQLAlchemy using the
-            # 'async_creator' argument to 'create_async_engine'
             pool = create_async_engine(
                 "postgresql+asyncpg://",
                 async_creator=getconn,
-                # poolclass=NullPool,
             )
             return pool
 

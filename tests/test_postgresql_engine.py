@@ -156,9 +156,8 @@ class TestEngineAsync:
         db_name,
         user,
         password,
-    ):
+    ) -> None:
         async def init_connection_pool(connector: Connector):
-            # initialize Connector object for connections to Cloud SQL
             async def getconn():
                 conn = await connector.connect_async(
                     f"{db_project}:{db_region}:{db_instance}",
@@ -171,8 +170,6 @@ class TestEngineAsync:
                 )
                 return conn
 
-            # The Cloud SQL Python Connector can be used along with SQLAlchemy using the
-            # 'async_creator' argument to 'create_async_engine'
             pool = create_async_engine(
                 "postgresql+asyncpg://",
                 async_creator=getconn,
@@ -182,9 +179,11 @@ class TestEngineAsync:
         connector = await create_async_connector()
         pool = await init_connection_pool(connector)
         engine = PostgresEngine.from_engine(pool)
-        await engine._aexecute("SELECT 1")
-        r = await engine._afetch("SELECT NOW();")
-        assert len(r) == 1
+
+        await engine._aexecute("SELECT 1;")
+        engine._execute("SELECT 1;")
+
+        assert len(await engine._afetch("SELECT NOW();")) == 1
         assert len(engine._fetch("SELECT NOW();")) == 1
         await engine._engine.dispose()
 
