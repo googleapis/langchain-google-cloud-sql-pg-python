@@ -23,7 +23,10 @@ from langchain_core.messages.human import HumanMessage
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
+from langchain_google_cloud_sql_pg import (
+    PostgresChatMessageHistory,
+    PostgresEngine,
+)
 
 table_name = "message_store" + str(uuid.uuid4())
 table_name_async = "message_store" + str(uuid.uuid4())
@@ -298,7 +301,7 @@ class TestEngineAsync:
         db_name: str,
         user: str,
         password: str,
-    ):
+    ) -> None:
         async def init_connection_pool(connector: Connector):
             async def getconn():
                 conn = await connector.connect_async(
