@@ -18,7 +18,7 @@ import uuid
 import asyncpg  # type: ignore
 import pytest
 import pytest_asyncio
-from google.cloud.sql.connector import Connector, IPTypes
+from google.cloud.sql.connector import Connector, create_async_connector
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import VARCHAR
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -148,38 +148,45 @@ class TestEngineAsync:
         await engine._aexecute("SELECT 1")
         PostgresEngine._connector = None
 
-    # async def test_from_engine(
-    #     self,
-    #     db_project,
-    #     db_region,
-    #     db_instance,
-    #     db_name,
-    #     user,
-    #     password,
-    # ):
-    #     async with Connector() as connector:
+    async def test_from_engine(
+        self,
+        db_project,
+        db_region,
+        db_instance,
+        db_name,
+        user,
+        password,
+    ):
+        async def init_connection_pool(connector: Connector):
+            # initialize Connector object for connections to Cloud SQL
+            async def getconn():
+                conn = await connector.connect_async(
+                    f"{db_project}:{db_region}:{db_instance}",
+                    "asyncpg",
+                    user=user,
+                    password=password,
+                    db=db_name,
+                    enable_iam_auth=False,
+                    ip_type="PUBLIC",
+                )
+                return conn
 
-    #         async def getconn() -> asyncpg.Connection:
-    #             conn = await connector.connect_async(  # type: ignore
-    #                 f"{db_project}:{db_region}:{db_instance}",
-    #                 "asyncpg",
-    #                 user=user,
-    #                 password=password,
-    #                 db=db_name,
-    #                 enable_iam_auth=False,
-    #                 ip_type=IPTypes.PUBLIC,
-    #             )
-    #             return conn
+            # The Cloud SQL Python Connector can be used along with SQLAlchemy using the
+            # 'async_creator' argument to 'create_async_engine'
+            pool = create_async_engine(
+                "postgresql+asyncpg://",
+                async_creator=getconn,
+            )
+            return pool
 
-    #         engine = create_async_engine(
-    #             "postgresql+asyncpg://",
-    #             async_creator=getconn,
-    #         )
-
-    #         engine = PostgresEngine.from_engine(engine)
-    #         await engine._aexecute("SELECT 1")
-    #         assert len(engine._fetch("SELECT NOW();")) == 1
-    #         await engine._engine.dispose()
+        connector = await create_async_connector()
+        pool = await init_connection_pool(connector)
+        engine = PostgresEngine.from_engine(pool)
+        await engine._aexecute("SELECT 1")
+        r = await engine._afetch("SELECT NOW();")
+        assert len(r) == 1
+        assert len(engine._fetch("SELECT NOW();")) == 1
+        await engine._engine.dispose()
 
     async def test_column(self, engine):
         with pytest.raises(ValueError):

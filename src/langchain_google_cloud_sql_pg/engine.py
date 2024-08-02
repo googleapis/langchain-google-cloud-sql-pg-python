@@ -323,7 +323,12 @@ class PostgresEngine:
     @classmethod
     def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
         """Create an PostgresEngine instance from an AsyncEngine."""
-        loop = asyncio.get_event_loop()
+        # loop = asyncio.get_event_loop()
+        # try:
+        #     loop = asyncio.get_running_loop()
+        #     thread = None
+        # except RuntimeError:  # If no running loop
+        loop = asyncio.new_event_loop()
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()
         return cls(cls.__create_key, engine, loop, thread)
