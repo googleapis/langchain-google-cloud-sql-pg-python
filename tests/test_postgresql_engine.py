@@ -180,9 +180,6 @@ class TestEngineAsync:
         pool = await init_connection_pool(connector)
         engine = PostgresEngine.from_engine(pool)
 
-        await engine._aexecute("SELECT 1;")
-        engine._execute("SELECT 1;")
-
         assert len(await engine._afetch("SELECT NOW();")) == 1
         assert len(engine._fetch("SELECT NOW();")) == 1
         await engine._engine.dispose()

@@ -17,8 +17,10 @@ from typing import Any, AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
+from google.cloud.sql.connector import Connector, create_async_connector
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
 
@@ -285,3 +287,47 @@ class TestEngineAsync:
             )
 
         await async_engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
+
+    @pytest.mark.asyncio
+    async def test_from_engine(
+        self,
+        project_id: str,
+        region: str,
+        instance_id: str,
+        db_name: str,
+        user: str,
+        password: str,
+    ):
+        async def init_connection_pool(connector: Connector):
+            async def getconn():
+                conn = await connector.connect_async(
+                    f"{project_id}:{region}:{instance_id}",
+                    "asyncpg",
+                    user=user,
+                    password=password,
+                    db=db_name,
+                    enable_iam_auth=False,
+                    ip_type="PUBLIC",
+                )
+                return conn
+
+            pool = create_async_engine(
+                "postgresql+asyncpg://",
+                async_creator=getconn,
+            )
+            return pool
+
+        connector = await create_async_connector()
+        pool = await init_connection_pool(connector)
+        engine = PostgresEngine.from_engine(pool)
+        table_name = "from_engine_test" + str(uuid.uuid4())
+        await engine.ainit_chat_history_table(table_name)
+
+        history = PostgresChatMessageHistory.create_sync(
+            engine=engine, session_id="test", table_name=table_name
+        )
+        history.add_message(HumanMessage(content="hi!"))
+        messages = history.messages
+        assert messages[0].content == "hi!"
+        history.clear()
+        await engine._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
