@@ -73,6 +73,8 @@ class TestVectorStore:
         )
 
         yield engine
+        await engine._connector.close_async()
+        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     def engine_sync(self, db_project, db_region, db_instance, db_name):
@@ -83,6 +85,9 @@ class TestVectorStore:
             database=db_name,
         )
         yield engine
+
+        engine._connector.close()
+        engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     def vs_sync(self, engine_sync):
