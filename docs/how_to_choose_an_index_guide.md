@@ -42,4 +42,4 @@ Here is a comparison table between Graph-based and Tree-based Indexing algorithm
 
 ## Next Step
 
-By carefully evaluating your requirements for accuracy, computational resources, and scalability, you can select the optimal indexing approach for your vector search application. Once you've made the choice for your indexing algorithm, turn to [this guide](https://github.com/googleapis/langchain-google-alloydb-pg-python/tree/main/samples/index_tuning_sample/README.md) as your next step for evaluating indexing performance and fine-tuning your indexes as needed.
+By carefully evaluating your requirements for accuracy, computational resources, and scalability, you can select the optimal indexing approach for your vector search application. Once you've made the choice for your indexing algorithm, turn to [this guide](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/blob/main/samples/index_tuning_sample/README.md) as your next step for evaluating indexing performance and fine-tuning your indexes as needed.
