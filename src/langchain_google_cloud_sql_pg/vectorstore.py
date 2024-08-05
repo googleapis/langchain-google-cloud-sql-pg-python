@@ -320,6 +320,30 @@ class PostgresVectorStore(VectorStore):
         **kwargs: Any,
     ) -> List[str]:
         """Embed texts and add to the table."""
+        return await self.engine._run_as_async(
+            self.__aadd_texts(texts, metadatas, ids, **kwargs)
+        )
+
+    def add_texts(
+        self,
+        texts: Iterable[str],
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        """Embed texts and add to the table."""
+        return self.engine._run_as_sync(
+            self.__aadd_texts(texts, metadatas, ids, **kwargs)
+        )
+
+    async def __aadd_texts(
+        self,
+        texts: Iterable[str],
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        """Embed texts and add to the table."""
         embeddings = self.embedding_service.embed_documents(list(texts))
         ids = await self._aadd_embeddings(
             texts, embeddings, metadatas=metadatas, ids=ids, **kwargs
@@ -332,23 +356,8 @@ class PostgresVectorStore(VectorStore):
         ids: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Embed documents and add to the table"""
-        texts = [doc.page_content for doc in documents]
-        metadatas = [doc.metadata for doc in documents]
-        ids = await self.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
-        return ids
-
-    def add_texts(
-        self,
-        texts: Iterable[str],
-        metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
-        **kwargs: Any,
-    ) -> List[str]:
-        """Embed texts and add to the table."""
-        return self.engine._run_as_sync(
-            self.aadd_texts(texts, metadatas, ids, **kwargs)
-        )
+        """Embed documents and add to the table."""
+        return await self.engine._run_as_async(self.__aadd_documents(documents, ids, **kwargs))
 
     def add_documents(
         self,
@@ -357,9 +366,37 @@ class PostgresVectorStore(VectorStore):
         **kwargs: Any,
     ) -> List[str]:
         """Embed documents and add to the table."""
-        return self.engine._run_as_sync(self.aadd_documents(documents, ids, **kwargs))
+        return self.engine._run_as_sync(self.__aadd_documents(documents, ids, **kwargs))
+
+    async def __aadd_documents(
+        self,
+        documents: List[Document],
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        """Embed documents and add to the table"""
+        texts = [doc.page_content for doc in documents]
+        metadatas = [doc.metadata for doc in documents]
+        ids = await self.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
+        return ids
 
     async def adelete(
+        self,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> Optional[bool]:
+        """Delete records from the table."""
+        return await self.engine._run_as_async(self.__adelete(ids, **kwargs))
+
+    def delete(
+        self,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> Optional[bool]:
+        """Delete records from the table."""
+        return self.engine._run_as_sync(self.__adelete(ids, **kwargs))
+
+    async def __adelete(
         self,
         ids: Optional[List[str]] = None,
         **kwargs: Any,
@@ -372,14 +409,6 @@ class PostgresVectorStore(VectorStore):
         query = f'DELETE FROM "{self.table_name}" WHERE {self.id_column} in ({id_list})'
         await self.engine._aexecute(query)
         return True
-
-    def delete(
-        self,
-        ids: Optional[List[str]] = None,
-        **kwargs: Any,
-    ) -> Optional[bool]:
-        """Delete records from the table."""
-        return self.engine._run_as_sync(self.adelete(ids, **kwargs))
 
     @classmethod
     async def afrom_texts(  # type: ignore[override]
@@ -614,10 +643,24 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected by similarity search on query."""
         return self.engine._run_as_sync(
-            self.asimilarity_search(query, k=k, filter=filter, **kwargs)
+            self.__asimilarity_search(query, k=k, filter=filter, **kwargs)
         )
 
     async def asimilarity_search(
+        self,
+        query: str,
+        k: Optional[int] = None,
+        filter: Optional[str] = None,
+        **kwargs: Any,
+    ) -> List[Document]:
+        """Return docs selected by similarity search on query."""
+        embedding = self.embedding_service.embed_query(text=query)
+
+        return await self.engine._run_as_async(
+            self.__asimilarity_search(query, k=k, filter=filter, **kwargs)
+        )
+
+    async def __asimilarity_search(
         self,
         query: str,
         k: Optional[int] = None,

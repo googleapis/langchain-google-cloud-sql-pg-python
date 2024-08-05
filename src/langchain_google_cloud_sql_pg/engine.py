@@ -298,7 +298,12 @@ class PostgresEngine:
         Returns:
             PostgresEngine: A newly created PostgresEngine instance.
         """
-        return await cls._create(
+        # Running a loop in a background thread allows us to support
+        # async methods from non-async environments
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+        coro = cls._create(
             project_id,
             region,
             instance,
@@ -306,9 +311,12 @@ class PostgresEngine:
             ip_type,
             user,
             password,
+            loop=loop,
+            thread=thread,
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
+        return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(coro, loop))
 
     @classmethod
     def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
@@ -349,8 +357,20 @@ class PostgresEngine:
     def _run_as_sync(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine synchronously"""
         if not self._loop:
-            raise Exception("Engine was initialized async.")
+            raise Exception(
+                "Engine was initialized without a background loop and cannot call sync methods."
+            )
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
+
+    async def _run_as_async(self, coro: Awaitable[T]) -> T:
+        """Run an async coroutine asynchronously"""
+        # If a loop has not been provided, we assume the user knows what they are doing and attempt to run in current thread
+        if not self._loop:
+            return await coro
+        # Otherwise, run in the background thread
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, self._loop)
+        )
 
     async def ainit_vectorstore_table(
         self,
