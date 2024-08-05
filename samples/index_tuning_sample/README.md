@@ -215,7 +215,7 @@ Our default values for `m` is 16 and `ef_construction` is 64. Modify your code t
     python3 index_search.py
     ```
 
-### IVFFlat
+### IVF and IVFFlat
 
 ```python
 class IVFFlatIndex(
@@ -230,12 +230,14 @@ class IVFFlatQueryOptions(QueryOptions):
     probes: int = 1
 ```
 
-IVFFlat index-specific parameter:
+IVF and IVFFlat index-specific parameter:
 
 - `lists`: the number of clusters into which the dataset is divided. Increasing `lists` generally improves recall but may increase latency as well. Tune `lists` to find the balance between recall and latency that is most suitable for your application.
 - `probes`: the number of inverted lists (clusters) to examine during similarity search. A higher number of `probes` increases both recall and latency.
 
 ### IVF Index Tuning
+
+IVF and IVFFlat share the same index parameters. Replace all `IVFFlatIndex` with `IVFIndex` in the following code for IVF tuning.
 
 1. Let us try changing several parameters of the IVF index aiming for a better performance.
 Our default values for `lists` is 100. Modify your code to increase `lists` to 200.

@@ -32,6 +32,7 @@ from langchain_google_cloud_sql_pg.indexes import (
     HNSWIndex,
     HNSWQueryOptions,
     IVFFlatIndex,
+    IVFIndex,
 )
 
 DISTANCE_STRATEGY = DistanceStrategy.COSINE_DISTANCE
@@ -121,6 +122,27 @@ async def ivfflat_search(vector_store, knn_docs):
     return average_latency, average_recall
 
 
+async def ivf_search(vector_store, knn_docs):
+    """Create an IVF index and perform similaity search with the index."""
+    ivf_index = IVFIndex(name="ivf")
+    await vector_store.aapply_vector_index(ivf_index)
+    assert await vector_store.is_valid_index(ivf_index.name)
+    print("IVF index created.")
+    latencies = []
+    recalls = []
+
+    for i in range(len(queries)):
+        ivf_docs, latency = await query_vector_with_timing(vector_store, queries[i])
+        latencies.append(latency)
+        recalls.append(calculate_recall(knn_docs[i], ivf_docs))
+
+    await vector_store.adrop_vector_index(ivf_index.name)
+    # calculate average recall & latency
+    average_latency = sum(latencies) / len(latencies)
+    average_recall = sum(recalls) / len(recalls)
+    return average_latency, average_recall
+
+
 async def knn_search(vector_store):
     latencies = []
     knn_docs = []
@@ -148,13 +170,17 @@ async def main():
     ivfflat_average_latency, ivfflat_average_recall = await ivfflat_search(
         vector_store, knn_docs
     )
+    ivf_average_latency, ivf_average_recall = await ivf_search(vector_store, knn_docs)
 
-    print(f"KNN recall: 1.0            KNN latency: {knn_latency}")
+    print(f"KNN recall: 1.0               KNN latency: {knn_latency}")
     print(
-        f"HNSW average recall: {hnsw_average_recall}          HNSW average latency: {hnsw_average_latency}"
+        f"HNSW average recall: {hnsw_average_recall}      HNSW average latency: {hnsw_average_latency}"
     )
     print(
-        f"IVFFLAT average recall: {ivfflat_average_recall}    IVFFLAT latency: {ivfflat_average_latency}"
+        f"IVFFLAT average recall: {ivfflat_average_recall}   IVFFLAT latency: {ivfflat_average_latency}"
+    )
+    print(
+        f"IVF average recall: {ivf_average_recall}       IVF latency: {ivf_average_latency}"
     )
 
 
