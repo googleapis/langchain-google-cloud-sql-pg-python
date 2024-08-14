@@ -25,10 +25,8 @@ When selecting an indexing algorithm for your application’s ANN vector search,
 - Graph-based algorithms are good at handling complex, high-dimensional data, offering faster search speeds by navigating through a network of interconnected data points. They are especially useful when the dataset is relatively larger, as they can efficiently traverse this network to find close matches. However, the memory usage and index building time could also grow significantly as the dataset grows compared to tree-based indexes. Example:
 HNSW (through the pgvector extension)
 
-- Tree-based algorithms organize data in a structured, hierarchical manner, making them efficient for lower-dimensional datasets. They offer a structured and often more resource-efficient approach to partitioning space and finding neighbors, but their performance degrades when the embeddings have high dimensionality but low information density. Examples:
-IVF (through the pgvector++ extension)
+- Tree-based algorithms organize data in a structured, hierarchical manner, making them efficient for lower-dimensional datasets. They offer a structured and often more resource-efficient approach to partitioning space and finding neighbors, but their performance degrades when the embeddings have high dimensionality but low information density. Example:
 IVFFlat (through the pgvector extension)
-ScaNN (through the postgres_ann extension)
 
 Here is a comparison table between Graph-based and Tree-based Indexing algorithms:
 
@@ -36,7 +34,7 @@ Here is a comparison table between Graph-based and Tree-based Indexing algorithm
 |---------|-----------------------|----------------------|
 |Latency |Generally offers higher search efficiency, especially in high-dimensional spaces due to its ability to skip over irrelevant regions of the graph. Write latency is generally higher.| Efficiency depends on dataset distribution characteristics.|
 | Accuracy | Can achieve high levels of accuracy by adjusting the graph's complexity (e.g., the number of edges per node), allowing for fine-tuning based on the dataset.| Accuracy is influenced by the tree's depth and branching factor. While very accurate in lower dimensions, accuracy decreases on embeddings with high dimensionality but low information density.|
-| Examples | HNSW (through pgvector) | IVF (through pgvector++), IVFFlat (through pgvector),  and ScaNN (through alloydb_ann)|
+| Examples | HNSW (through pgvector) | IVFFlat (through pgvector)|
 | Index Creation Time| Slower | Faster|
 | Memory used | More | Less |
 
