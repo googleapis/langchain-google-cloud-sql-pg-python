@@ -107,6 +107,8 @@ class PostgresEngine:
     """A class for managing connections to a Cloud SQL for Postgres database."""
 
     _connector: Optional[Connector] = None
+    _default_loop: Optional[asyncio.AbstractEventLoop] = None
+    _default_thread: Optional[Thread] = None
     __create_key = object()
 
     def __init__(
@@ -166,9 +168,12 @@ class PostgresEngine:
         """
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
-        loop = asyncio.new_event_loop()
-        thread = Thread(target=loop.run_forever, daemon=True)
-        thread.start()
+        if cls._default_loop is None:
+            cls._default_loop = asyncio.new_event_loop()
+            cls._default_thread = Thread(
+                target=cls._default_loop.run_forever, daemon=True
+            )
+            cls._default_thread.start()
         coro = cls._create(
             project_id,
             region,
@@ -177,12 +182,12 @@ class PostgresEngine:
             ip_type,
             user,
             password,
-            loop=loop,
-            thread=thread,
+            loop=cls._default_loop,
+            thread=cls._default_thread,
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
-        return asyncio.run_coroutine_threadsafe(coro, loop).result()
+        return asyncio.run_coroutine_threadsafe(coro, cls._default_loop).result()
 
     @classmethod
     async def _create(
@@ -228,7 +233,7 @@ class PostgresEngine:
             )
         if cls._connector is None:
             cls._connector = Connector(
-                loop=asyncio.get_event_loop(),
+                loop=loop,
                 user_agent=USER_AGENT,
                 quota_project=quota_project,
                 refresh_strategy=RefreshStrategy.LAZY,
