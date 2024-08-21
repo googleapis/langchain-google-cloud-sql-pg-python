@@ -20,7 +20,11 @@ import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 
-from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
+from langchain_google_cloud_sql_pg import (
+    Column,
+    PostgresEngine,
+    PostgresVectorStore,
+)
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
@@ -31,12 +35,17 @@ VECTOR_SIZE = 768
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz"]
-metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
+metadatas = [
+    {"page": str(i), "source": "google.com"} for i in range(len(texts))
+]
 docs = [
-    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
+    Document(page_content=texts[i], metadata=metadatas[i])
+    for i in range(len(texts))
 ]
 
-embeddings = [embeddings_service.embed_query(texts[i]) for i in range(len(texts))]
+embeddings = [
+    embeddings_service.embed_query(texts[i]) for i in range(len(texts))
+]
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -88,7 +97,7 @@ class TestVectorStoreFromMethods:
         await engine._engine.dispose()
 
     @pytest_asyncio.fixture
-    def engine_sync(self, db_project, db_region, db_instance, db_name):
+    async def engine_sync(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
@@ -98,9 +107,9 @@ class TestVectorStoreFromMethods:
         engine.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
 
         yield engine
-        engine._execute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
+        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
 
-        engine._engine.dispose()
+        await engine._engine.dispose()
 
     async def test_afrom_texts(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -126,9 +135,11 @@ class TestVectorStoreFromMethods:
             metadatas=metadatas,
             ids=ids,
         )
-        results = engine_sync._fetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        results = await engine_sync._afetch(
+            f"SELECT * FROM {DEFAULT_TABLE_SYNC}"
+        )
         assert len(results) == 3
-        engine_sync._execute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+        await engine_sync._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
 
     async def test_afrom_docs(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -152,9 +163,39 @@ class TestVectorStoreFromMethods:
             DEFAULT_TABLE_SYNC,
             ids=ids,
         )
-        results = engine_sync._fetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        results = await engine_sync._afetch(
+            f"SELECT * FROM {DEFAULT_TABLE_SYNC}"
+        )
         assert len(results) == 3
-        engine_sync._execute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+        await engine_sync._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+
+    async def test_afrom_docs_cross_env(self, engine_sync):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        await PostgresVectorStore.afrom_documents(
+            docs,
+            embeddings_service,
+            engine_sync,
+            DEFAULT_TABLE_SYNC,
+            ids=ids,
+        )
+        results = await engine_sync._afetch(
+            f"SELECT * FROM {DEFAULT_TABLE_SYNC}"
+        )
+        assert len(results) == 3
+        await engine_sync._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+
+    async def test_from_docs_cross_env(self, engine, engine_sync):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        PostgresVectorStore.from_documents(
+            docs,
+            embeddings_service,
+            engine,
+            DEFAULT_TABLE_SYNC,
+            ids=ids,
+        )
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        assert len(results) == 3
+        await engine._aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
 
     async def test_afrom_texts_custom(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
