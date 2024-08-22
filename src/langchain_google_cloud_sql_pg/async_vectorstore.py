@@ -26,6 +26,7 @@ from langchain_core.vectorstores import VectorStore
 from langchain_core.vectorstores.utils import (
     _maximal_marginal_relevance as maximal_marginal_relevance,
 )
+from sqlalchemy import MetaData, Table, text
 from sqlalchemy.engine.row import RowMapping
 
 from .engine import PostgresEngine
@@ -145,8 +146,15 @@ class AsyncPostgresVectorStore(VectorStore):
                 "Can not use both metadata_columns and ignore_metadata_columns."
             )
         # Get field type information
-        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}'"
-        results = await engine._afetch(stmt)
+        async with engine._engine.connect() as conn:
+            result = await conn.execute(
+                text(
+                    f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}'"
+                )
+            )
+            result_map = result.mappings()
+            results = result_map.fetchall()
+
         columns = {}
         for field in results:
             columns[field["column_name"]] = field["data_type"]
@@ -254,7 +262,9 @@ class AsyncPostgresVectorStore(VectorStore):
                 values_stmt += ")"
 
             query = insert_stmt + values_stmt
-            await self.engine._aexecute(query, values)
+            async with self.engine._engine.connect() as conn:
+                await conn.execute(text(query), values)
+                await conn.commit()
 
         return ids
 
@@ -295,7 +305,9 @@ class AsyncPostgresVectorStore(VectorStore):
 
         id_list = ", ".join([f"'{id}'" for id in ids])
         query = f'DELETE FROM "{self.table_name}" WHERE {self.id_column} in ({id_list})'
-        await self.engine._aexecute(query)
+        async with self.engine._engine.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
         return True
 
     @classmethod
@@ -413,10 +425,18 @@ class AsyncPostgresVectorStore(VectorStore):
         filter = f"WHERE {filter}" if filter else ""
         stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM \"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
         if self.index_query_options:
-            await self.engine._aexecute(
-                f"SET LOCAL {self.index_query_options.to_string()};"
-            )
-        results = await self.engine._afetch(stmt)
+            async with self.engine._engine.connect() as conn:
+                await conn.execute(
+                    text(f"SET LOCAL {self.index_query_options.to_string()};")
+                )
+                result = await conn.execute(text(stmt))
+                result_map = result.mappings()
+                results = result_map.fetchall()
+        else:
+            async with self.engine._engine.connect() as conn:
+                result = await conn.execute(text(stmt))
+                result_map = result.mappings()
+                results = result_map.fetchall()
         return results
 
     async def asimilarity_search(
@@ -615,15 +635,21 @@ class AsyncPostgresVectorStore(VectorStore):
             name = index.name
         stmt = f'CREATE INDEX {"CONCURRENTLY" if concurrently else ""} {name} ON "{self.table_name}" USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};'
         if concurrently:
-            await self.engine._aexecute_outside_tx(stmt)
+            async with self.engine._engine.connect() as conn:
+                await conn.execute(text("COMMIT"))
+                await conn.execute(text(stmt))
         else:
-            await self.engine._aexecute(stmt)
+            async with self.engine._engine.connect() as conn:
+                await conn.execute(text(stmt))
+                await conn.commit()
 
     async def areindex(self, index_name: Optional[str] = None) -> None:
         """Re-index the vector store table."""
         index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"REINDEX INDEX {index_name};"
-        await self.engine._aexecute(query)
+        async with self.engine._engine.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
 
     async def adrop_vector_index(
         self,
@@ -632,7 +658,9 @@ class AsyncPostgresVectorStore(VectorStore):
         """Drop the vector index."""
         index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"DROP INDEX IF EXISTS {index_name};"
-        await self.engine._aexecute(query)
+        async with self.engine._engine.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
 
     async def is_valid_index(
         self,
@@ -640,12 +668,16 @@ class AsyncPostgresVectorStore(VectorStore):
     ) -> bool:
         """Check if index exists in the table."""
         index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
-        query = f"""
+        stmt = f"""
         SELECT tablename, indexname
         FROM pg_indexes
         WHERE tablename = '{self.table_name}' AND indexname = '{index_name}';
         """
-        results = await self.engine._afetch(query)
+        async with self.engine._engine.connect() as conn:
+            result = await conn.execute(text(stmt))
+            result_map = result.mappings()
+            results = result_map.fetchall()
+
         return bool(len(results) == 1)
 
     def similarity_search(
