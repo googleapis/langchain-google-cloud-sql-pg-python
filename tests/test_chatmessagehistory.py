@@ -30,8 +30,8 @@ table_name = "message_store" + str(uuid.uuid4())
 table_name_async = "message_store" + str(uuid.uuid4())
 
 
-@pytest.fixture(name="memory_engine")
-def setup() -> Generator:
+@pytest_asyncio.fixture
+async def engine():
     engine = PostgresEngine.from_instance(
         project_id=project_id,
         region=region,
@@ -42,27 +42,31 @@ def setup() -> Generator:
     yield engine
     # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
-    engine._execute(query)
+    await engine.aexecute(query)
+    await engine._connector.close_async()
+    await engine._engine.dispose()
 
 
 @pytest_asyncio.fixture
 async def async_engine():
-    engine = await PostgresEngine.afrom_instance(
+    async_engine = await PostgresEngine.afrom_instance(
         project_id=project_id,
         region=region,
         instance=instance_id,
         database=db_name,
     )
-    await engine.ainit_chat_history_table(table_name=table_name_async)
-    yield engine
+    await async_engine.ainit_chat_history_table(table_name=table_name_async)
+    yield async_engine
     # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
-    await engine._aexecute(query)
+    await async_engine.aexecute(query)
+    await async_engine._connector.close_async()
+    await async_engine._engine.dispose()
 
 
-def test_chat_message_history(memory_engine: PostgresEngine) -> None:
+def test_chat_message_history(engine: PostgresEngine) -> None:
     history = PostgresChatMessageHistory.create_sync(
-        engine=memory_engine, session_id="test", table_name=table_name
+        engine=engine, session_id="test", table_name=table_name
     )
     history.add_user_message("hi!")
     history.add_ai_message("whats up?")
@@ -79,23 +83,24 @@ def test_chat_message_history(memory_engine: PostgresEngine) -> None:
     assert len(history.messages) == 0
 
 
-def test_chat_table(memory_engine: Any) -> None:
+def test_chat_table(engine: Any) -> None:
     with pytest.raises(ValueError):
         PostgresChatMessageHistory.create_sync(
-            engine=memory_engine, session_id="test", table_name="doesnotexist"
+            engine=engine, session_id="test", table_name="doesnotexist"
         )
 
 
-def test_chat_schema(memory_engine: Any) -> None:
+@pytest.mark.asyncio
+async def test_chat_schema(engine: Any) -> None:
     doc_table_name = "test_table" + str(uuid.uuid4())
-    memory_engine.init_document_table(table_name=doc_table_name)
+    engine.init_document_table(table_name=doc_table_name)
     with pytest.raises(IndexError):
         PostgresChatMessageHistory.create_sync(
-            engine=memory_engine, session_id="test", table_name=doc_table_name
+            engine=engine, session_id="test", table_name=doc_table_name
         )
 
     query = f'DROP TABLE IF EXISTS "{doc_table_name}"'
-    memory_engine._execute(query)
+    await engine.aexecute(query)
 
 
 @pytest.mark.asyncio
@@ -137,11 +142,8 @@ async def test_chat_message_history_sync_messages(
     await history1.aadd_message(msg1)
     await history2.aadd_message(msg2)
 
-    assert len(history1.messages) == 1
-    assert len(history2.messages) == 2
-
-    await history1.async_messages()
     assert len(history1.messages) == 2
+    assert len(history2.messages) == 2
 
     # verify clear() clears message history
     await history2.aclear()
@@ -166,4 +168,23 @@ async def test_chat_schema_async(async_engine):
         )
 
     query = f'DROP TABLE IF EXISTS "{table_name}"'
-    await async_engine._aexecute(query)
+    await async_engine.aexecute(query)
+
+
+@pytest.mark.asyncio
+async def test_cross_env_chat_message_history(engine):
+    history = PostgresChatMessageHistory.create_sync(
+        engine=engine, session_id="test_cross", table_name=table_name
+    )
+    await history.aadd_message(HumanMessage(content="hi!"))
+    messages = history.messages
+    assert messages[0].content == "hi!"
+    history.clear()
+
+    history = await PostgresChatMessageHistory.create(
+        engine=engine, session_id="test_cross", table_name=table_name
+    )
+    history.add_message(HumanMessage(content="hi!"))
+    messages = history.messages
+    assert messages[0].content == "hi!"
+    history.clear()

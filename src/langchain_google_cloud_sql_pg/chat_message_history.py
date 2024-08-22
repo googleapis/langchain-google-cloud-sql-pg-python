@@ -48,7 +48,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         engine: PostgresEngine,
         session_id: str,
         table_name: str,
-        messages: List[BaseMessage],
+        # messages: List[BaseMessage],
     ):
         """PostgresChatMessageHistory constructor.
 
@@ -69,10 +69,17 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         self.engine = engine
         self.session_id = session_id
         self.table_name = table_name
-        self.messages = messages
+        # self.messages = messages
+
+    @property  # type: ignore[override]
+    def messages(self) -> List[BaseMessage]:
+        """The abstraction required a property."""
+        return self.engine._run_as_sync(
+            _aget_messages(self.engine, self.session_id, self.table_name)
+        )
 
     @classmethod
-    async def create(
+    async def _create(
         cls,
         engine: PostgresEngine,
         session_id: str,
@@ -109,7 +116,30 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
                 "\n);"
             )
         messages = await _aget_messages(engine, session_id, table_name)
-        return cls(cls.__create_key, engine, session_id, table_name, messages)
+        return cls(cls.__create_key, engine, session_id, table_name)  # , messages)
+
+    @classmethod
+    async def create(
+        cls,
+        engine: PostgresEngine,
+        session_id: str,
+        table_name: str,
+    ) -> PostgresChatMessageHistory:
+        """Create a new PostgresChatMessageHistory instance.
+
+        Args:
+            engine (PostgresEngine): Postgres engine to use.
+            session_id (str): Retrieve the table content with this session ID.
+            table_name (str): Table name that stores the chat message history.
+
+        Raises:
+            IndexError: If the table provided does not contain required schema.
+
+        Returns:
+            PostgresChatMessageHistory: A newly created instance of PostgresChatMessageHistory.
+        """
+        coro = cls._create(engine, session_id, table_name)
+        return await engine._run_as_async(coro)
 
     @classmethod
     def create_sync(
@@ -131,10 +161,10 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         Returns:
             PostgresChatMessageHistory: A newly created instance of PostgresChatMessageHistory.
         """
-        coro = cls.create(engine, session_id, table_name)
+        coro = cls._create(engine, session_id, table_name)
         return engine._run_as_sync(coro)
 
-    async def aadd_message(self, message: BaseMessage) -> None:
+    async def _aadd_message(self, message: BaseMessage) -> None:
         """Append the message to the record in PostgreSQL"""
         query = f"""INSERT INTO "{self.table_name}"(session_id, data, type)
                     VALUES (:session_id, :data, :type);
@@ -147,39 +177,55 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
                 "type": message.type,
             },
         )
-        self.messages = await _aget_messages(
-            self.engine, self.session_id, self.table_name
-        )
+        # self.messages = await _aget_messages(
+        #     self.engine, self.session_id, self.table_name
+        # )
+
+    async def aadd_message(self, message: BaseMessage) -> None:
+        """Append the message to the record in PostgreSQL"""
+        await self.engine._run_as_async(self._aadd_message(message))
 
     def add_message(self, message: BaseMessage) -> None:
         """Append the message to the record in PostgreSQL"""
-        self.engine._run_as_sync(self.aadd_message(message))
+        self.engine._run_as_sync(self._aadd_message(message))
 
-    async def aadd_messages(self, messages: Sequence[BaseMessage]) -> None:
+    async def _aadd_messages(self, messages: Sequence[BaseMessage]) -> None:
         """Append a list of messages to the record in PostgreSQL"""
         for message in messages:
             await self.aadd_message(message)
 
+    async def aadd_messages(self, messages: Sequence[BaseMessage]) -> None:
+        """Append a list of messages to the record in PostgreSQL"""
+        await self.engine._run_as_async(self._aadd_messages(messages))
+
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
         """Append a list of messages to the record in PostgreSQL"""
-        self.engine._run_as_sync(self.aadd_messages(messages))
+        self.engine._run_as_sync(self._aadd_messages(messages))
 
-    async def aclear(self) -> None:
+    async def _aclear(self) -> None:
         """Clear session memory from PostgreSQL"""
         query = f"""DELETE FROM "{self.table_name}" WHERE session_id = :session_id;"""
         await self.engine._aexecute(query, {"session_id": self.session_id})
-        self.messages = []
+        # self.messages = []
+
+    async def aclear(self) -> None:
+        """Clear session memory from PostgreSQL"""
+        await self.engine._run_as_async(self._aclear())
 
     def clear(self) -> None:
         """Clear session memory from PostgreSQL"""
-        self.engine._run_as_sync(self.aclear())
+        self.engine._run_as_sync(self._aclear())
 
-    async def async_messages(self) -> None:
-        """Retrieve the messages from Postgres."""
-        self.messages = await _aget_messages(
-            self.engine, self.session_id, self.table_name
-        )
+    # async def _async_messages(self) -> None:
+    #     """Retrieve the messages from Postgres."""
+    #     self.messages = await _aget_messages(
+    #         self.engine, self.session_id, self.table_name
+    #     )
+
+    # async def async_messages(self) -> None:
+    #     """Retrieve the messages from Postgres."""
+    #     await self.engine._run_as_async(self._async_messages())
 
     def sync_messages(self) -> None:
         """Retrieve the messages from Postgres."""
-        self.engine._run_as_sync(self.async_messages())
+        self.engine._run_as_sync(self._async_messages())
