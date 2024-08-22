@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from . import indexes
+from .async_vectorstore import AsyncPostgresVectorStore
 from .chat_message_history import PostgresChatMessageHistory
 from .engine import Column, PostgresEngine
 from .loader import PostgresDocumentSaver, PostgresLoader
@@ -21,6 +22,7 @@ from .version import __version__
 
 __all__ = [
     "indexes",
+    "AsyncPostgresVectorStore",
     "PostgresVectorStore",
     "PostgresChatMessageHistory",
     "Column",
