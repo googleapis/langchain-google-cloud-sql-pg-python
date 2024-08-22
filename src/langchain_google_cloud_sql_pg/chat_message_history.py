@@ -28,7 +28,7 @@ async def _aget_messages(
 ) -> List[BaseMessage]:
     """Retrieve the messages from PostgreSQL."""
     query = f"""SELECT data, type FROM "{table_name}" WHERE session_id = :session_id ORDER BY id;"""
-    results = await engine.afetch(query, {"session_id": session_id})
+    results = await engine._afetch(query, {"session_id": session_id})
     if not results:
         return []
 
@@ -139,7 +139,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         query = f"""INSERT INTO "{self.table_name}"(session_id, data, type)
                     VALUES (:session_id, :data, :type);
                 """
-        await self.engine.aexecute(
+        await self.engine._aexecute(
             query,
             {
                 "session_id": self.session_id,
@@ -167,7 +167,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
     async def aclear(self) -> None:
         """Clear session memory from PostgreSQL"""
         query = f"""DELETE FROM "{self.table_name}" WHERE session_id = :session_id;"""
-        await self.engine.aexecute(query, {"session_id": self.session_id})
+        await self.engine._aexecute(query, {"session_id": self.session_id})
         self.messages = []
 
     def clear(self) -> None:
