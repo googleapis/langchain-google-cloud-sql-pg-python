@@ -599,10 +599,12 @@ class PostgresVectorStore(VectorStore):
         filter = f"WHERE {filter}" if filter else ""
         stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM \"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
         if self.index_query_options:
-            await self.engine._aexecute(
-                f"SET LOCAL {self.index_query_options.to_string()};"
+            query_options_stmt = f"SET LOCAL {self.index_query_options.to_string()};"
+            results = await self.engine._afetch_with_query_options(
+                stmt, query_options_stmt
             )
-        results = await self.engine._afetch(stmt)
+        else:
+            results = await self.engine._afetch(stmt)
         return results
 
     def similarity_search(
