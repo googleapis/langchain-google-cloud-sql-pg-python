@@ -84,7 +84,7 @@ class TestIndex:
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await engine._ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         vs = await AsyncPostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,

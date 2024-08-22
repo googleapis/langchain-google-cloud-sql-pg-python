@@ -87,7 +87,7 @@ class TestVectorStoreSearch:
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_documents(docs, ids=ids)
         yield vs
-        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await engine.aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
@@ -126,7 +126,7 @@ class TestVectorStoreSearch:
         )
         vs_custom.add_documents(docs, ids=ids)
         yield vs_custom
-        engine_sync._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        engine_sync.aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
         engine_sync._engine.dispose()
 
     async def test_asimilarity_search(self, vs):

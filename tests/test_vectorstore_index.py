@@ -96,7 +96,7 @@ class TestIndex:
         vs.add_texts(texts, ids=ids)
         vs.drop_vector_index()
         yield vs
-        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await engine.aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
 
     @pytest.mark.run(order=1)
     async def test_aapply_vector_index(self, vs):

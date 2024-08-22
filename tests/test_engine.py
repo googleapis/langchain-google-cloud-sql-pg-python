@@ -81,7 +81,7 @@ class TestEngineAsync:
         await engine._engine.dispose()
 
     async def test_execute(self, engine):
-        await engine._aexecute("SELECT 1")
+        await engine.aexecute("SELECT 1")
 
     async def test_init_table(self, engine):
         await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
@@ -89,12 +89,12 @@ class TestEngineAsync:
         content = "coffee"
         embedding = await embeddings_service.aembed_query(content)
         stmt = f"INSERT INTO {DEFAULT_TABLE} (langchain_id, content, embedding) VALUES ('{id}', '{content}','{embedding}');"
-        await engine._aexecute(stmt)
+        await engine.aexecute(stmt)
 
     async def test_fetch(self, engine):
-        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        results = await engine.afetch(f"SELECT * FROM {DEFAULT_TABLE}")
         assert len(results) > 0
-        await engine._aexecute(f"DROP TABLE {DEFAULT_TABLE}")
+        await engine.aexecute(f"DROP TABLE {DEFAULT_TABLE}")
 
     async def test_init_table_custom(self, engine):
         await engine.ainit_vectorstore_table(
@@ -107,7 +107,7 @@ class TestEngineAsync:
             store_metadata=True,
         )
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{CUSTOM_TABLE}';"
-        results = await engine._afetch(stmt)
+        results = await engine.afetch(stmt)
         expected = [
             {"column_name": "uuid", "data_type": "uuid"},
             {"column_name": "my_embedding", "data_type": "USER-DEFINED"},
@@ -119,7 +119,7 @@ class TestEngineAsync:
         for row in results:
             assert row in expected
 
-        await engine._aexecute(f"DROP TABLE {CUSTOM_TABLE}")
+        await engine.aexecute(f"DROP TABLE {CUSTOM_TABLE}")
 
     async def test_password(
         self,
@@ -140,7 +140,7 @@ class TestEngineAsync:
             password=password,
         )
         assert engine
-        await engine._aexecute("SELECT 1")
+        await engine.aexecute("SELECT 1")
         PostgresEngine._connector = None
 
     async def test_column(self, engine):
@@ -165,7 +165,7 @@ class TestEngineAsync:
             iam_account_email=iam_account,
         )
         assert engine
-        await engine._aexecute("SELECT 1")
+        await engine.aexecute("SELECT 1")
         await engine._connector.close_async()
         await engine._engine.dispose()
 
@@ -212,7 +212,7 @@ class TestEngineSync:
         await engine._engine.dispose()
 
     async def test_execute(self, engine):
-        await engine._aexecute("SELECT 1")
+        await engine.aexecute("SELECT 1")
 
     async def test_init_table(self, engine):
         engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
@@ -220,12 +220,12 @@ class TestEngineSync:
         content = "coffee"
         embedding = await embeddings_service.aembed_query(content)
         stmt = f"INSERT INTO {DEFAULT_TABLE} (langchain_id, content, embedding) VALUES ('{id}', '{content}','{embedding}');"
-        await engine._aexecute(stmt)
+        await engine.aexecute(stmt)
 
     async def test_fetch(self, engine):
-        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        results = await engine.afetch(f"SELECT * FROM {DEFAULT_TABLE}")
         assert len(results) > 0
-        await engine._aexecute(f"DROP TABLE {DEFAULT_TABLE}")
+        await engine.aexecute(f"DROP TABLE {DEFAULT_TABLE}")
 
     async def test_init_table_custom(self, engine):
         engine.init_vectorstore_table(
@@ -238,7 +238,7 @@ class TestEngineSync:
             store_metadata=True,
         )
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{CUSTOM_TABLE}';"
-        results = await engine._afetch(stmt)
+        results = await engine.afetch(stmt)
         expected = [
             {"column_name": "uuid", "data_type": "uuid"},
             {"column_name": "my_embedding", "data_type": "USER-DEFINED"},
@@ -250,7 +250,7 @@ class TestEngineSync:
         for row in results:
             assert row in expected
 
-        await engine._aexecute(f"DROP TABLE {CUSTOM_TABLE}")
+        await engine.aexecute(f"DROP TABLE {CUSTOM_TABLE}")
 
     async def test_password(
         self,
@@ -272,7 +272,7 @@ class TestEngineSync:
             quota_project=db_project,
         )
         assert engine
-        await engine._aexecute("SELECT 1")
+        await engine.aexecute("SELECT 1")
         PostgresEngine._connector = None
 
     async def test_engine_constructor_key(
@@ -299,6 +299,6 @@ class TestEngineSync:
             iam_account_email=iam_account,
         )
         assert engine
-        await engine._aexecute("SELECT 1")
+        await engine.aexecute("SELECT 1")
         engine._connector.close()
         await engine._engine.dispose()

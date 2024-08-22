@@ -80,7 +80,7 @@ class TestVectorStoreSearch:
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine.ainit_vectorstore_table(
+        await engine._ainit_vectorstore_table(
             DEFAULT_TABLE, VECTOR_SIZE, store_metadata=False
         )
         vs = await AsyncPostgresVectorStore.create(
@@ -96,7 +96,7 @@ class TestVectorStoreSearch:
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
-        await engine.ainit_vectorstore_table(
+        await engine._ainit_vectorstore_table(
             CUSTOM_TABLE,
             VECTOR_SIZE,
             id_column="myid",

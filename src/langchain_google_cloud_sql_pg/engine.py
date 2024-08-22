@@ -328,27 +328,27 @@ class PostgresEngine:
             asyncio.run_coroutine_threadsafe(coro, cls._default_loop)
         )
 
-    async def __aexecute(self, query: str, params: Optional[dict] = None) -> None:
+    async def _aexecute(self, query: str, params: Optional[dict] = None) -> None:
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text(query), params)
             await conn.commit()
 
-    async def _aexecute(self, query: str, params: Optional[dict] = None) -> None:
+    async def aexecute(self, query: str, params: Optional[dict] = None) -> None:
         """Execute a SQL query."""
-        return await self._run_as_async(self.__aexecute(query, params))
+        return await self._run_as_async(self._aexecute(query, params))
 
-    async def __aexecute_outside_tx(self, query: str) -> None:
+    async def _aexecute_outside_tx(self, query: str) -> None:
         """Execute a SQL query."""
         async with self._engine.connect() as conn:
             await conn.execute(text("COMMIT"))
             await conn.execute(text(query))
 
-    async def _aexecute_outside_tx(self, query: str) -> None:
+    async def aexecute_outside_tx(self, query: str) -> None:
         """Execute a SQL query."""
-        return await self._run_as_async(self.__aexecute_outside_tx(query))
+        return await self._run_as_async(self._aexecute_outside_tx(query))
 
-    async def __afetch(
+    async def _afetch(
         self, query: str, params: Optional[dict] = None
     ) -> Sequence[RowMapping]:
         """Fetch results from a SQL query."""
@@ -359,11 +359,11 @@ class PostgresEngine:
 
         return result_fetch
 
-    async def _afetch(
+    async def afetch(
         self, query: str, params: Optional[dict] = None
     ) -> Sequence[RowMapping]:
         """Fetch results from a SQL query."""
-        return await self._run_as_async(self.__afetch(query, params))
+        return await self._run_as_async(self._afetch(query, params))
 
     def _run_as_sync(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine synchronously"""
@@ -395,10 +395,10 @@ class PostgresEngine:
         overwrite_existing: bool = False,
         store_metadata: bool = True,
     ) -> None:
-        await self.__aexecute("CREATE EXTENSION IF NOT EXISTS vector")
+        await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
 
         if overwrite_existing:
-            await self.__aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
+            await self._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
 
         query = f"""CREATE TABLE "{table_name}"(
             "{id_column}" UUID PRIMARY KEY,
@@ -411,7 +411,7 @@ class PostgresEngine:
             query += f""",\n"{metadata_json_column}" JSON"""
         query += "\n);"
 
-        await self.__aexecute(query)
+        await self._aexecute(query)
 
     async def ainit_vectorstore_table(
         self,
@@ -515,7 +515,7 @@ class PostgresEngine:
             data JSONB NOT NULL,
             type TEXT NOT NULL
         );"""
-        await self.__aexecute(create_table_query)
+        await self._aexecute(create_table_query)
 
     async def ainit_chat_history_table(self, table_name: str) -> None:
         """Create a Cloud SQL table to store chat history.
@@ -566,7 +566,7 @@ class PostgresEngine:
             query += f',\n"{metadata_json_column}" JSON'
         query += "\n);"
 
-        await self.__aexecute(query)
+        await self._aexecute(query)
 
     async def ainit_document_table(
         self,

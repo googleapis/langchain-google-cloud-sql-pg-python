@@ -77,22 +77,23 @@ class TestVectorStore:
         )
 
         yield engine
+        await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
+        await engine._connector.close_async()
+        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await engine._ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         vs = await AsyncPostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
         )
         yield vs
-        await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
-        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
-        await engine.ainit_vectorstore_table(
+        await engine._ainit_vectorstore_table(
             CUSTOM_TABLE,
             VECTOR_SIZE,
             id_column="myid",

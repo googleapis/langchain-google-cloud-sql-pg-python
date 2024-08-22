@@ -76,8 +76,8 @@ class TestVectorStoreFromMethods:
             region=db_region,
             database=db_name,
         )
-        await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
-        await engine.ainit_vectorstore_table(
+        await engine._ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await engine._ainit_vectorstore_table(
             CUSTOM_TABLE,
             VECTOR_SIZE,
             id_column="myid",
