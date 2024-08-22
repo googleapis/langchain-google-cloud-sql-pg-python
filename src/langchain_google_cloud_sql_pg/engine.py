@@ -69,7 +69,9 @@ async def _get_iam_principal_email(
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
     if hasattr(credentials, "_service_account_email"):
-        return credentials._service_account_email.replace(".gserviceaccount.com", "")
+        return credentials._service_account_email.replace(
+            ".gserviceaccount.com", ""
+        )
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -187,7 +189,9 @@ class PostgresEngine:
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
-        return asyncio.run_coroutine_threadsafe(coro, cls._default_loop).result()
+        return asyncio.run_coroutine_threadsafe(
+            coro, cls._default_loop
+        ).result()
 
     @classmethod
     async def _create(
@@ -303,7 +307,15 @@ class PostgresEngine:
         Returns:
             PostgresEngine: A newly created PostgresEngine instance.
         """
-        return await cls._create(
+        # Running a loop in a background thread allows us to support
+        # async methods from non-async environments
+        if cls._default_loop is None:
+            cls._default_loop = asyncio.new_event_loop()
+            cls._default_thread = Thread(
+                target=cls._default_loop.run_forever, daemon=True
+            )
+            cls._default_thread.start()
+        coro = cls._create(
             project_id,
             region,
             instance,
@@ -311,8 +323,13 @@ class PostgresEngine:
             ip_type,
             user,
             password,
+            loop=cls._default_loop,
+            thread=cls._default_thread,
             quota_project=quota_project,
             iam_account_email=iam_account_email,
+        )
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, cls._default_loop)
         )
 
     @classmethod
@@ -333,7 +350,9 @@ class PostgresEngine:
     def _run_as_sync(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine synchronously"""
         if not self._loop:
-            raise Exception("Engine was initialized async.")
+            raise Exception(
+                "Engine was initialized without a background loop and cannot call sync methods."
+            )
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
     async def close(self) -> None:
@@ -492,14 +511,6 @@ class PostgresEngine:
         )
 
     async def _ainit_chat_history_table(self, table_name: str) -> None:
-        """Create a Cloud SQL table to store chat history.
-
-        Args:
-            table_name (str): Table name to store chat history.
-
-        Returns:
-            None
-        """
         create_table_query = f"""CREATE TABLE IF NOT EXISTS "{table_name}"(
             id SERIAL PRIMARY KEY,
             session_id TEXT NOT NULL,
@@ -509,6 +520,21 @@ class PostgresEngine:
         async with self._pool.connect() as conn:
             await conn.execute(text(create_table_query))
             await conn.commit()
+
+    async def ainit_chat_history_table(self, table_name: str) -> None:
+        """Create a Cloud SQL table to store chat history.
+
+        Args:
+            table_name (str): Table name to store chat history.
+
+        Returns:
+            None
+        """
+        await self._run_as_async(
+            self._ainit_chat_history_table(
+                table_name,
+            )
+        )
 
     def init_chat_history_table(self, table_name: str) -> None:
         """Create a Cloud SQL table to store chat history.
@@ -533,6 +559,29 @@ class PostgresEngine:
         metadata_json_column: str = "langchain_metadata",
         store_metadata: bool = True,
     ) -> None:
+        query = f"""CREATE TABLE "{table_name}"(
+            {content_column} TEXT NOT NULL
+            """
+        for column in metadata_columns:
+            nullable = "NOT NULL" if not column.nullable else ""
+            query += f',\n"{column.name}" {column.data_type} {nullable}'
+        metadata_json_column = metadata_json_column or "langchain_metadata"
+        if store_metadata:
+            query += f',\n"{metadata_json_column}" JSON'
+        query += "\n);"
+
+        async with self._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    async def ainit_document_table(
+        self,
+        table_name: str,
+        content_column: str = "page_content",
+        metadata_columns: List[Column] = [],
+        metadata_json_column: str = "langchain_metadata",
+        store_metadata: bool = True,
+    ) -> None:
         """
         Create a table for saving of langchain documents.
 
@@ -550,21 +599,15 @@ class PostgresEngine:
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
-
-        query = f"""CREATE TABLE "{table_name}"(
-            {content_column} TEXT NOT NULL
-            """
-        for column in metadata_columns:
-            nullable = "NOT NULL" if not column.nullable else ""
-            query += f',\n"{column.name}" {column.data_type} {nullable}'
-        metadata_json_column = metadata_json_column or "langchain_metadata"
-        if store_metadata:
-            query += f',\n"{metadata_json_column}" JSON'
-        query += "\n);"
-
-        async with self._pool.connect() as conn:
-            await conn.execute(text(query))
-            await conn.commit()
+        return self._run_as_async(
+            self._ainit_document_table(
+                table_name,
+                content_column,
+                metadata_columns,
+                metadata_json_column,
+                store_metadata,
+            )
+        )
 
     def init_document_table(
         self,
@@ -580,10 +623,16 @@ class PostgresEngine:
         Args:
             table_name (str): The PgSQL database table name.
             content_column (str): Name of the column to store document content.
+                Default: "page_content".
             metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
                 to create for custom metadata. Optional.
+            metadata_json_column (str): The column to store extra metadata in JSON format.
+                Default: "langchain_metadata". Optional.
             store_metadata (bool): Whether to store extra metadata in a metadata column
                 if not described in 'metadata' field list (Default: True).
+
+        Raises:
+            :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
         return self._run_as_sync(
             self._ainit_document_table(
@@ -609,7 +658,9 @@ class PostgresEngine:
             try:
                 await conn.run_sync(metadata.reflect, only=[table_name])
             except InvalidRequestError as e:
-                raise ValueError(f"Table, {table_name}, does not exist: " + str(e))
+                raise ValueError(
+                    f"Table, {table_name}, does not exist: " + str(e)
+                )
 
         table = Table(table_name, metadata)
         # Extract the schema information

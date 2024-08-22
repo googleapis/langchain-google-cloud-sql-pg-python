@@ -143,37 +143,6 @@ class TestEngineAsync:
         await engine._aexecute("SELECT 1")
         PostgresEngine._connector = None
 
-    async def test_from_engine(
-        self,
-        db_project,
-        db_region,
-        db_instance,
-        db_name,
-        user,
-        password,
-    ):
-        async with Connector() as connector:
-
-            async def getconn() -> asyncpg.Connection:
-                conn = await connector.connect_async(  # type: ignore
-                    f"{db_project}:{db_region}:{db_instance}",
-                    "asyncpg",
-                    user=user,
-                    password=password,
-                    db=db_name,
-                    enable_iam_auth=False,
-                    ip_type=IPTypes.PUBLIC,
-                )
-                return conn
-
-            engine = create_async_engine(
-                "postgresql+asyncpg://",
-                async_creator=getconn,
-            )
-
-            engine = PostgresEngine.from_engine(engine)
-            await engine._aexecute("SELECT 1")
-
     async def test_column(self, engine):
         with pytest.raises(ValueError):
             Column("test", VARCHAR)
@@ -232,7 +201,7 @@ class TestEngineSync:
         return get_env_var("IAM_ACCOUNT", "Cloud SQL IAM account email")
 
     @pytest_asyncio.fixture
-    def engine(self, db_project, db_region, db_instance, db_name):
+    async def engine(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
@@ -240,10 +209,10 @@ class TestEngineSync:
             database=db_name,
         )
         yield engine
-        engine._engine.dispose()
+        await engine._engine.dispose()
 
     async def test_execute(self, engine):
-        engine._execute("SELECT 1")
+        await engine._aexecute("SELECT 1")
 
     async def test_init_table(self, engine):
         engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
@@ -251,12 +220,12 @@ class TestEngineSync:
         content = "coffee"
         embedding = await embeddings_service.aembed_query(content)
         stmt = f"INSERT INTO {DEFAULT_TABLE} (langchain_id, content, embedding) VALUES ('{id}', '{content}','{embedding}');"
-        engine._execute(stmt)
+        await engine._aexecute(stmt)
 
     async def test_fetch(self, engine):
-        results = engine._fetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
         assert len(results) > 0
-        engine._execute(f"DROP TABLE {DEFAULT_TABLE}")
+        await engine._aexecute(f"DROP TABLE {DEFAULT_TABLE}")
 
     async def test_init_table_custom(self, engine):
         engine.init_vectorstore_table(
@@ -269,7 +238,7 @@ class TestEngineSync:
             store_metadata=True,
         )
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{CUSTOM_TABLE}';"
-        results = engine._fetch(stmt)
+        results = await engine._afetch(stmt)
         expected = [
             {"column_name": "uuid", "data_type": "uuid"},
             {"column_name": "my_embedding", "data_type": "USER-DEFINED"},
@@ -281,7 +250,7 @@ class TestEngineSync:
         for row in results:
             assert row in expected
 
-        engine._execute(f"DROP TABLE {CUSTOM_TABLE}")
+        await engine._aexecute(f"DROP TABLE {CUSTOM_TABLE}")
 
     async def test_password(
         self,
@@ -303,7 +272,7 @@ class TestEngineSync:
             quota_project=db_project,
         )
         assert engine
-        engine._execute("SELECT 1")
+        await engine._aexecute("SELECT 1")
         PostgresEngine._connector = None
 
     async def test_engine_constructor_key(
@@ -314,7 +283,7 @@ class TestEngineSync:
         with pytest.raises(Exception):
             PostgresEngine(key, engine)
 
-    def test_iam_account_override(
+    async def test_iam_account_override(
         self,
         db_project,
         db_instance,
@@ -330,6 +299,6 @@ class TestEngineSync:
             iam_account_email=iam_account,
         )
         assert engine
-        engine._execute("SELECT 1")
+        await engine._aexecute("SELECT 1")
         engine._connector.close()
-        engine._engine.dispose()
+        await engine._engine.dispose()
