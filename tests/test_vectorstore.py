@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
+from threading import Thread
 
 import pytest
 import pytest_asyncio
+from google.cloud.sql.connector import Connector, IPTypes, create_async_connector
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
@@ -63,6 +67,14 @@ class TestVectorStore:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "database name on cloud sql instance")
 
+    @pytest.fixture(scope="module")
+    def user(self) -> str:
+        return get_env_var("DB_USER", "database user for cloud sql")
+
+    @pytest.fixture(scope="module")
+    def password(self) -> str:
+        return get_env_var("DB_PASSWORD", "database password for cloud sql")
+
     @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
@@ -75,6 +87,19 @@ class TestVectorStore:
         yield engine
 
     @pytest_asyncio.fixture(scope="class")
+    async def vs(self, engine):
+        await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        vs = await PostgresVectorStore.create(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=DEFAULT_TABLE,
+        )
+        yield vs
+
+        await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
+        await engine._engine.dispose()
+
+    @pytest_asyncio.fixture(scope="class")
     def engine_sync(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,
@@ -85,7 +110,7 @@ class TestVectorStore:
         yield engine
 
     @pytest_asyncio.fixture(scope="class")
-    def vs_sync(self, engine_sync):
+    async def vs_sync(self, engine_sync):
         engine_sync.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
 
         vs = PostgresVectorStore.create_sync(
@@ -94,20 +119,9 @@ class TestVectorStore:
             table_name=DEFAULT_TABLE_SYNC,
         )
         yield vs
-        engine_sync._execute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"')
-        engine_sync._engine.dispose()
 
-    @pytest_asyncio.fixture(scope="class")
-    async def vs(self, engine):
-        await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
-        vs = await PostgresVectorStore.create(
-            engine,
-            embedding_service=embeddings_service,
-            table_name=DEFAULT_TABLE,
-        )
-        yield vs
-        await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
-        await engine._engine.dispose()
+        await engine_sync._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"')
+        await engine_sync._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
@@ -171,6 +185,13 @@ class TestVectorStore:
         assert len(results) == 6
         await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
 
+    async def test_cross_env_add_texts(self, engine, vs):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        vs.add_texts(texts, ids=ids)
+        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
+        assert len(results) == 3
+        vs.delete(ids)
+
     async def test_aadd_texts_edge_cases(self, engine, vs):
         texts = ["Taylor's", '"Swift"', "best-friend"]
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -184,20 +205,6 @@ class TestVectorStore:
         await vs.aadd_documents(docs, ids=ids)
         results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
-        await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
-
-    async def test_aadd_embedding(self, engine, vs):
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs._aadd_embeddings(texts, embeddings, metadatas, ids)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
-        assert len(results) == 3
-        await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
-
-    async def test_aadd_embedding_without_id(self, engine, vs):
-        await vs._aadd_embeddings(texts, embeddings, metadatas)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
-        assert len(results) == 3
-        assert results[0]["langchain_id"]
         await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
 
     async def test_adelete(self, engine, vs):
@@ -245,13 +252,6 @@ class TestVectorStore:
         assert results[0]["source"] == "google.com"
         await engine._aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
 
-    async def test_aadd_embedding_custom(self, engine, vs_custom):
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs_custom._aadd_embeddings(texts, embeddings, metadatas, ids)
-        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
-        assert len(results) == 3
-        await engine._aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
-
     async def test_adelete_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_custom.aadd_texts(texts, ids=ids)
@@ -269,19 +269,28 @@ class TestVectorStore:
     async def test_add_docs(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_documents(docs, ids=ids)
-        results = engine_sync._fetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
+        results = await engine_sync._afetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
         assert len(results) == 3
+        vs_sync.delete(ids)
 
     async def test_add_texts(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_texts(texts, ids=ids)
-        results = engine_sync._fetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
-        assert len(results) == 6
+        results = await engine_sync._afetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
+        assert len(results) == 3
+        await vs_sync.adelete(ids)
 
-    async def test_ignore_metadata_columns(self, vs_custom):
+    async def test_cross_env(self, engine_sync, vs_sync):
+        ids = [str(uuid.uuid4()) for i in range(len(texts))]
+        await vs_sync.aadd_texts(texts, ids=ids)
+        results = await engine_sync._afetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
+        assert len(results) == 3
+        await vs_sync.adelete(ids)
+
+    async def test_ignore_metadata_columns(self, engine):
         column_to_ignore = "source"
         vs = await PostgresVectorStore.create(
-            vs_custom.engine,
+            engine,
             embedding_service=embeddings_service,
             table_name=CUSTOM_TABLE,
             ignore_metadata_columns=[column_to_ignore],
@@ -290,12 +299,12 @@ class TestVectorStore:
             embedding_column="myembedding",
             metadata_json_column="mymeta",
         )
-        assert column_to_ignore not in vs.metadata_columns
+        assert column_to_ignore not in vs._vs.metadata_columns
 
-    async def test_create_vectorstore_with_invalid_parameters(self, vs_custom):
+    async def test_create_vectorstore_with_invalid_parameters(self, engine):
         with pytest.raises(ValueError):
             await PostgresVectorStore.create(
-                vs_custom.engine,
+                engine,
                 embedding_service=embeddings_service,
                 table_name=CUSTOM_TABLE,
                 id_column="myid",
@@ -305,7 +314,7 @@ class TestVectorStore:
             )
         with pytest.raises(ValueError):
             await PostgresVectorStore.create(
-                vs_custom.engine,
+                engine,
                 embedding_service=embeddings_service,
                 table_name=CUSTOM_TABLE,
                 id_column="myid",
@@ -315,7 +324,7 @@ class TestVectorStore:
             )
         with pytest.raises(ValueError):
             await PostgresVectorStore.create(
-                vs_custom.engine,
+                engine,
                 embedding_service=embeddings_service,
                 table_name=CUSTOM_TABLE,
                 id_column="myid",
@@ -325,7 +334,7 @@ class TestVectorStore:
             )
         with pytest.raises(ValueError):
             await PostgresVectorStore.create(
-                vs_custom.engine,
+                engine,
                 embedding_service=embeddings_service,
                 table_name=CUSTOM_TABLE,
                 id_column="myid",
@@ -333,5 +342,3 @@ class TestVectorStore:
                 embedding_column="langchain_id",  # invalid embedding column data type
                 metadata_columns=["random_column"],
             )
-
-    # Need tests for store metadata=False

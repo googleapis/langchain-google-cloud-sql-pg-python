@@ -20,7 +20,10 @@ import pytest_asyncio
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 
-from langchain_google_cloud_sql_pg import PostgresChatMessageHistory, PostgresEngine
+from langchain_google_cloud_sql_pg import (
+    PostgresChatMessageHistory,
+    PostgresEngine,
+)
 
 project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
@@ -31,7 +34,7 @@ table_name_async = "message_store" + str(uuid.uuid4())
 
 
 @pytest.fixture(name="memory_engine")
-def setup() -> Generator:
+async def setup() -> Generator:
     engine = PostgresEngine.from_instance(
         project_id=project_id,
         region=region,
@@ -42,7 +45,7 @@ def setup() -> Generator:
     yield engine
     # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
-    engine._execute(query)
+    await engine._aexecute(query)
 
 
 @pytest_asyncio.fixture
@@ -86,7 +89,7 @@ def test_chat_table(memory_engine: Any) -> None:
         )
 
 
-def test_chat_schema(memory_engine: Any) -> None:
+async def test_chat_schema(memory_engine: Any) -> None:
     doc_table_name = "test_table" + str(uuid.uuid4())
     memory_engine.init_document_table(table_name=doc_table_name)
     with pytest.raises(IndexError):
@@ -95,7 +98,7 @@ def test_chat_schema(memory_engine: Any) -> None:
         )
 
     query = f'DROP TABLE IF EXISTS "{doc_table_name}"'
-    memory_engine._execute(query)
+    await memory_engine._aexecute(query)
 
 
 @pytest.mark.asyncio
