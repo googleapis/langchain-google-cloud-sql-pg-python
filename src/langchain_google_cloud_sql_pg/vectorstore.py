@@ -602,6 +602,7 @@ class PostgresVectorStore(VectorStore):
             query_options_stmt = f"SET LOCAL {self.index_query_options.to_string()};"
             results = await self.engine._afetch_with_query_options(
                 stmt, query_options_stmt
+            )
         else:
             results = await self.engine._afetch(stmt)
         return results
