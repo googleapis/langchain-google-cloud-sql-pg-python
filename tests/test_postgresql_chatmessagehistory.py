@@ -31,7 +31,7 @@ table_name_async = "message_store" + str(uuid.uuid4())
 
 
 @pytest.fixture(name="memory_engine")
-async def setup() -> Generator:
+def setup() -> Generator:
     engine = PostgresEngine.from_instance(
         project_id=project_id,
         region=region,
@@ -42,7 +42,7 @@ async def setup() -> Generator:
     yield engine
     # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
-    await engine.aexecute(query)
+    engine._execute(query)
 
 
 @pytest_asyncio.fixture
@@ -57,7 +57,7 @@ async def async_engine():
     yield engine
     # use default table for PostgresChatMessageHistory
     query = f'DROP TABLE IF EXISTS "{table_name}"'
-    await engine.aexecute(query)
+    await engine._aexecute(query)
 
 
 def test_chat_message_history(memory_engine: PostgresEngine) -> None:
@@ -86,7 +86,7 @@ def test_chat_table(memory_engine: Any) -> None:
         )
 
 
-async def test_chat_schema(memory_engine: Any) -> None:
+def test_chat_schema(memory_engine: Any) -> None:
     doc_table_name = "test_table" + str(uuid.uuid4())
     memory_engine.init_document_table(table_name=doc_table_name)
     with pytest.raises(IndexError):
@@ -95,7 +95,7 @@ async def test_chat_schema(memory_engine: Any) -> None:
         )
 
     query = f'DROP TABLE IF EXISTS "{doc_table_name}"'
-    await memory_engine.aexecute(query)
+    memory_engine._execute(query)
 
 
 @pytest.mark.asyncio
@@ -166,4 +166,4 @@ async def test_chat_schema_async(async_engine):
         )
 
     query = f'DROP TABLE IF EXISTS "{table_name}"'
-    await async_engine.aexecute(query)
+    await async_engine._aexecute(query)

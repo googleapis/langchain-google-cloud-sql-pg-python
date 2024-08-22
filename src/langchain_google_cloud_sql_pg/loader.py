@@ -497,7 +497,7 @@ class PostgresDocumentSaver:
                 values_stmt += ")"
 
             query = insert_stmt + values_stmt
-            await self.engine.aexecute(query, row)
+            await self.engine._aexecute(query, row)
 
     def add_documents(self, docs: List[Document]) -> None:
         """
@@ -544,7 +544,7 @@ class PostgresDocumentSaver:
                 else:
                     values[key] = value
 
-            await self.engine.aexecute(stmt, values)
+            await self.engine._aexecute(stmt, values)
 
     def delete(self, docs: List[Document]) -> None:
         """
