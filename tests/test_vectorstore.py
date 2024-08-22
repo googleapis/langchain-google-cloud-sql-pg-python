@@ -19,12 +19,20 @@ from threading import Thread
 
 import pytest
 import pytest_asyncio
-from google.cloud.sql.connector import Connector, IPTypes, create_async_connector
+from google.cloud.sql.connector import (
+    Connector,
+    IPTypes,
+    create_async_connector,
+)
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
+from langchain_google_cloud_sql_pg import (
+    Column,
+    PostgresEngine,
+    PostgresVectorStore,
+)
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4())
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4())
@@ -34,12 +42,17 @@ VECTOR_SIZE = 768
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz"]
-metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
+metadatas = [
+    {"page": str(i), "source": "google.com"} for i in range(len(texts))
+]
 docs = [
-    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
+    Document(page_content=texts[i], metadata=metadatas[i])
+    for i in range(len(texts))
 ]
 
-embeddings = [embeddings_service.embed_query(texts[i]) for i in range(len(texts))]
+embeddings = [
+    embeddings_service.embed_query(texts[i]) for i in range(len(texts))
+]
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -108,7 +121,9 @@ class TestVectorStore:
         )
         yield engine
 
-        await engine_sync._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"')
+        await engine_sync._aexecute(
+            f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"'
+        )
         await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
@@ -144,7 +159,7 @@ class TestVectorStore:
             metadata_json_column="mymeta",
         )
         yield vs
-        await engine._aexecute(f'DROP TABLE IF EXISTS "{CUSTOM_TABLE}"')
+        await engine.aexecute(f'DROP TABLE IF EXISTS "{CUSTOM_TABLE}"')
 
     async def test_init_with_constructor(self, engine):
         with pytest.raises(Exception):
@@ -175,19 +190,19 @@ class TestVectorStore:
     async def test_aadd_texts(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_texts(texts, ids=ids)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
 
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_texts(texts, metadatas, ids)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 6
-        await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
+        await engine.aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
 
     async def test_cross_env_add_texts(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs.add_texts(texts, ids=ids)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
         vs.delete(ids)
 
@@ -195,16 +210,16 @@ class TestVectorStore:
         texts = ["Taylor's", '"Swift"', "best-friend"]
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_texts(texts, ids=ids)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
-        await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
+        await engine.aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
 
     async def test_aadd_docs(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_documents(docs, ids=ids)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
-        await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
+        await engine.aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
 
     async def test_aadd_embedding(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -223,17 +238,17 @@ class TestVectorStore:
     async def test_adelete(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_texts(texts, ids=ids)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
         # delete an ID
         await vs.adelete([ids[0]])
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 2
 
     async def test_aadd_texts_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_custom.aadd_texts(texts, ids=ids)
-        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 3
         assert results[0]["mycontent"] == "foo"
         assert results[0]["myembedding"]
@@ -242,9 +257,9 @@ class TestVectorStore:
 
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_custom.aadd_texts(texts, metadatas, ids)
-        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 6
-        await engine._aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
+        await engine.aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
 
     async def test_aadd_docs_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -257,13 +272,13 @@ class TestVectorStore:
         ]
         await vs_custom.aadd_documents(docs, ids=ids)
 
-        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 3
         assert results[0]["mycontent"] == "foo"
         assert results[0]["myembedding"]
         assert results[0]["page"] == "0"
         assert results[0]["source"] == "google.com"
-        await engine._aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
+        await engine.aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
 
     async def test_aadd_embedding_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -275,13 +290,13 @@ class TestVectorStore:
     async def test_adelete_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_custom.aadd_texts(texts, ids=ids)
-        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
         content = [result["mycontent"] for result in results]
         assert len(results) == 3
         assert "foo" in content
         # delete an ID
         await vs_custom.adelete([ids[0]])
-        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
+        results = await engine.afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
         content = [result["mycontent"] for result in results]
         assert len(results) == 2
         assert "foo" not in content
@@ -289,21 +304,27 @@ class TestVectorStore:
     async def test_add_docs(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_documents(docs, ids=ids)
-        results = await engine_sync._afetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
+        results = await engine_sync.afetch(
+            f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"'
+        )
         assert len(results) == 3
         vs_sync.delete(ids)
 
     async def test_add_texts(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_texts(texts, ids=ids)
-        results = await engine_sync._afetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
+        results = await engine_sync.afetch(
+            f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"'
+        )
         assert len(results) == 3
         await vs_sync.adelete(ids)
 
     async def test_cross_env(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_sync.aadd_texts(texts, ids=ids)
-        results = await engine_sync._afetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
+        results = await engine_sync.afetch(
+            f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"'
+        )
         assert len(results) == 3
         await vs_sync.adelete(ids)
 
