@@ -817,7 +817,7 @@ class TestLoaderAsync:
                 engine=sync_engine,
                 query=f'SELECT * FROM "{table_name}";',
             )
-            documents = loader.load()
+            documents = await loader.aload()
             assert documents == test_docs
 
             saver.delete(test_docs)
