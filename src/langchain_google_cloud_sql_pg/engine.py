@@ -593,7 +593,7 @@ class PostgresEngine:
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
-        return self._run_as_async(
+        return await self._run_as_async(
             self._ainit_document_table(
                 table_name,
                 content_column,
@@ -639,6 +639,17 @@ class PostgresEngine:
         )
 
     async def _aload_table_schema(
+        self,
+        table_name: str,
+    ) -> Table:
+        """
+        Load table schema from existing table in PgSQL database.
+        Returns:
+            (sqlalchemy.Table): The loaded table.
+        """
+        return await self._run_as_async(self.__aload_table_schema(table_name))
+
+    async def __aload_table_schema(
         self,
         table_name: str,
     ) -> Table:

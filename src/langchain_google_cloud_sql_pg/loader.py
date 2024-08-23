@@ -152,7 +152,7 @@ class PostgresLoader(BaseLoader):
         self.metadata_json_column = metadata_json_column
 
     @classmethod
-    async def create(
+    async def _create(
         cls,
         engine: PostgresEngine,
         query: Optional[str] = None,
@@ -245,6 +245,45 @@ class PostgresLoader(BaseLoader):
         )
 
     @classmethod
+    async def create(
+        cls,
+        engine: PostgresEngine,
+        query: Optional[str] = None,
+        table_name: Optional[str] = None,
+        content_columns: Optional[List[str]] = None,
+        metadata_columns: Optional[List[str]] = None,
+        metadata_json_column: Optional[str] = None,
+        format: Optional[str] = None,
+        formatter: Optional[Callable] = None,
+    ) -> PostgresLoader:
+        """Create a new PostgresLoader instance.
+
+        Args:
+            engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
+            query (Optional[str], optional): SQL query. Defaults to None.
+            table_name (Optional[str], optional): Name of table to query. Defaults to None.
+            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
+            metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            format (Optional[str], optional): Format of page content (OneOf: text, csv, YAML, JSON). Defaults to 'text'.
+            formatter (Optional[Callable], optional): A function to format page content (OneOf: format, formatter). Defaults to None.
+
+        Returns:
+            PostgresLoader
+        """
+        coro = cls._create(
+            engine,
+            query,
+            table_name,
+            content_columns,
+            metadata_columns,
+            metadata_json_column,
+            format,
+            formatter,
+        )
+        return await engine._run_as_async(coro)
+
+    @classmethod
     def create_sync(
         cls,
         engine: PostgresEngine,
@@ -271,7 +310,7 @@ class PostgresLoader(BaseLoader):
         Returns:
             PostgresLoader
         """
-        coro = cls.create(
+        coro = cls._create(
             engine,
             query,
             table_name,
@@ -284,36 +323,16 @@ class PostgresLoader(BaseLoader):
         return engine._run_as_sync(coro)
 
     async def _collect_async_items(self, docs_generator):
-        """Exhause document generator into a list."""
         return [doc async for doc in docs_generator]
 
-    def load(self) -> List[Document]:
-        """Load PostgreSQL data into Document objects."""
-        documents = self.engine._run_as_sync(
-            self._collect_async_items(self.alazy_load())
-        )
-        return documents
-
-    async def aload(self) -> List[Document]:
-        """Load PostgreSQL data into Document objects."""
-        return [doc async for doc in self.alazy_load()]
-
-    def lazy_load(self) -> Iterator[Document]:
-        """Load PostgreSQL data into Document objects lazily."""
-        yield from self.engine._run_as_sync(
-            self._collect_async_items(self.alazy_load())
-        )
-
-    async def alazy_load(self) -> AsyncIterator[Document]:
-        """Load PostgreSQL data into Document objects lazily."""
+    async def _aload(self) -> List[Document]:
         stmt = sqlalchemy.text(self.query)
         async with self.engine._engine.connect() as connection:
-            result_proxy = await connection.execute(stmt)
-            # load document one by one
-            while True:
-                row = result_proxy.fetchone()
-                if not row:
-                    break
+            result = await connection.execute(stmt)
+            result_map = result.mappings()
+            results = result_map.fetchall()
+            documents = []
+            for doc in results:
 
                 row_data = {}
                 column_names = self.content_columns + self.metadata_columns
@@ -321,16 +340,89 @@ class PostgresLoader(BaseLoader):
                     [self.metadata_json_column] if self.metadata_json_column else []
                 )
                 for column in column_names:
-                    value = getattr(row, column)
+                    value = getattr(doc, column)
                     row_data[column] = value
 
-                yield _parse_doc_from_row(
-                    self.content_columns,
-                    self.metadata_columns,
-                    row_data,
-                    self.metadata_json_column,
-                    self.formatter,
+                documents.append(
+                    _parse_doc_from_row(
+                        self.content_columns,
+                        self.metadata_columns,
+                        row_data,
+                        self.metadata_json_column,
+                        self.formatter,
+                    )
                 )
+        return documents
+
+    async def aload(self) -> List[Document]:
+        """Load PostgreSQL data into Document objects."""
+        # return [doc async for doc in self._alazy_load()]
+        return await self.engine._run_as_async(self._aload())
+
+    def load(self) -> List[Document]:
+        """Load PostgreSQL data into Document objects."""
+        return self.engine._run_as_sync(self._aload())
+
+    async def __fetch(self):
+        stmt = sqlalchemy.text(self.query)
+        async with self.engine._engine.connect() as connection:
+            result_proxy = await connection.execute(stmt)
+        return result_proxy
+
+    async def alazy_load(self) -> AsyncIterator[Document]:
+        """Load PostgreSQL data into Document objects lazily."""
+
+        result_proxy = await self.engine._run_as_async(self.__fetch())
+
+        # load document one by one
+        while True:
+            row = result_proxy.fetchone()
+            if not row:
+                break
+
+            row_data = {}
+            column_names = self.content_columns + self.metadata_columns
+            column_names += (
+                [self.metadata_json_column] if self.metadata_json_column else []
+            )
+            for column in column_names:
+                value = getattr(row, column)
+                row_data[column] = value
+
+            yield _parse_doc_from_row(
+                self.content_columns,
+                self.metadata_columns,
+                row_data,
+                self.metadata_json_column,
+                self.formatter,
+            )
+
+    def lazy_load(self) -> Iterator[Document]:
+        """Load PostgreSQL data into Document objects lazily."""
+        result_proxy = self.engine._run_as_sync(self.__fetch())
+
+        # load document one by one
+        while True:
+            row = result_proxy.fetchone()
+            if not row:
+                break
+
+            row_data = {}
+            column_names = self.content_columns + self.metadata_columns
+            column_names += (
+                [self.metadata_json_column] if self.metadata_json_column else []
+            )
+            for column in column_names:
+                value = getattr(row, column)
+                row_data[column] = value
+
+            yield _parse_doc_from_row(
+                self.content_columns,
+                self.metadata_columns,
+                row_data,
+                self.metadata_json_column,
+                self.formatter,
+            )
 
 
 class PostgresDocumentSaver:
@@ -457,9 +549,9 @@ class PostgresDocumentSaver:
         )
         return engine._run_as_sync(coro)
 
-    async def aadd_documents(self, docs: List[Document]) -> None:
+    async def _aadd_documents(self, docs: List[Document]) -> None:
         """
-        Save documents in the DocumentSaver table. Document’s metadata is added to columns if found or
+        Save documents in the DocumentSaver table. Document's metadata is added to columns if found or
         stored in langchain_metadata JSON column.
 
         Args:
@@ -499,6 +591,16 @@ class PostgresDocumentSaver:
             query = insert_stmt + values_stmt
             await self.engine._aexecute(query, row)
 
+    async def aadd_documents(self, docs: List[Document]) -> None:
+        """
+        Save documents in the DocumentSaver table. Document's metadata is added to columns if found or
+        stored in langchain_metadata JSON column.
+
+        Args:
+            docs (List[langchain_core.documents.Document]): a list of documents to be saved.
+        """
+        await self.engine._run_as_async(self._aadd_documents(docs))
+
     def add_documents(self, docs: List[Document]) -> None:
         """
         Save documents in the DocumentSaver table. Document’s metadata is added to columns if found or
@@ -507,9 +609,9 @@ class PostgresDocumentSaver:
         Args:
             docs (List[langchain_core.documents.Document]): a list of documents to be saved.
         """
-        self.engine._run_as_sync(self.aadd_documents(docs))
+        self.engine._run_as_sync(self._aadd_documents(docs))
 
-    async def adelete(self, docs: List[Document]) -> None:
+    async def _adelete(self, docs: List[Document]) -> None:
         """
         Delete all instances of a document from the DocumentSaver table by matching the entire Document
         object.
@@ -546,6 +648,16 @@ class PostgresDocumentSaver:
 
             await self.engine._aexecute(stmt, values)
 
+    async def adelete(self, docs: List[Document]) -> None:
+        """
+        Delete all instances of a document from the DocumentSaver table by matching the entire Document
+        object.
+
+        Args:
+            docs (List[langchain_core.documents.Document]): a list of documents to be deleted.
+        """
+        await self.engine._run_as_async(self._adelete(docs))
+
     def delete(self, docs: List[Document]) -> None:
         """
         Delete all instances of a document from the DocumentSaver table by matching the entire Document
@@ -554,4 +666,4 @@ class PostgresDocumentSaver:
         Args:
             docs (List[langchain_core.documents.Document]): a list of documents to be deleted.
         """
-        self.engine._run_as_sync(self.adelete(docs))
+        self.engine._run_as_sync(self._adelete(docs))

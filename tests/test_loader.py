@@ -67,7 +67,7 @@ class TestLoaderAsync:
 
     async def _cleanup_table(self, engine):
         query = f'DROP TABLE IF EXISTS "{table_name}"'
-        await engine._aexecute(query)
+        await engine.aexecute(query)
 
     async def test_create_loader_with_invalid_parameters(self, engine):
         with pytest.raises(ValueError):
@@ -105,14 +105,14 @@ class TestLoaderAsync:
                         organic INT NOT NULL
                     )
                 """
-            await engine._aexecute(query)
+            await engine.aexecute(query)
 
             insert_query = f"""
                 INSERT INTO "{table_name}" (
                     fruit_name, variety, quantity_in_stock, price_per_unit, organic
                 ) VALUES ('Apple', 'Granny Smith', 150, 1, 1);
             """
-            await engine._aexecute(insert_query)
+            await engine.aexecute(insert_query)
 
             loader = await PostgresLoader.create(
                 engine=engine,
@@ -152,7 +152,7 @@ class TestLoaderAsync:
                         organic INT NOT NULL
                     )
                 """
-            await engine._aexecute(query)
+            await engine.aexecute(query)
 
             insert_query = f"""
                 INSERT INTO "{table_name}" (fruit_name, variety, quantity_in_stock, price_per_unit, organic)
@@ -160,7 +160,7 @@ class TestLoaderAsync:
                        ('Banana', 'Cavendish', 200, 0.59, 0),
                        ('Orange', 'Navel', 80, 1.29, 1);
             """
-            await engine._aexecute(insert_query)
+            await engine.aexecute(insert_query)
 
             loader = await PostgresLoader.create(
                 engine=engine,
@@ -208,13 +208,13 @@ class TestLoaderAsync:
                         organic INT NOT NULL
                     )
                 """
-            await engine._aexecute(query)
+            await engine.aexecute(query)
 
             insert_query = f"""
                 INSERT INTO "{table_name}" (fruit_name, variety, quantity_in_stock, price_per_unit, organic)
                 VALUES ('Apple', 'Granny Smith', 150, 1, 1);
             """
-            await engine._aexecute(insert_query)
+            await engine.aexecute(insert_query)
 
             loader = await PostgresLoader.create(
                 engine=engine,
@@ -226,7 +226,9 @@ class TestLoaderAsync:
                 ],
             )
 
-            documents = await self._collect_async_items(loader.alazy_load())
+            documents = []
+            for docs in loader.lazy_load():
+                documents.append(docs)
 
             assert documents == [
                 Document(
@@ -279,7 +281,7 @@ class TestLoaderAsync:
                         organic INT NOT NULL
                     )
                 """
-            await engine._aexecute(query)
+            await engine.aexecute(query)
 
             insert_query = f"""
                         INSERT INTO "{table_name}" (
@@ -290,7 +292,7 @@ class TestLoaderAsync:
                             organic
                         ) VALUES ('Apple', 'Granny Smith', 150, 1, 1);
             """
-            await engine._aexecute(insert_query)
+            await engine.aexecute(insert_query)
 
             loader = await PostgresLoader.create(
                 engine=engine,
@@ -323,14 +325,14 @@ class TestLoaderAsync:
                     langchain_metadata JSON NOT NULL
                 )
                 """
-            await engine._aexecute(query)
+            await engine.aexecute(query)
 
             metadata = json.dumps({"organic": 1})
             insert_query = f"""
                 INSERT INTO "{table_name}"
                 (fruit_name, variety, quantity_in_stock, price_per_unit, langchain_metadata)
                 VALUES ('Apple', 'Granny Smith', 150, 1, '{metadata}');"""
-            await engine._aexecute(insert_query)
+            await engine.aexecute(insert_query)
 
             loader = await PostgresLoader.create(
                 engine=engine,
@@ -369,7 +371,7 @@ class TestLoaderAsync:
                     langchain_metadata JSON NOT NULL
                 )
                 """
-            await engine._aexecute(query)
+            await engine.aexecute(query)
 
             metadata = json.dumps({"organic": 1})
             variety = json.dumps({"type": "Granny Smith"})
@@ -377,7 +379,7 @@ class TestLoaderAsync:
                 INSERT INTO "{table_name}"
                 (fruit_name, variety, quantity_in_stock, price_per_unit, langchain_metadata)
                 VALUES ('Apple', '{variety}', 150, 1, '{metadata}');"""
-            await engine._aexecute(insert_query)
+            await engine.aexecute(insert_query)
 
             loader = await PostgresLoader.create(
                 engine=engine,
@@ -417,13 +419,13 @@ class TestLoaderAsync:
                         organic INT NOT NULL
                     )
                 """
-            await engine._aexecute(query)
+            await engine.aexecute(query)
 
             insert_query = f"""
                         INSERT INTO "{table_name}" (fruit_name, variety, quantity_in_stock, price_per_unit, organic)
                         VALUES ('Apple', 'Granny Smith', 150, 1, 1);
                         """
-            await engine._aexecute(insert_query)
+            await engine.aexecute(insert_query)
 
             def my_formatter(row, content_columns):
                 return "-".join(
@@ -472,13 +474,13 @@ class TestLoaderAsync:
                         organic INT NOT NULL
                     )
                 """
-            await engine._aexecute(query)
+            await engine.aexecute(query)
 
             insert_query = f"""
                             INSERT INTO "{table_name}" (fruit_name, variety, quantity_in_stock, price_per_unit, organic)
                             VALUES ('Apple', 'Granny Smith', 150, 1, 1);
                         """
-            await engine._aexecute(insert_query)
+            await engine.aexecute(insert_query)
 
             loader = await PostgresLoader.create(
                 engine=engine,
