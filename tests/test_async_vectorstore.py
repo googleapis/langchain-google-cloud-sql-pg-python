@@ -225,10 +225,10 @@ class TestVectorStore:
         assert len(results) == 2
         assert "foo" not in content
 
-    async def test_ignore_metadata_columns(self, vs_custom):
+    async def test_ignore_metadata_columns(self, engine):
         column_to_ignore = "source"
         vs = await AsyncPostgresVectorStore.create(
-            vs_custom.engine,
+            engine,
             embedding_service=embeddings_service,
             table_name=CUSTOM_TABLE,
             ignore_metadata_columns=[column_to_ignore],
@@ -239,10 +239,10 @@ class TestVectorStore:
         )
         assert column_to_ignore not in vs.metadata_columns
 
-    async def test_create_vectorstore_with_invalid_parameters(self, vs_custom):
+    async def test_create_vectorstore_with_invalid_parameters(self, engine):
         with pytest.raises(ValueError):
             await AsyncPostgresVectorStore.create(
-                vs_custom.engine,
+                engine,
                 embedding_service=embeddings_service,
                 table_name=CUSTOM_TABLE,
                 id_column="myid",
@@ -252,7 +252,7 @@ class TestVectorStore:
             )
         with pytest.raises(ValueError):
             await AsyncPostgresVectorStore.create(
-                vs_custom.engine,
+                engine,
                 embedding_service=embeddings_service,
                 table_name=CUSTOM_TABLE,
                 id_column="myid",
@@ -262,7 +262,7 @@ class TestVectorStore:
             )
         with pytest.raises(ValueError):
             await AsyncPostgresVectorStore.create(
-                vs_custom.engine,
+                engine,
                 embedding_service=embeddings_service,
                 table_name=CUSTOM_TABLE,
                 id_column="myid",
@@ -272,7 +272,7 @@ class TestVectorStore:
             )
         with pytest.raises(ValueError):
             await AsyncPostgresVectorStore.create(
-                vs_custom.engine,
+                engine,
                 embedding_service=embeddings_service,
                 table_name=CUSTOM_TABLE,
                 id_column="myid",
