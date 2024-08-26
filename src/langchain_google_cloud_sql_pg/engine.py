@@ -599,7 +599,7 @@ class PostgresEngine:
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
-        return self._run_as_async(
+        return await self._run_as_async(
             self._ainit_document_table(
                 table_name,
                 content_column,

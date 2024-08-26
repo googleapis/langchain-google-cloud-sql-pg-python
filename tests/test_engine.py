@@ -78,7 +78,7 @@ class TestEngineAsync:
             database=db_name,
         )
         yield engine
-        await engine._engine.dispose()
+        await engine.close()
 
     async def test_execute(self, engine):
         await engine._aexecute("SELECT 1")
@@ -209,7 +209,7 @@ class TestEngineSync:
             database=db_name,
         )
         yield engine
-        await engine._engine.dispose()
+        await engine.close()
 
     async def test_execute(self, engine):
         await engine._aexecute("SELECT 1")
@@ -300,5 +300,4 @@ class TestEngineSync:
         )
         assert engine
         await engine._aexecute("SELECT 1")
-        engine._connector.close()
-        await engine._engine.dispose()
+        await engine.close()

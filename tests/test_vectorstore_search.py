@@ -73,6 +73,8 @@ class TestVectorStoreSearch:
             database=db_name,
         )
         yield engine
+        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
@@ -87,11 +89,9 @@ class TestVectorStoreSearch:
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_documents(docs, ids=ids)
         yield vs
-        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
-    def engine_sync(self, db_project, db_region, db_instance, db_name):
+    async def engine_sync(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
@@ -99,6 +99,8 @@ class TestVectorStoreSearch:
             database=db_name,
         )
         yield engine
+        await engine._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine_sync):
@@ -126,8 +128,6 @@ class TestVectorStoreSearch:
         )
         vs_custom.add_documents(docs, ids=ids)
         yield vs_custom
-        engine_sync._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
-        engine_sync._engine.dispose()
 
     async def test_asimilarity_search(self, vs):
         results = await vs.asimilarity_search("foo", k=1)

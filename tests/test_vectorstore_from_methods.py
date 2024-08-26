@@ -85,7 +85,7 @@ class TestVectorStoreFromMethods:
         yield engine
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await engine._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
-        await engine._engine.dispose()
+        await engine.close()
 
     @pytest_asyncio.fixture
     async def engine_sync(self, db_project, db_region, db_instance, db_name):
@@ -99,8 +99,7 @@ class TestVectorStoreFromMethods:
 
         yield engine
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
-
-        await engine._engine.dispose()
+        await engine.close()
 
     async def test_afrom_texts(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]

@@ -85,6 +85,8 @@ class TestVectorStore:
         )
 
         yield engine
+        await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
+        await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
@@ -96,11 +98,8 @@ class TestVectorStore:
         )
         yield vs
 
-        await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
-        await engine._engine.dispose()
-
     @pytest_asyncio.fixture(scope="class")
-    def engine_sync(self, db_project, db_region, db_instance, db_name):
+    async def engine_sync(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
@@ -109,8 +108,11 @@ class TestVectorStore:
         )
         yield engine
 
+        await engine_sync._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"')
+        await engine.close()
+
     @pytest_asyncio.fixture(scope="class")
-    async def vs_sync(self, engine_sync):
+    def vs_sync(self, engine_sync):
         engine_sync.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
 
         vs = PostgresVectorStore.create_sync(
@@ -119,9 +121,6 @@ class TestVectorStore:
             table_name=DEFAULT_TABLE_SYNC,
         )
         yield vs
-
-        await engine_sync._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"')
-        await engine_sync._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
