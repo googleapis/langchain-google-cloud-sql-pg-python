@@ -20,11 +20,8 @@ import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 
-from langchain_google_cloud_sql_pg import (
-    AsyncPostgresVectorStore,
-    Column,
-    PostgresEngine,
-)
+from langchain_google_cloud_sql_pg import Column, PostgresEngine
+from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
@@ -89,6 +86,7 @@ class TestVectorStoreFromMethods:
         yield engine
         await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await engine._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await engine._connector.close_async()
         await engine._engine.dispose()
 
     async def test_afrom_texts(self, engine):

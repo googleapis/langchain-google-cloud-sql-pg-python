@@ -22,7 +22,8 @@ import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 
-from langchain_google_cloud_sql_pg import AsyncPostgresVectorStore, PostgresEngine
+from langchain_google_cloud_sql_pg import PostgresEngine
+from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import (
     DEFAULT_INDEX_NAME_SUFFIX,
     DistanceStrategy,
@@ -81,6 +82,9 @@ class TestIndex:
             database=db_name,
         )
         yield engine
+        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await engine._connector.close_async()
+        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
@@ -94,8 +98,6 @@ class TestIndex:
         await vs.aadd_texts(texts, ids=ids)
         await vs.adrop_vector_index()
         yield vs
-        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine._engine.dispose()
 
     @pytest.mark.run(order=1)
     async def test_aapply_vector_index(self, vs):

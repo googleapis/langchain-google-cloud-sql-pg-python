@@ -26,8 +26,9 @@ from langchain_core.vectorstores import VectorStore
 from langchain_core.vectorstores.utils import (
     _maximal_marginal_relevance as maximal_marginal_relevance,
 )
-from sqlalchemy import MetaData, Table, text
+from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from .engine import PostgresEngine
 from .indexes import (
@@ -48,7 +49,7 @@ class AsyncPostgresVectorStore(VectorStore):
     def __init__(
         self,
         key: object,
-        engine: PostgresEngine,
+        engine: AsyncEngine,
         embedding_service: Embeddings,
         table_name: str,
         content_column: str = "content",
@@ -198,7 +199,7 @@ class AsyncPostgresVectorStore(VectorStore):
 
         return cls(
             cls.__create_key,
-            engine,
+            engine._engine,
             embedding_service,
             table_name,
             content_column,
@@ -217,7 +218,7 @@ class AsyncPostgresVectorStore(VectorStore):
     def embeddings(self) -> Embeddings:
         return self.embedding_service
 
-    async def _aadd_embeddings(
+    async def __aadd_embeddings(
         self,
         texts: Iterable[str],
         embeddings: List[List[float]],
@@ -262,7 +263,7 @@ class AsyncPostgresVectorStore(VectorStore):
                 values_stmt += ")"
 
             query = insert_stmt + values_stmt
-            async with self.engine._engine.connect() as conn:
+            async with self.engine.connect() as conn:
                 await conn.execute(text(query), values)
                 await conn.commit()
 
@@ -277,7 +278,7 @@ class AsyncPostgresVectorStore(VectorStore):
     ) -> List[str]:
         """Embed texts and add to the table."""
         embeddings = self.embedding_service.embed_documents(list(texts))
-        ids = await self._aadd_embeddings(
+        ids = await self.__aadd_embeddings(
             texts, embeddings, metadatas=metadatas, ids=ids, **kwargs
         )
         return ids
@@ -305,7 +306,7 @@ class AsyncPostgresVectorStore(VectorStore):
 
         id_list = ", ".join([f"'{id}'" for id in ids])
         query = f'DELETE FROM "{self.table_name}" WHERE {self.id_column} in ({id_list})'
-        async with self.engine._engine.connect() as conn:
+        async with self.engine.connect() as conn:
             await conn.execute(text(query))
             await conn.commit()
         return True
@@ -425,7 +426,7 @@ class AsyncPostgresVectorStore(VectorStore):
         filter = f"WHERE {filter}" if filter else ""
         stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM \"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
         if self.index_query_options:
-            async with self.engine._engine.connect() as conn:
+            async with self.engine.connect() as conn:
                 await conn.execute(
                     text(f"SET LOCAL {self.index_query_options.to_string()};")
                 )
@@ -433,7 +434,7 @@ class AsyncPostgresVectorStore(VectorStore):
                 result_map = result.mappings()
                 results = result_map.fetchall()
         else:
-            async with self.engine._engine.connect() as conn:
+            async with self.engine.connect() as conn:
                 result = await conn.execute(text(stmt))
                 result_map = result.mappings()
                 results = result_map.fetchall()
@@ -635,11 +636,11 @@ class AsyncPostgresVectorStore(VectorStore):
             name = index.name
         stmt = f'CREATE INDEX {"CONCURRENTLY" if concurrently else ""} {name} ON "{self.table_name}" USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};'
         if concurrently:
-            async with self.engine._engine.connect() as conn:
+            async with self.engine.connect() as conn:
                 await conn.execute(text("COMMIT"))
                 await conn.execute(text(stmt))
         else:
-            async with self.engine._engine.connect() as conn:
+            async with self.engine.connect() as conn:
                 await conn.execute(text(stmt))
                 await conn.commit()
 
@@ -647,7 +648,7 @@ class AsyncPostgresVectorStore(VectorStore):
         """Re-index the vector store table."""
         index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"REINDEX INDEX {index_name};"
-        async with self.engine._engine.connect() as conn:
+        async with self.engine.connect() as conn:
             await conn.execute(text(query))
             await conn.commit()
 
@@ -658,7 +659,7 @@ class AsyncPostgresVectorStore(VectorStore):
         """Drop the vector index."""
         index_name = index_name or self.table_name + DEFAULT_INDEX_NAME_SUFFIX
         query = f"DROP INDEX IF EXISTS {index_name};"
-        async with self.engine._engine.connect() as conn:
+        async with self.engine.connect() as conn:
             await conn.execute(text(query))
             await conn.commit()
 
@@ -673,7 +674,7 @@ class AsyncPostgresVectorStore(VectorStore):
         FROM pg_indexes
         WHERE tablename = '{self.table_name}' AND indexname = '{index_name}';
         """
-        async with self.engine._engine.connect() as conn:
+        async with self.engine.connect() as conn:
             result = await conn.execute(text(stmt))
             result_map = result.mappings()
             results = result_map.fetchall()

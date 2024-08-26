@@ -20,11 +20,8 @@ import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 
-from langchain_google_cloud_sql_pg import (
-    AsyncPostgresVectorStore,
-    Column,
-    PostgresEngine,
-)
+from langchain_google_cloud_sql_pg import Column, PostgresEngine
+from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4())
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4())
@@ -77,6 +74,9 @@ class TestVectorStore:
         )
 
         yield engine
+        await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
+        await engine._connector.close_async()
+        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
@@ -87,8 +87,6 @@ class TestVectorStore:
             table_name=DEFAULT_TABLE,
         )
         yield vs
-        await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
-        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
