@@ -39,12 +39,9 @@ embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz"]
 ids = [str(uuid.uuid4()) for i in range(len(texts))]
-metadatas = [
-    {"page": str(i), "source": "google.com"} for i in range(len(texts))
-]
+metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
 docs = [
-    Document(page_content=texts[i], metadata=metadatas[i])
-    for i in range(len(texts))
+    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
 ]
 
 embeddings = [embeddings_service.embed_query("foo") for i in range(len(texts))]
@@ -84,7 +81,7 @@ class TestIndex:
             database=db_name,
         )
         yield engine
-        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await engine.aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await engine.close()
 
     @pytest_asyncio.fixture(scope="class")

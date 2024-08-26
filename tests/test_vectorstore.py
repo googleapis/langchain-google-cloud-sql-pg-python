@@ -19,20 +19,12 @@ from threading import Thread
 
 import pytest
 import pytest_asyncio
-from google.cloud.sql.connector import (
-    Connector,
-    IPTypes,
-    create_async_connector,
-)
+from google.cloud.sql.connector import Connector, IPTypes, create_async_connector
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from langchain_google_cloud_sql_pg import (
-    Column,
-    PostgresEngine,
-    PostgresVectorStore,
-)
+from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4())
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4())
@@ -42,17 +34,12 @@ VECTOR_SIZE = 768
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz"]
-metadatas = [
-    {"page": str(i), "source": "google.com"} for i in range(len(texts))
-]
+metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
 docs = [
-    Document(page_content=texts[i], metadata=metadatas[i])
-    for i in range(len(texts))
+    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
 ]
 
-embeddings = [
-    embeddings_service.embed_query(texts[i]) for i in range(len(texts))
-]
+embeddings = [embeddings_service.embed_query(texts[i]) for i in range(len(texts))]
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -98,7 +85,7 @@ class TestVectorStore:
         )
 
         yield engine
-        await engine._aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
+        await engine.aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
         await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
@@ -113,18 +100,16 @@ class TestVectorStore:
 
     @pytest_asyncio.fixture(scope="class")
     async def engine_sync(self, db_project, db_region, db_instance, db_name):
-        engine = PostgresEngine.from_instance(
+        engine_sync = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
             region=db_region,
             database=db_name,
         )
-        yield engine
+        yield engine_sync
 
-        await engine_sync._aexecute(
-            f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"'
-        )
-        await engine.close()
+        await engine_sync.aexecute(f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"')
+        await engine_sync.close()
 
     @pytest_asyncio.fixture(scope="class")
     def vs_sync(self, engine_sync):
@@ -304,27 +289,21 @@ class TestVectorStore:
     async def test_add_docs(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_documents(docs, ids=ids)
-        results = await engine_sync.afetch(
-            f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"'
-        )
+        results = await engine_sync.afetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
         assert len(results) == 3
         vs_sync.delete(ids)
 
     async def test_add_texts(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         vs_sync.add_texts(texts, ids=ids)
-        results = await engine_sync.afetch(
-            f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"'
-        )
+        results = await engine_sync.afetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
         assert len(results) == 3
         await vs_sync.adelete(ids)
 
     async def test_cross_env(self, engine_sync, vs_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs_sync.aadd_texts(texts, ids=ids)
-        results = await engine_sync.afetch(
-            f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"'
-        )
+        results = await engine_sync.afetch(f'SELECT * FROM "{DEFAULT_TABLE_SYNC}"')
         assert len(results) == 3
         await vs_sync.adelete(ids)
 

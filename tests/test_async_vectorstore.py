@@ -24,9 +24,7 @@ from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
-from langchain_google_cloud_sql_pg.async_vectorstore import (
-    AsyncPostgresVectorStore,
-)
+from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4())
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4())
@@ -36,17 +34,12 @@ VECTOR_SIZE = 768
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
 texts = ["foo", "bar", "baz"]
-metadatas = [
-    {"page": str(i), "source": "google.com"} for i in range(len(texts))
-]
+metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
 docs = [
-    Document(page_content=texts[i], metadata=metadatas[i])
-    for i in range(len(texts))
+    Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
 ]
 
-embeddings = [
-    embeddings_service.embed_query(texts[i]) for i in range(len(texts))
-]
+embeddings = [embeddings_service.embed_query(texts[i]) for i in range(len(texts))]
 
 
 def get_env_var(key: str, desc: str) -> str:

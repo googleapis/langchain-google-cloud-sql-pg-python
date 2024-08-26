@@ -299,5 +299,5 @@ class TestEngineSync:
             iam_account_email=iam_account,
         )
         assert engine
-        await engine._aexecute("SELECT 1")
+        await engine.aexecute("SELECT 1")
         await engine.close()
