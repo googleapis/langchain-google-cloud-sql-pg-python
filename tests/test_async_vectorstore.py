@@ -280,3 +280,29 @@ class TestVectorStore:
                 embedding_column="langchain_id",  # invalid embedding column data type
                 metadata_columns=["random_column"],
             )
+        with pytest.raises(ValueError):
+            await AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="langchain_id",
+                metadata_columns=["random_column"],
+                ignore_metadata_columns=[
+                    "one",
+                    "two",
+                ],  # invalid use of metadata_columns and ignore columns
+            )
+
+    async def test_create_vectorstore_with_init(self, engine):
+        with pytest.raises(Exception):
+            await AsyncPostgresVectorStore(
+                engine._engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=["random_column"],  # invalid metadata column
+            )
