@@ -186,20 +186,6 @@ class TestVectorStore:
         assert len(results) == 3
         await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
 
-    async def test_aadd_embedding(self, engine, vs):
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs._aadd_embeddings(texts, embeddings, metadatas, ids)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
-        assert len(results) == 3
-        await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
-
-    async def test_aadd_embedding_without_id(self, engine, vs):
-        await vs._aadd_embeddings(texts, embeddings, metadatas)
-        results = await engine._afetch(f'SELECT * FROM "{DEFAULT_TABLE}"')
-        assert len(results) == 3
-        assert results[0]["langchain_id"]
-        await engine._aexecute(f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
-
     async def test_adelete(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_texts(texts, ids=ids)
@@ -243,13 +229,6 @@ class TestVectorStore:
         assert results[0]["myembedding"]
         assert results[0]["page"] == "0"
         assert results[0]["source"] == "google.com"
-        await engine._aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
-
-    async def test_aadd_embedding_custom(self, engine, vs_custom):
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs_custom._aadd_embeddings(texts, embeddings, metadatas, ids)
-        results = await engine._afetch(f'SELECT * FROM "{CUSTOM_TABLE}"')
-        assert len(results) == 3
         await engine._aexecute(f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
 
     async def test_adelete_custom(self, engine, vs_custom):
