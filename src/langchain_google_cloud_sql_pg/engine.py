@@ -357,6 +357,11 @@ class PostgresEngine:
             raise Exception("Engine was initialized async.")
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
+    async def close(self) -> None:
+        """Close the connector and dispose of connection pool"""
+        await self._connector.close_async()
+        await self._engine.dispose()
+
     async def ainit_vectorstore_table(
         self,
         table_name: str,

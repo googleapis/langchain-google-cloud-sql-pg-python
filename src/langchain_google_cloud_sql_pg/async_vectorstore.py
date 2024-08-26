@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type
 
 import numpy as np
 from langchain_core.documents import Document
