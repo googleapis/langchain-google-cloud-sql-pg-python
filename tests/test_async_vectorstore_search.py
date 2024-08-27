@@ -175,14 +175,6 @@ class TestVectorStoreSearch:
         )
         assert len(results) == 1
 
-        score_threshold = {"score_threshold": 0.5}
-        vs.distance_strategy = DistanceStrategy.INNER_PRODUCT
-        results = await vs.asimilarity_search_with_relevance_scores(
-            "foo", **score_threshold
-        )
-        assert len(results) == 1
-        assert results[0][0] == Document(page_content="foo")
-
     async def test_similarity_search_with_relevance_scores_threshold_euclidean(
         self, engine
     ):

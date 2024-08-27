@@ -26,7 +26,7 @@ steps:
   - id: Run integration tests
     name: python:${_VERSION}
     entrypoint: python
-    args: ["-m", "pytest", "--cov=langchain_google_cloud_sql_pg", "--cov-config=.coveragerc", "tests/test_async_*"]
+    args: ["-m", "pytest", "--cov=langchain_google_cloud_sql_pg", "--cov-config=.coveragerc", "tests/"]
     env:
       - "PROJECT_ID=$PROJECT_ID"
       - "INSTANCE_ID=$_INSTANCE_ID"
