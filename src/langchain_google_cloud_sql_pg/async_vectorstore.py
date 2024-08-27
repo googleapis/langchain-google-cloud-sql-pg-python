@@ -22,10 +22,7 @@ from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Typ
 import numpy as np
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from langchain_core.vectorstores import VectorStore
-from langchain_core.vectorstores.utils import (
-    _maximal_marginal_relevance as maximal_marginal_relevance,
-)
+from langchain_core.vectorstores import VectorStore, utils
 from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -588,7 +585,7 @@ class AsyncPostgresVectorStore(VectorStore):
         fetch_k = fetch_k if fetch_k else self.fetch_k
         lambda_mult = lambda_mult if lambda_mult else self.lambda_mult
         embedding_list = [json.loads(row[self.embedding_column]) for row in results]
-        mmr_selected = maximal_marginal_relevance(
+        mmr_selected = utils._maximal_marginal_relevance(
             np.array(embedding, dtype=np.float32),
             embedding_list,
             k=k,

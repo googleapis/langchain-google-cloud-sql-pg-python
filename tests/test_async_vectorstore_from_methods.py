@@ -57,9 +57,7 @@ async def aexecute(
         await conn.commit()
 
 
-async def afetch(
-    engine: PostgresEngine, query: str, params: Optional[dict] = None
-) -> None:
+async def afetch(engine: PostgresEngine, query: str, params: Optional[dict] = None):
     async with engine._pool.connect() as conn:
         result = await conn.execute(text(query), params)
         result_map = result.mappings()
