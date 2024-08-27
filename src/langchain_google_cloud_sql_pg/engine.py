@@ -337,8 +337,7 @@ class PostgresEngine:
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
     async def close(self) -> None:
-        """Close the connector and dispose of connection pool"""
-        await self._connector.close_async()
+        """Dispose of connection pool"""
         await self._pool.dispose()
 
     async def _ainit_vectorstore_table(
