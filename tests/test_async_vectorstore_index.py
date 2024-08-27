@@ -56,9 +56,9 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
-async def aexecute(engine: PostgresEngine, query: str, params=None) -> None:
+async def aexecute(engine: PostgresEngine, query: str) -> None:
     async with engine._pool.connect() as conn:
-        await conn.execute(text(query), params)
+        await conn.execute(text(query))
         await conn.commit()
 
 

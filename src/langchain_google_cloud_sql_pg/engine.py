@@ -431,8 +431,8 @@ class PostgresEngine:
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
         """
-        return self._run_as_async(
-            await self._ainit_vectorstore_table(
+        await self._run_as_async(
+            self._ainit_vectorstore_table(
                 table_name,
                 vector_size,
                 content_column,
@@ -477,7 +477,7 @@ class PostgresEngine:
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
         """
-        return self._run_as_sync(
+        self._run_as_sync(
             self._ainit_vectorstore_table(
                 table_name,
                 vector_size,
@@ -519,7 +519,7 @@ class PostgresEngine:
         Returns:
             None
         """
-        return self._run_as_sync(
+        self._run_as_sync(
             self._ainit_chat_history_table(
                 table_name,
             )

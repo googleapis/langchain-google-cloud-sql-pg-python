@@ -14,13 +14,14 @@
 
 import os
 import uuid
-from typing import Optional
+from typing import Sequence
 
 import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import text
+from sqlalchemy.engine.row import RowMapping
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
 from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
@@ -49,17 +50,15 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
-async def aexecute(
-    engine: PostgresEngine, query: str, params: Optional[dict] = None
-) -> None:
+async def aexecute(engine: PostgresEngine, query: str) -> None:
     async with engine._pool.connect() as conn:
-        await conn.execute(text(query), params)
+        await conn.execute(text(query))
         await conn.commit()
 
 
-async def afetch(engine: PostgresEngine, query: str, params: Optional[dict] = None):
+async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     async with engine._pool.connect() as conn:
-        result = await conn.execute(text(query), params)
+        result = await conn.execute(text(query))
         result_map = result.mappings()
         result_fetch = result_map.fetchall()
     return result_fetch
