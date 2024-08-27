@@ -69,9 +69,7 @@ async def _get_iam_principal_email(
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
     if hasattr(credentials, "_service_account_email"):
-        return credentials._service_account_email.replace(
-            ".gserviceaccount.com", ""
-        )
+        return credentials._service_account_email.replace(".gserviceaccount.com", "")
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -189,9 +187,7 @@ class PostgresEngine:
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
-        return asyncio.run_coroutine_threadsafe(
-            coro, cls._default_loop
-        ).result()
+        return asyncio.run_coroutine_threadsafe(coro, cls._default_loop).result()
 
     @classmethod
     async def _create(
@@ -599,7 +595,7 @@ class PostgresEngine:
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
-        return await self._run_as_async(
+        await self._run_as_async(
             self._ainit_document_table(
                 table_name,
                 content_column,
@@ -634,7 +630,7 @@ class PostgresEngine:
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
-        return self._run_as_sync(
+        self._run_as_sync(
             self._ainit_document_table(
                 table_name,
                 content_column,
@@ -658,9 +654,7 @@ class PostgresEngine:
             try:
                 await conn.run_sync(metadata.reflect, only=[table_name])
             except InvalidRequestError as e:
-                raise ValueError(
-                    f"Table, {table_name}, does not exist: " + str(e)
-                )
+                raise ValueError(f"Table, {table_name}, does not exist: " + str(e))
 
         table = Table(table_name, metadata)
         # Extract the schema information

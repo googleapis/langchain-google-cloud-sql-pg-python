@@ -180,7 +180,7 @@ class PostgresVectorStore(VectorStore):
 
     @property
     def embeddings(self) -> Embeddings:
-        return self.embedding_service
+        return self._vs.embedding_service
 
     async def aadd_texts(
         self,

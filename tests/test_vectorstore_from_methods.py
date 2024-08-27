@@ -14,11 +14,15 @@
 
 import os
 import uuid
+from typing import Sequence
 
 import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from sqlalchemy import VARCHAR, text
+from sqlalchemy.engine.row import RowMapping
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
@@ -44,6 +48,29 @@ def get_env_var(key: str, desc: str) -> str:
     if v is None:
         raise ValueError(f"Must set env var {key} to: {desc}")
     return v
+
+
+async def aexecute(
+    engine: PostgresEngine,
+    query: str,
+) -> None:
+    async def run(engine, query):
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    await engine._run_as_async(run(engine, query))
+
+
+async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
+    async def run(engine, query):
+        async with engine._pool.connect() as conn:
+            result = await conn.execute(text(query))
+            result_map = result.mappings()
+            result_fetch = result_map.fetchall()
+        return result_fetch
+
+    return await engine._run_as_async(run(engine, query))
 
 
 @pytest.mark.asyncio
@@ -83,8 +110,8 @@ class TestVectorStoreFromMethods:
             store_metadata=False,
         )
         yield engine
-        await engine.aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine.aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
         await engine.close()
 
     @pytest_asyncio.fixture
@@ -98,7 +125,7 @@ class TestVectorStoreFromMethods:
         engine.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
 
         yield engine
-        await engine.aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
         await engine.close()
 
     async def test_afrom_texts(self, engine):
@@ -111,9 +138,9 @@ class TestVectorStoreFromMethods:
             metadatas=metadatas,
             ids=ids,
         )
-        results = await engine.afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        results = await afetch(engine, f"SELECT * FROM {DEFAULT_TABLE}")
         assert len(results) == 3
-        await engine.aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE}")
+        await aexecute(engine, f"TRUNCATE TABLE {DEFAULT_TABLE}")
 
     async def test_from_texts(self, engine_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -125,9 +152,9 @@ class TestVectorStoreFromMethods:
             metadatas=metadatas,
             ids=ids,
         )
-        results = await engine_sync.afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        results = await afetch(engine_sync, f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 3
-        await engine_sync.aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+        await aexecute(engine_sync, f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
 
     async def test_afrom_docs(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -138,9 +165,9 @@ class TestVectorStoreFromMethods:
             DEFAULT_TABLE,
             ids=ids,
         )
-        results = await engine.afetch(f"SELECT * FROM {DEFAULT_TABLE}")
+        results = await afetch(engine, f"SELECT * FROM {DEFAULT_TABLE}")
         assert len(results) == 3
-        await engine.aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE}")
+        await aexecute(engine, f"TRUNCATE TABLE {DEFAULT_TABLE}")
 
     async def test_from_docs(self, engine_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -151,9 +178,9 @@ class TestVectorStoreFromMethods:
             DEFAULT_TABLE_SYNC,
             ids=ids,
         )
-        results = await engine_sync.afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        results = await afetch(engine_sync, f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 3
-        await engine_sync.aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+        await aexecute(engine_sync, f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
 
     async def test_afrom_docs_cross_env(self, engine_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -164,9 +191,9 @@ class TestVectorStoreFromMethods:
             DEFAULT_TABLE_SYNC,
             ids=ids,
         )
-        results = await engine_sync.afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        results = await afetch(engine_sync, f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 3
-        await engine_sync.aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+        await aexecute(engine_sync, f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
 
     async def test_from_docs_cross_env(self, engine, engine_sync):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -177,9 +204,9 @@ class TestVectorStoreFromMethods:
             DEFAULT_TABLE_SYNC,
             ids=ids,
         )
-        results = await engine.afetch(f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
+        results = await afetch(engine, f"SELECT * FROM {DEFAULT_TABLE_SYNC}")
         assert len(results) == 3
-        await engine.aexecute(f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
+        await aexecute(engine, f"TRUNCATE TABLE {DEFAULT_TABLE_SYNC}")
 
     async def test_afrom_texts_custom(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
@@ -194,7 +221,7 @@ class TestVectorStoreFromMethods:
             embedding_column="myembedding",
             metadata_columns=["page", "source"],
         )
-        results = await engine.afetch(f"SELECT * FROM {CUSTOM_TABLE}")
+        results = await afetch(engine, f"SELECT * FROM {CUSTOM_TABLE}")
         assert len(results) == 3
         assert results[0]["mycontent"] == "foo"
         assert results[0]["myembedding"]
@@ -222,10 +249,10 @@ class TestVectorStoreFromMethods:
             metadata_columns=["page", "source"],
         )
 
-        results = await engine.afetch(f"SELECT * FROM {CUSTOM_TABLE}")
+        results = await afetch(engine, f"SELECT * FROM {CUSTOM_TABLE}")
         assert len(results) == 3
         assert results[0]["mycontent"] == "foo"
         assert results[0]["myembedding"]
         assert results[0]["page"] == "0"
         assert results[0]["source"] == "google.com"
-        await engine.aexecute(f"TRUNCATE TABLE {CUSTOM_TABLE}")
+        await aexecute(engine, f"TRUNCATE TABLE {CUSTOM_TABLE}")
