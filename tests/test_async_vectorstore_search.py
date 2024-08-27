@@ -19,6 +19,7 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
 from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
@@ -45,6 +46,12 @@ def get_env_var(key: str, desc: str) -> str:
     if v is None:
         raise ValueError(f"Must set env var {key} to: {desc}")
     return v
+
+
+async def aexecute(engine: PostgresEngine, query: str, params=None) -> None:
+    async with engine._pool.connect() as conn:
+        await conn.execute(text(query), params)
+        await conn.commit()
 
 
 @pytest.mark.asyncio(scope="class")
@@ -74,12 +81,13 @@ class TestVectorStoreSearch:
             database=db_name,
         )
         yield engine
-        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
         await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine.ainit_vectorstore_table(
+        await engine._ainit_vectorstore_table(
             DEFAULT_TABLE, VECTOR_SIZE, store_metadata=False
         )
         vs = await AsyncPostgresVectorStore.create(
@@ -93,7 +101,7 @@ class TestVectorStoreSearch:
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
-        await engine.ainit_vectorstore_table(
+        await engine._ainit_vectorstore_table(
             CUSTOM_TABLE,
             VECTOR_SIZE,
             id_column="myid",
@@ -117,8 +125,6 @@ class TestVectorStoreSearch:
         )
         await vs_custom.aadd_documents(docs, ids=ids)
         yield vs_custom
-        await engine._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
-        await engine._engine.dispose()
 
     async def test_asimilarity_search(self, vs):
         results = await vs.asimilarity_search("foo", k=1)
@@ -156,6 +162,21 @@ class TestVectorStoreSearch:
         assert len(results) == 2
 
         score_threshold = {"score_threshold": 0.9}
+        results = await vs.asimilarity_search_with_relevance_scores(
+            "foo", **score_threshold
+        )
+        assert len(results) == 1
+        assert results[0][0] == Document(page_content="foo")
+
+        score_threshold = {"score_threshold": 0.02}
+        vs.distance_strategy = DistanceStrategy.EUCLIDEAN
+        results = await vs.asimilarity_search_with_relevance_scores(
+            "foo", **score_threshold
+        )
+        assert len(results) == 1
+
+        score_threshold = {"score_threshold": 0.5}
+        vs.distance_strategy = DistanceStrategy.INNER_PRODUCT
         results = await vs.asimilarity_search_with_relevance_scores(
             "foo", **score_threshold
         )

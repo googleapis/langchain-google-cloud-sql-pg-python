@@ -114,15 +114,15 @@ class PostgresEngine:
     def __init__(
         self,
         key: object,
-        engine: AsyncEngine,
+        pool: AsyncEngine,
         loop: Optional[asyncio.AbstractEventLoop],
         thread: Optional[Thread],
     ):
         """PostgresEngine constructor.
 
         Args:
-            key(object): Prevent direct constructor usage.
-            engine(AsyncEngine): Async engine connection pool.
+            key (object): Prevent direct constructor usage.
+            pool (AsyncEngine): Async engine connection pool.
             loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
             thread (Optional[Thread] = None): Thread used to create the engine async.
 
@@ -133,7 +133,7 @@ class PostgresEngine:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
             )
-        self._engine = engine
+        self._pool = pool
         self._loop = loop
         self._thread = thread
 
@@ -320,36 +320,15 @@ class PostgresEngine:
         """Create an PostgresEngine instance from an AsyncEngine."""
         return cls(cls.__create_key, engine, None, None)
 
-    async def _aexecute(self, query: str, params: Optional[dict] = None) -> None:
-        """Execute a SQL query."""
-        async with self._engine.connect() as conn:
-            await conn.execute(text(query), params)
-            await conn.commit()
-
-    async def _aexecute_outside_tx(self, query: str) -> None:
-        """Execute a SQL query."""
-        async with self._engine.connect() as conn:
-            await conn.execute(text("COMMIT"))
-            await conn.execute(text(query))
-
-    async def _afetch(
-        self, query: str, params: Optional[dict] = None
-    ) -> Sequence[RowMapping]:
-        """Fetch results from a SQL query."""
-        async with self._engine.connect() as conn:
-            result = await conn.execute(text(query), params)
-            result_map = result.mappings()
-            result_fetch = result_map.fetchall()
-
-        return result_fetch
-
-    def _execute(self, query: str, params: Optional[dict] = None) -> None:
-        """Execute a SQL query."""
-        return self._run_as_sync(self._aexecute(query, params))
-
-    def _fetch(self, query: str, params: Optional[dict] = None) -> Sequence[RowMapping]:
-        """Fetch results from a SQL query."""
-        return self._run_as_sync(self._afetch(query, params))
+    async def _run_as_async(self, coro: Awaitable[T]) -> T:
+        """Run an async coroutine asynchronously"""
+        # If a loop has not been provided, attempt to run in current thread
+        if not self._loop:
+            return await coro
+        # Otherwise, run in the background thread
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, self._loop)
+        )
 
     def _run_as_sync(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine synchronously"""
@@ -360,9 +339,9 @@ class PostgresEngine:
     async def close(self) -> None:
         """Close the connector and dispose of connection pool"""
         await self._connector.close_async()
-        await self._engine.dispose()
+        await self._pool.dispose()
 
-    async def ainit_vectorstore_table(
+    async def _ainit_vectorstore_table(
         self,
         table_name: str,
         vector_size: int,
@@ -397,10 +376,14 @@ class PostgresEngine:
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists and overwrite flag is not set.
         """
-        await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
+        async with self._pool.connect() as conn:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            await conn.commit()
 
         if overwrite_existing:
-            await self._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
+            async with self._pool.connect() as conn:
+                await conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}"'))
+                await conn.commit()
 
         query = f"""CREATE TABLE "{table_name}"(
             "{id_column}" UUID PRIMARY KEY,
@@ -413,7 +396,55 @@ class PostgresEngine:
             query += f""",\n"{metadata_json_column}" JSON"""
         query += "\n);"
 
-        await self._aexecute(query)
+        async with self._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    async def ainit_vectorstore_table(
+        self,
+        table_name: str,
+        vector_size: int,
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[Column] = [],
+        metadata_json_column: str = "langchain_metadata",
+        id_column: str = "langchain_id",
+        overwrite_existing: bool = False,
+        store_metadata: bool = True,
+    ) -> None:
+        """
+        Create a table for saving of vectors to be used with PostgresVectorStore.
+
+        Args:
+            table_name (str): The Postgres database table name.
+            vector_size (int): Vector size for the embedding model to be used.
+            content_column (str): Name of the column to store document content.
+                Default: "page_content".
+            embedding_column (str) : Name of the column to store vector embeddings.
+                Default: "embedding".
+            metadata_columns (List[Column]): A list of Columns to create for custom
+                metadata. Default: []. Optional.
+            metadata_json_column (str): The column to store extra metadata in JSON format.
+                Default: "langchain_metadata". Optional.
+            id_column (str):  Name of the column to store ids.
+                Default: "langchain_id". Optional,
+            overwrite_existing (bool): Whether to drop existing table. Default: False.
+            store_metadata (bool): Whether to store metadata in the table.
+                Default: True.
+        """
+        return self._run_as_async(
+            await self._ainit_vectorstore_table(
+                table_name,
+                vector_size,
+                content_column,
+                embedding_column,
+                metadata_columns,
+                metadata_json_column,
+                id_column,
+                overwrite_existing,
+                store_metadata,
+            )
+        )
 
     def init_vectorstore_table(
         self,
@@ -448,7 +479,7 @@ class PostgresEngine:
                 Default: True.
         """
         return self._run_as_sync(
-            self.ainit_vectorstore_table(
+            self._ainit_vectorstore_table(
                 table_name,
                 vector_size,
                 content_column,
@@ -461,7 +492,7 @@ class PostgresEngine:
             )
         )
 
-    async def ainit_chat_history_table(self, table_name: str) -> None:
+    async def _ainit_chat_history_table(self, table_name: str) -> None:
         """Create a Cloud SQL table to store chat history.
 
         Args:
@@ -476,7 +507,9 @@ class PostgresEngine:
             data JSONB NOT NULL,
             type TEXT NOT NULL
         );"""
-        await self._aexecute(create_table_query)
+        async with self._pool.connect() as conn:
+            await conn.execute(text(create_table_query))
+            await conn.commit()
 
     def init_chat_history_table(self, table_name: str) -> None:
         """Create a Cloud SQL table to store chat history.
@@ -488,12 +521,12 @@ class PostgresEngine:
             None
         """
         return self._run_as_sync(
-            self.ainit_chat_history_table(
+            self._ainit_chat_history_table(
                 table_name,
             )
         )
 
-    async def ainit_document_table(
+    async def _ainit_document_table(
         self,
         table_name: str,
         content_column: str = "page_content",
@@ -530,7 +563,9 @@ class PostgresEngine:
             query += f',\n"{metadata_json_column}" JSON'
         query += "\n);"
 
-        await self._aexecute(query)
+        async with self._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
 
     def init_document_table(
         self,
@@ -552,7 +587,7 @@ class PostgresEngine:
                 if not described in 'metadata' field list (Default: True).
         """
         return self._run_as_sync(
-            self.ainit_document_table(
+            self._ainit_document_table(
                 table_name,
                 content_column,
                 metadata_columns,
@@ -571,7 +606,7 @@ class PostgresEngine:
             (sqlalchemy.Table): The loaded table.
         """
         metadata = MetaData()
-        async with self._engine.connect() as conn:
+        async with self._pool.connect() as conn:
             try:
                 await conn.run_sync(metadata.reflect, only=[table_name])
             except InvalidRequestError as e:

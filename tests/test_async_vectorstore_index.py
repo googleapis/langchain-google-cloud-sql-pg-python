@@ -21,6 +21,7 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import PostgresEngine
 from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
@@ -55,6 +56,12 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
+async def aexecute(engine: PostgresEngine, query: str, params=None) -> None:
+    async with engine._pool.connect() as conn:
+        await conn.execute(text(query), params)
+        await conn.commit()
+
+
 @pytest.mark.asyncio(scope="class")
 class TestIndex:
     @pytest.fixture(scope="module")
@@ -82,12 +89,12 @@ class TestIndex:
             database=db_name,
         )
         yield engine
-        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await engine._ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         vs = await AsyncPostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
