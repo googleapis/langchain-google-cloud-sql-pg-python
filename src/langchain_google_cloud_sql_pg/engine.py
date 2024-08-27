@@ -373,6 +373,7 @@ class PostgresEngine:
         self,
         table_name: str,
         vector_size: int,
+        schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[Column] = [],
@@ -387,6 +388,8 @@ class PostgresEngine:
         Args:
             table_name (str): The Postgres database table name.
             vector_size (int): Vector size for the embedding model to be used.
+            schema_name (str): The schema name to store Postgres database table.
+                Default: "public".
             content_column (str): Name of the column to store document content.
                 Default: "page_content".
             embedding_column (str) : Name of the column to store vector embeddings.
@@ -407,9 +410,9 @@ class PostgresEngine:
         await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
 
         if overwrite_existing:
-            await self._aexecute(f'DROP TABLE IF EXISTS "{table_name}"')
+            await self._aexecute(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"')
 
-        query = f"""CREATE TABLE "{table_name}"(
+        query = f"""CREATE TABLE "{schema_name}"."{table_name}"(
             "{id_column}" UUID PRIMARY KEY,
             "{content_column}" TEXT NOT NULL,
             "{embedding_column}" vector({vector_size}) NOT NULL"""
@@ -426,6 +429,7 @@ class PostgresEngine:
         self,
         table_name: str,
         vector_size: int,
+        schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[Column] = [],
@@ -440,6 +444,8 @@ class PostgresEngine:
         Args:
             table_name (str): The Postgres database table name.
             vector_size (int): Vector size for the embedding model to be used.
+            schema_name (str): The schema name to store Postgres database table.
+                Default: "public".
             content_column (str): Name of the column to store document content.
                 Default: "page_content".
             embedding_column (str) : Name of the column to store vector embeddings.
@@ -458,6 +464,7 @@ class PostgresEngine:
             self.ainit_vectorstore_table(
                 table_name,
                 vector_size,
+                schema_name,
                 content_column,
                 embedding_column,
                 metadata_columns,
@@ -468,16 +475,20 @@ class PostgresEngine:
             )
         )
 
-    async def ainit_chat_history_table(self, table_name: str) -> None:
+    async def ainit_chat_history_table(
+        self, table_name: str, schema_name: str = "public"
+    ) -> None:
         """Create a Cloud SQL table to store chat history.
 
         Args:
             table_name (str): Table name to store chat history.
+            schema_name (str): Schema name to store chat history table.
+                Default: "public".
 
         Returns:
             None
         """
-        create_table_query = f"""CREATE TABLE IF NOT EXISTS "{table_name}"(
+        create_table_query = f"""CREATE TABLE IF NOT EXISTS "{schema_name}"."{table_name}"(
             id SERIAL PRIMARY KEY,
             session_id TEXT NOT NULL,
             data JSONB NOT NULL,
@@ -485,11 +496,15 @@ class PostgresEngine:
         );"""
         await self._aexecute(create_table_query)
 
-    def init_chat_history_table(self, table_name: str) -> None:
+    def init_chat_history_table(
+        self, table_name: str, schema_name: str = "public"
+    ) -> None:
         """Create a Cloud SQL table to store chat history.
 
         Args:
             table_name (str): Table name to store chat history.
+            schema_name (str): Schema name to store chat history table.
+                Default: "public".
 
         Returns:
             None
@@ -497,12 +512,14 @@ class PostgresEngine:
         return self._run_as_sync(
             self.ainit_chat_history_table(
                 table_name,
+                schema_name,
             )
         )
 
     async def ainit_document_table(
         self,
         table_name: str,
+        schema_name: str = "public",
         content_column: str = "page_content",
         metadata_columns: List[Column] = [],
         metadata_json_column: str = "langchain_metadata",
@@ -513,6 +530,8 @@ class PostgresEngine:
 
         Args:
             table_name (str): The PgSQL database table name.
+            schema_name (str): The schema name to store PgSQL database table.
+                Default: "public".
             content_column (str): Name of the column to store document content.
                 Default: "page_content".
             metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
@@ -526,7 +545,7 @@ class PostgresEngine:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
 
-        query = f"""CREATE TABLE "{table_name}"(
+        query = f"""CREATE TABLE "{schema_name}"."{table_name}"(
             {content_column} TEXT NOT NULL
             """
         for column in metadata_columns:
@@ -542,6 +561,7 @@ class PostgresEngine:
     def init_document_table(
         self,
         table_name: str,
+        schema_name: str = "public",
         content_column: str = "page_content",
         metadata_columns: List[Column] = [],
         metadata_json_column: str = "langchain_metadata",
@@ -552,6 +572,8 @@ class PostgresEngine:
 
         Args:
             table_name (str): The PgSQL database table name.
+            schema_name (str): The schema name to store PgSQL database table.
+                Default: "public".
             content_column (str): Name of the column to store document content.
             metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
                 to create for custom metadata. Optional.
@@ -561,6 +583,7 @@ class PostgresEngine:
         return self._run_as_sync(
             self.ainit_document_table(
                 table_name,
+                schema_name,
                 content_column,
                 metadata_columns,
                 metadata_json_column,
@@ -571,6 +594,7 @@ class PostgresEngine:
     async def _aload_table_schema(
         self,
         table_name: str,
+        schema_name: str = "public",
     ) -> Table:
         """
         Load table schema from existing table in PgSQL database.
@@ -580,11 +604,15 @@ class PostgresEngine:
         metadata = MetaData()
         async with self._engine.connect() as conn:
             try:
-                await conn.run_sync(metadata.reflect, only=[table_name])
+                await conn.run_sync(
+                    metadata.reflect, schema=schema_name, only=[table_name]
+                )
             except InvalidRequestError as e:
-                raise ValueError(f"Table, {table_name}, does not exist: " + str(e))
+                raise ValueError(
+                    f"Table, '{schema_name}'.'{table_name}', does not exist: " + str(e)
+                )
 
-        table = Table(table_name, metadata)
+        table = Table(table_name, metadata, schema=schema_name)
         # Extract the schema information
         schema = []
         for column in table.columns:
@@ -597,4 +625,4 @@ class PostgresEngine:
                 }
             )
 
-        return metadata.tables[table_name]
+        return metadata.tables[f"{schema_name}.{table_name}"]
