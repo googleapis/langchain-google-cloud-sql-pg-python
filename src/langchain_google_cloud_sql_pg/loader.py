@@ -14,19 +14,8 @@
 
 from __future__ import annotations
 
-import json
-from typing import (
-    Any,
-    AsyncIterator,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-)
+from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
 
-import sqlalchemy
 from langchain_core.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
@@ -158,10 +147,6 @@ class PostgresLoader(BaseLoader):
         loader = engine._run_as_sync(coro)
         return cls(cls.__create_key, engine, loader)
 
-    # async def _collect_async_items(self, docs_generator):
-    #     """Exhause document generator into a list."""
-    #     return [doc async for doc in docs_generator]
-
     def load(self) -> List[Document]:
         """Load PostgreSQL data into Document objects."""
         return self._engine._run_as_sync(self._loader.aload())
@@ -172,11 +157,10 @@ class PostgresLoader(BaseLoader):
 
     def lazy_load(self) -> Iterator[Document]:
         """Load PostgreSQL data into Document objects lazily."""
-        # yield from self._engine._run_as_sync(self._loader.alazy_load())
         iterator = self._loader.alazy_load()
         while True:
             try:
-                result = self._engine._run_as_sync(anext(iterator))
+                result = self._engine._run_as_sync(iterator.__anext__())
                 yield result
             except StopAsyncIteration:
                 break
@@ -186,12 +170,10 @@ class PostgresLoader(BaseLoader):
         iterator = self._loader.alazy_load()
         while True:
             try:
-                result = await self._engine._run_as_async(anext(iterator))
+                result = await self._engine._run_as_async(iterator.__anext__())
                 yield result
             except StopAsyncIteration:
                 break
-
-        # yield await self._engine._run_as_async(self._loader.alazy_load())
 
 
 class PostgresDocumentSaver:
