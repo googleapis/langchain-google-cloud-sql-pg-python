@@ -57,10 +57,6 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
         self.session_id = session_id
         self.table_name = table_name
 
-    async def messages(self) -> List[BaseMessage]:
-        """The abstraction required a property."""
-        return await self.__aget_messages()
-
     @classmethod
     async def create(
         cls,
@@ -128,7 +124,7 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
             await conn.execute(text(query), {"session_id": self.session_id})
             await conn.commit()
 
-    async def __aget_messages(self) -> List[BaseMessage]:
+    async def _aget_messages(self) -> List[BaseMessage]:
         """Retrieve the messages from PostgreSQL."""
         query = f"""SELECT data, type FROM "{self.table_name}" WHERE session_id = :session_id ORDER BY id;"""
         async with self.pool.connect() as conn:

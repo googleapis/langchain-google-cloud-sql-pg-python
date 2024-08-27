@@ -105,7 +105,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
     @property  # type: ignore[override]
     def messages(self) -> List[BaseMessage]:
         """The abstraction required a property."""
-        return self._engine._run_as_sync(self._history.messages())
+        return self._engine._run_as_sync(self._history._aget_messages())
 
     async def aadd_message(self, message: BaseMessage) -> None:
         """Append the message to the record in PostgreSQL"""

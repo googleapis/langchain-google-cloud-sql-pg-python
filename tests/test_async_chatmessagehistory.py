@@ -67,7 +67,7 @@ async def test_chat_message_history_async(
     msg2 = AIMessage(content="whats up?")
     await history.aadd_message(msg1)
     await history.aadd_message(msg2)
-    messages = await history.messages()
+    messages = await history._aget_messages()
 
     # verify messages are correct
     assert messages[0].content == "hi!"
@@ -77,7 +77,7 @@ async def test_chat_message_history_async(
 
     # verify clear() clears message history
     await history.aclear()
-    assert len(await history.messages()) == 0
+    assert len(await history._aget_messages()) == 0
 
 
 @pytest.mark.asyncio
@@ -95,12 +95,12 @@ async def test_chat_message_history_sync_messages(
     await history1.aadd_message(msg1)
     await history2.aadd_message(msg2)
 
-    assert len(await history1.messages()) == 2
-    assert len(await history2.messages()) == 2
+    assert len(await history1._aget_messages()) == 2
+    assert len(await history2._aget_messages()) == 2
 
     # verify clear() clears message history
     await history2.aclear()
-    assert len(await history2.messages()) == 0
+    assert len(await history2._aget_messages()) == 0
 
 
 @pytest.mark.asyncio
