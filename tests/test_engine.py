@@ -203,7 +203,7 @@ class TestEngineAsync:
         host = "127.0.0.1"
         port = "5432"
         url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
-        engine = PostgresEngine.from_engine_args(url, random=False)
+        engine = PostgresEngine.from_engine_args(url)
         await aexecute(engine, "SELECT 1")
 
     async def test_from_engine_args_url_error(
