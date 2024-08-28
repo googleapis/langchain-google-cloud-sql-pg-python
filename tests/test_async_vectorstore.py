@@ -92,6 +92,7 @@ class TestVectorStore:
 
         yield engine
         await aexecute(engine, f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
+        await aexecute(engine, f'DROP TABLE IF EXISTS "{CUSTOM_TABLE}"')
         await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
@@ -126,7 +127,6 @@ class TestVectorStore:
             metadata_json_column="mymeta",
         )
         yield vs
-        await aexecute(engine, f'DROP TABLE IF EXISTS "{CUSTOM_TABLE}"')
 
     async def test_init_with_constructor(self, engine):
         with pytest.raises(Exception):
