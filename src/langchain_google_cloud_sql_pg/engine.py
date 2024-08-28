@@ -346,23 +346,13 @@ class PostgresEngine:
     @classmethod
     def from_engine_args(
         cls,
-        url: Optional[str | URL] = None,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        host: Optional[str] = None,
-        port: Optional[int] = 5432,
-        database: Optional[str] = None,
+        url: Union[str | URL],
         **kwargs: Any,
     ) -> PostgresEngine:
         """Create an PostgresEngine instance from arguments
 
         Args:
             url (Optional[str]): the URL used to connect to a database. Use url or set other arguments.
-            user (Optional[str]): Postgres user name. Use url or set this argument.
-            password (Optional[str]): Postgres user password. Defaults to None. Use url or set this argument.
-            host (Optional[str]): the database host name. Use url or set this argument.
-            port (Optional[str]): the database port.
-            database (Optional[str]):: the database name. Use url or set this argument.
 
         Raises:
             ValueError: If not all database url arguments are specified
@@ -379,8 +369,11 @@ class PostgresEngine:
             )
             cls._default_thread.start()
 
-        if not url:
-            url = URL.create("postgresql+asyncpg", user, password, host, port, database)
+        driver = "postgresql+asyncpg"
+        if (isinstance(url, str) and not url.startswith(driver)) or (
+            isinstance(url, URL) and url.drivername != driver
+        ):
+            raise ValueError("Driver must be type 'postgresql+asyncpg'")
 
         engine = create_async_engine(url, **kwargs)
         return cls(cls.__create_key, engine, cls._default_loop, cls._default_thread)
