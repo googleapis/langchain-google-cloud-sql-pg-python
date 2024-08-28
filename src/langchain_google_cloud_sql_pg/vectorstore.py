@@ -15,24 +15,19 @@
 # TODO: Remove below import when minimum supported Python version is 3.10
 from __future__ import annotations
 
-import json
-import uuid
-from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type
 
 import numpy as np
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
-from sqlalchemy.engine.row import RowMapping
 
 from .async_vectorstore import AsyncPostgresVectorStore
 from .engine import PostgresEngine
 from .indexes import (
     DEFAULT_DISTANCE_STRATEGY,
-    DEFAULT_INDEX_NAME_SUFFIX,
     BaseIndex,
     DistanceStrategy,
-    ExactNearestNeighbor,
     QueryOptions,
 )
 
@@ -60,7 +55,7 @@ class PostgresVectorStore(VectorStore):
             )
 
         self._engine = engine
-        self._vs = vs
+        self.__vs = vs
 
     @classmethod
     async def create(
@@ -180,7 +175,7 @@ class PostgresVectorStore(VectorStore):
 
     @property
     def embeddings(self) -> Embeddings:
-        return self._vs.embedding_service
+        return self.__vs.embedding_service
 
     async def aadd_texts(
         self,
@@ -191,7 +186,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[str]:
         """Embed texts and add to the table."""
         return await self._engine._run_as_async(
-            self._vs.aadd_texts(texts, metadatas, ids, **kwargs)
+            self.__vs.aadd_texts(texts, metadatas, ids, **kwargs)
         )
 
     def add_texts(
@@ -203,7 +198,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[str]:
         """Embed texts and add to the table."""
         return self._engine._run_as_sync(
-            self._vs.aadd_texts(texts, metadatas, ids, **kwargs)
+            self.__vs.aadd_texts(texts, metadatas, ids, **kwargs)
         )
 
     async def aadd_documents(
@@ -214,7 +209,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[str]:
         """Embed documents and add to the table"""
         return await self._engine._run_as_async(
-            self._vs.aadd_documents(documents, ids, **kwargs)
+            self.__vs.aadd_documents(documents, ids, **kwargs)
         )
 
     def add_documents(
@@ -225,7 +220,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[str]:
         """Embed documents and add to the table."""
         return self._engine._run_as_sync(
-            self._vs.aadd_documents(documents, ids, **kwargs)
+            self.__vs.aadd_documents(documents, ids, **kwargs)
         )
 
     async def adelete(
@@ -234,7 +229,7 @@ class PostgresVectorStore(VectorStore):
         **kwargs: Any,
     ) -> Optional[bool]:
         """Delete records from the table."""
-        return await self._engine._run_as_async(self._vs.adelete(ids, **kwargs))
+        return await self._engine._run_as_async(self.__vs.adelete(ids, **kwargs))
 
     def delete(
         self,
@@ -242,13 +237,13 @@ class PostgresVectorStore(VectorStore):
         **kwargs: Any,
     ) -> Optional[bool]:
         """Delete records from the table."""
-        return self._engine._run_as_sync(self._vs.adelete(ids, **kwargs))
+        return self._engine._run_as_sync(self.__vs.adelete(ids, **kwargs))
 
     @classmethod
     async def afrom_texts(  # type: ignore[override]
         cls: Type[PostgresVectorStore],
         texts: List[str],
-        embedding_service: Embeddings,
+        embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
         metadatas: Optional[List[dict]] = None,
@@ -279,13 +274,18 @@ class PostgresVectorStore(VectorStore):
             ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
+            k (int): Number of Documents to return from search. Defaults to 4.
+            fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
+            lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
+            index_query_options (QueryOptions): Index query option.
 
         Returns:
             PostgresVectorStore
         """
-        coro = AsyncPostgresVectorStore.create(
+        vs = await cls.create(
             engine,
-            embedding_service,
+            embedding,
             table_name,
             content_column,
             embedding_column,
@@ -299,8 +299,6 @@ class PostgresVectorStore(VectorStore):
             lambda_mult,
             index_query_options,
         )
-        async_vs = await engine._run_as_async(coro)
-        vs = cls(cls.__create_key, engine, async_vs)
         await vs.aadd_texts(texts, metadatas=metadatas, ids=ids)
         return vs
 
@@ -308,7 +306,7 @@ class PostgresVectorStore(VectorStore):
     async def afrom_documents(  # type: ignore[override]
         cls: Type[PostgresVectorStore],
         documents: List[Document],
-        embedding_service: Embeddings,
+        embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
         ids: Optional[List[str]] = None,
@@ -339,13 +337,18 @@ class PostgresVectorStore(VectorStore):
             ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
+            k (int): Number of Documents to return from search. Defaults to 4.
+            fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
+            lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
+            index_query_options (QueryOptions): Index query option.
 
         Returns:
             PostgresVectorStore
         """
-        coro = AsyncPostgresVectorStore.create(
+        vs = await cls.create(
             engine,
-            embedding_service,
+            embedding,
             table_name,
             content_column,
             embedding_column,
@@ -359,8 +362,6 @@ class PostgresVectorStore(VectorStore):
             lambda_mult,
             index_query_options,
         )
-        async_vs = await engine._run_as_async(coro)
-        vs = cls(cls.__create_key, engine, async_vs)
         await vs.aadd_documents(documents, ids=ids)
         return vs
 
@@ -368,7 +369,7 @@ class PostgresVectorStore(VectorStore):
     def from_texts(  # type: ignore[override]
         cls: Type[PostgresVectorStore],
         texts: List[str],
-        embedding_service: Embeddings,
+        embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
         metadatas: Optional[List[dict]] = None,
@@ -399,13 +400,18 @@ class PostgresVectorStore(VectorStore):
             ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
+            k (int): Number of Documents to return from search. Defaults to 4.
+            fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
+            lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
+            index_query_options (QueryOptions): Index query option.
 
         Returns:
             PostgresVectorStore
         """
-        coro = AsyncPostgresVectorStore.create(
+        vs = cls.create_sync(
             engine,
-            embedding_service,
+            embedding,
             table_name,
             content_column,
             embedding_column,
@@ -419,8 +425,6 @@ class PostgresVectorStore(VectorStore):
             lambda_mult,
             index_query_options,
         )
-        async_vs = engine._run_as_sync(coro)
-        vs = cls(cls.__create_key, engine, async_vs)
         vs.add_texts(texts, metadatas=metadatas, ids=ids)
         return vs
 
@@ -428,7 +432,7 @@ class PostgresVectorStore(VectorStore):
     def from_documents(  # type: ignore[override]
         cls: Type[PostgresVectorStore],
         documents: List[Document],
-        embedding_service: Embeddings,
+        embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
         ids: Optional[List[str]] = None,
@@ -459,13 +463,18 @@ class PostgresVectorStore(VectorStore):
             ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
+            k (int): Number of Documents to return from search. Defaults to 4.
+            fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
+            lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
+            index_query_options (QueryOptions): Index query option.
 
         Returns:
             PostgresVectorStore
         """
-        coro = AsyncPostgresVectorStore.create(
+        vs = cls.create_sync(
             engine,
-            embedding_service,
+            embedding,
             table_name,
             content_column,
             embedding_column,
@@ -479,8 +488,6 @@ class PostgresVectorStore(VectorStore):
             lambda_mult,
             index_query_options,
         )
-        async_vs = engine._run_as_sync(coro)
-        vs = cls(cls.__create_key, engine, async_vs)
         vs.add_documents(documents, ids=ids)
         return vs
 
@@ -493,7 +500,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected by similarity search on query."""
         return await self._engine._run_as_async(
-            self._vs.asimilarity_search(query, k, filter, **kwargs)
+            self.__vs.asimilarity_search(query, k, filter, **kwargs)
         )
 
     def similarity_search(
@@ -505,18 +512,18 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected by similarity search on query."""
         return self._engine._run_as_sync(
-            self._vs.asimilarity_search(query, k, filter, **kwargs)
+            self.__vs.asimilarity_search(query, k, filter, **kwargs)
         )
 
+    # Required for (a)similarity_search_with_relevance_scores
     def _select_relevance_score_fn(self) -> Callable[[float], float]:
         """Select a relevance function based on distance strategy."""
-        # Calculate distance strategy provided in
-        # vectorstore constructor
-        if self._vs.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
+        # Calculate distance strategy provided in vectorstore constructor
+        if self.__vs.distance_strategy == DistanceStrategy.COSINE_DISTANCE:
             return self._cosine_relevance_score_fn
-        if self._vs.distance_strategy == DistanceStrategy.INNER_PRODUCT:
+        if self.__vs.distance_strategy == DistanceStrategy.INNER_PRODUCT:
             return self._max_inner_product_relevance_score_fn
-        elif self._vs.distance_strategy == DistanceStrategy.EUCLIDEAN:
+        elif self.__vs.distance_strategy == DistanceStrategy.EUCLIDEAN:
             return self._euclidean_relevance_score_fn
 
     async def asimilarity_search_with_score(
@@ -528,7 +535,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on query."""
         return await self._engine._run_as_async(
-            self._vs.asimilarity_search_with_score(query, k, filter, **kwargs)
+            self.__vs.asimilarity_search_with_score(query, k, filter, **kwargs)
         )
 
     def similarity_search_with_score(
@@ -540,7 +547,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on query."""
         return self._engine._run_as_sync(
-            self._vs.asimilarity_search_with_score(query, k, filter, **kwargs)
+            self.__vs.asimilarity_search_with_score(query, k, filter, **kwargs)
         )
 
     async def asimilarity_search_by_vector(
@@ -552,7 +559,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected by vector similarity search."""
         return await self._engine._run_as_async(
-            self._vs.asimilarity_search_by_vector(embedding, k, filter, **kwargs)
+            self.__vs.asimilarity_search_by_vector(embedding, k, filter, **kwargs)
         )
 
     def similarity_search_by_vector(
@@ -564,7 +571,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected by vector similarity search."""
         return self._engine._run_as_sync(
-            self._vs.asimilarity_search_by_vector(embedding, k, filter, **kwargs)
+            self.__vs.asimilarity_search_by_vector(embedding, k, filter, **kwargs)
         )
 
     async def asimilarity_search_with_score_by_vector(
@@ -576,7 +583,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Tuple[Document, float]]:
         """Return docs and distance scores selected by vector similarity search."""
         return await self._engine._run_as_async(
-            self._vs.asimilarity_search_with_score_by_vector(
+            self.__vs.asimilarity_search_with_score_by_vector(
                 embedding, k, filter, **kwargs
             )
         )
@@ -590,7 +597,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on vector."""
         return self._engine._run_as_sync(
-            self._vs.asimilarity_search_with_score_by_vector(
+            self.__vs.asimilarity_search_with_score_by_vector(
                 embedding, k, filter, **kwargs
             )
         )
@@ -606,7 +613,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected using the maximal marginal relevance."""
         return await self._engine._run_as_async(
-            self._vs.amax_marginal_relevance_search(
+            self.__vs.amax_marginal_relevance_search(
                 query, k, fetch_k, lambda_mult, filter, **kwargs
             )
         )
@@ -622,7 +629,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected using the maximal marginal relevance."""
         return self._engine._run_as_sync(
-            self._vs.amax_marginal_relevance_search(
+            self.__vs.amax_marginal_relevance_search(
                 query, k, fetch_k, lambda_mult, filter, **kwargs
             )
         )
@@ -638,7 +645,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected using the maximal marginal relevance."""
         return await self._engine._run_as_async(
-            self._vs.amax_marginal_relevance_search_by_vector(
+            self.__vs.amax_marginal_relevance_search_by_vector(
                 embedding, k, fetch_k, lambda_mult, filter, **kwargs
             )
         )
@@ -654,7 +661,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected using the maximal marginal relevance."""
         return self._engine._run_as_sync(
-            self._vs.amax_marginal_relevance_search_by_vector(
+            self.__vs.amax_marginal_relevance_search_by_vector(
                 embedding, k, fetch_k, lambda_mult, filter, **kwargs
             )
         )
@@ -670,7 +677,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Tuple[Document, float]]:
         """Return docs and distance scores selected using the maximal marginal relevance."""
         return await self._engine._run_as_async(
-            self._vs.amax_marginal_relevance_search_with_score_by_vector(
+            self.__vs.amax_marginal_relevance_search_with_score_by_vector(
                 embedding, k, fetch_k, lambda_mult, filter, **kwargs
             )
         )
@@ -686,7 +693,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Tuple[Document, float]]:
         """Return docs and distance scores selected using the maximal marginal relevance."""
         return self._engine._run_as_sync(
-            self._vs.amax_marginal_relevance_search_with_score_by_vector(
+            self.__vs.amax_marginal_relevance_search_with_score_by_vector(
                 embedding, k, fetch_k, lambda_mult, filter, **kwargs
             )
         )
@@ -699,7 +706,7 @@ class PostgresVectorStore(VectorStore):
     ) -> None:
         """Create an index on the vector store table."""
         return await self._engine._run_as_async(
-            self._vs.aapply_vector_index(index, name, concurrently)
+            self.__vs.aapply_vector_index(index, name, concurrently)
         )
 
     def apply_vector_index(
@@ -710,41 +717,43 @@ class PostgresVectorStore(VectorStore):
     ) -> None:
         """Create an index on the vector store table."""
         return self._engine._run_as_sync(
-            self._vs.aapply_vector_index(index, name, concurrently)
+            self.__vs.aapply_vector_index(index, name, concurrently)
         )
 
     async def areindex(self, index_name: Optional[str] = None) -> None:
         """Re-index the vector store table."""
-        return await self._engine._run_as_async(self._vs.areindex(index_name))
+        return await self._engine._run_as_async(self.__vs.areindex(index_name))
 
     def reindex(self, index_name: Optional[str] = None) -> None:
         """Re-index the vector store table."""
-        return self._engine._run_as_sync(self._vs.areindex(index_name))
+        return self._engine._run_as_sync(self.__vs.areindex(index_name))
 
     async def adrop_vector_index(
         self,
         index_name: Optional[str] = None,
     ) -> None:
         """Drop the vector index."""
-        return await self._engine._run_as_async(self._vs.adrop_vector_index(index_name))
+        return await self._engine._run_as_async(
+            self.__vs.adrop_vector_index(index_name)
+        )
 
     def drop_vector_index(
         self,
         index_name: Optional[str] = None,
     ) -> None:
         """Drop the vector index."""
-        return self._engine._run_as_sync(self._vs.adrop_vector_index(index_name))
+        return self._engine._run_as_sync(self.__vs.adrop_vector_index(index_name))
 
     async def ais_valid_index(
         self,
         index_name: Optional[str] = None,
     ) -> bool:
         """Check if index exists in the table."""
-        return await self._engine._run_as_async(self._vs.is_valid_index(index_name))
+        return await self._engine._run_as_async(self.__vs.is_valid_index(index_name))
 
     def is_valid_index(
         self,
         index_name: Optional[str] = None,
     ) -> bool:
         """Check if index exists in the table."""
-        return self._engine._run_as_sync(self._vs.is_valid_index(index_name))
+        return self._engine._run_as_sync(self.__vs.is_valid_index(index_name))
