@@ -506,7 +506,6 @@ class TestVectorStore:
         thread = Thread(target=loop.run_forever, daemon=True)
         thread.start()
         pool = create_async_engine(url)
-        # pool = asyncio.run_coroutine_threadsafe(coro, loop).result()
         engine = PostgresEngine.from_engine(pool, loop)
 
         table_name = "test_table" + str(uuid.uuid4()).replace("-", "_")
