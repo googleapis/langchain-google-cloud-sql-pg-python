@@ -19,6 +19,7 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOptions
@@ -44,6 +45,18 @@ def get_env_var(key: str, desc: str) -> str:
     if v is None:
         raise ValueError(f"Must set env var {key} to: {desc}")
     return v
+
+
+async def aexecute(
+    engine: PostgresEngine,
+    query: str,
+) -> None:
+    async def run(engine, query):
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    await engine._run_as_async(run(engine, query))
 
 
 @pytest.mark.asyncio(scope="class")
@@ -73,6 +86,8 @@ class TestVectorStoreSearch:
             database=db_name,
         )
         yield engine
+        await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
+        await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
@@ -87,11 +102,9 @@ class TestVectorStoreSearch:
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_documents(docs, ids=ids)
         yield vs
-        await engine._aexecute(f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
-        await engine._engine.dispose()
 
     @pytest_asyncio.fixture(scope="class")
-    def engine_sync(self, db_project, db_region, db_instance, db_name):
+    async def engine_sync(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
@@ -99,6 +112,8 @@ class TestVectorStoreSearch:
             database=db_name,
         )
         yield engine
+        await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine_sync):
@@ -126,8 +141,6 @@ class TestVectorStoreSearch:
         )
         vs_custom.add_documents(docs, ids=ids)
         yield vs_custom
-        engine_sync._aexecute(f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
-        engine_sync._engine.dispose()
 
     async def test_asimilarity_search(self, vs):
         results = await vs.asimilarity_search("foo", k=1)
@@ -135,6 +148,11 @@ class TestVectorStoreSearch:
         assert results == [Document(page_content="foo")]
         results = await vs.asimilarity_search("foo", k=1, filter="content = 'bar'")
         assert results == [Document(page_content="bar")]
+
+    def test_asimilarity_search_cross_env(self, vs):
+        results = vs.similarity_search("foo", k=1)
+        assert len(results) == 1
+        assert results == [Document(page_content="foo")]
 
     async def test_asimilarity_search_score(self, vs):
         results = await vs.asimilarity_search_with_score("foo")
