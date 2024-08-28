@@ -18,16 +18,7 @@ import asyncio
 from concurrent.futures import Future
 from dataclasses import dataclass
 from threading import Thread
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Dict,
-    List,
-    Optional,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Dict, List, Optional, TypeVar, Union
 
 import aiohttp
 import google.auth  # type: ignore
@@ -70,9 +61,7 @@ async def _get_iam_principal_email(
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
     if hasattr(credentials, "_service_account_email"):
-        return credentials._service_account_email.replace(
-            ".gserviceaccount.com", ""
-        )
+        return credentials._service_account_email.replace(".gserviceaccount.com", "")
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -387,14 +376,10 @@ class PostgresEngine:
             cls._default_thread.start()
 
         if not url:
-            url = URL.create(
-                "postgresql+asyncpg", user, password, host, port, database
-            )
+            url = URL.create("postgresql+asyncpg", user, password, host, port, database)
 
         engine = create_async_engine(url, **kwargs)
-        return cls(
-            cls.__create_key, engine, cls._default_loop, cls._default_thread
-        )
+        return cls(cls.__create_key, engine, cls._default_loop, cls._default_thread)
 
     async def _run_as_async(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine asynchronously"""
@@ -717,9 +702,7 @@ class PostgresEngine:
             try:
                 await conn.run_sync(metadata.reflect, only=[table_name])
             except InvalidRequestError as e:
-                raise ValueError(
-                    f"Table, {table_name}, does not exist: " + str(e)
-                )
+                raise ValueError(f"Table, {table_name}, does not exist: " + str(e))
 
         table = Table(table_name, metadata)
         # Extract the schema information
