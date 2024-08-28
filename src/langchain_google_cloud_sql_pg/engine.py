@@ -18,14 +18,23 @@ import asyncio
 from concurrent.futures import Future
 from dataclasses import dataclass
 from threading import Thread
-from typing import TYPE_CHECKING, Awaitable, Dict, List, Optional, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Dict,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 import aiohttp
 import google.auth  # type: ignore
 import google.auth.transport.requests  # type: ignore
 from google.cloud.sql.connector import Connector, IPTypes, RefreshStrategy
 from sqlalchemy import MetaData, Table, text
-from sqlalchemy.engine.row import RowMapping
+from sqlalchemy.engine import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -61,7 +70,9 @@ async def _get_iam_principal_email(
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
     if hasattr(credentials, "_service_account_email"):
-        return credentials._service_account_email.replace(".gserviceaccount.com", "")
+        return credentials._service_account_email.replace(
+            ".gserviceaccount.com", ""
+        )
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -338,6 +349,52 @@ class PostgresEngine:
     def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
         """Create an PostgresEngine instance from an AsyncEngine."""
         return cls(cls.__create_key, engine, None, None)
+
+    @classmethod
+    def from_engine_args(
+        cls,
+        url: Optional[str | URL] = None,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        host: Optional[str] = None,
+        port: Optional[int] = 5432,
+        database: Optional[str] = None,
+        **kwargs: Any,
+    ) -> PostgresEngine:
+        """Create an PostgresEngine instance from arguments
+
+        Args:
+            url (Optional[str]): the URL used to connect to a database. Use url or set other arguments.
+            user (Optional[str]): Postgres user name. Use url or set this argument.
+            password (Optional[str]): Postgres user password. Defaults to None. Use url or set this argument.
+            host (Optional[str]): the database host name. Use url or set this argument.
+            port (Optional[str]): the database port.
+            database (Optional[str]):: the database name. Use url or set this argument.
+
+        Raises:
+            ValueError: If not all database url arguments are specified
+
+        Returns:
+            PostgresEngine
+        """
+        # Running a loop in a background thread allows us to support
+        # async methods from non-async environments
+        if cls._default_loop is None:
+            cls._default_loop = asyncio.new_event_loop()
+            cls._default_thread = Thread(
+                target=cls._default_loop.run_forever, daemon=True
+            )
+            cls._default_thread.start()
+
+        if not url:
+            url = URL.create(
+                "postgresql+asyncpg", user, password, host, port, database
+            )
+
+        engine = create_async_engine(url, **kwargs)
+        return cls(
+            cls.__create_key, engine, cls._default_loop, cls._default_thread
+        )
 
     async def _run_as_async(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine asynchronously"""
@@ -660,7 +717,9 @@ class PostgresEngine:
             try:
                 await conn.run_sync(metadata.reflect, only=[table_name])
             except InvalidRequestError as e:
-                raise ValueError(f"Table, {table_name}, does not exist: " + str(e))
+                raise ValueError(
+                    f"Table, {table_name}, does not exist: " + str(e)
+                )
 
         table = Table(table_name, metadata)
         # Extract the schema information

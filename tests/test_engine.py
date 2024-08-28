@@ -24,6 +24,7 @@ from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import VARCHAR, text
 from sqlalchemy.engine.row import RowMapping
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
 
@@ -192,6 +193,47 @@ class TestEngineAsync:
 
             engine = PostgresEngine.from_engine(engine)
             await aexecute(engine, "SELECT 1")
+
+    async def test_from_engine_args_url(
+        self,
+        db_name,
+        user,
+        password,
+    ):
+        host = "127.0.0.1"
+        port = "5432"
+        url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+        engine = PostgresEngine.from_engine_args(url, random=False)
+        await aexecute(engine, "SELECT 1")
+
+    async def test_from_engine_args_url_error(
+        self,
+        db_name,
+        user,
+        password,
+    ):
+        host = "127.0.0.1"
+        port = "5432"
+        url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+        with pytest.raises(TypeError):
+            engine = PostgresEngine.from_engine_args(url, random=False)
+
+    async def test_from_engine_args(
+        self,
+        db_name,
+        user,
+        password,
+    ):
+        host = "127.0.0.1"
+        engine = PostgresEngine.from_engine_args(
+            user=user,
+            password=password,
+            host=host,
+            database=db_name,
+            echo=True,
+            poolclass=NullPool,
+        )
+        await aexecute(engine, "SELECT 1")
 
     async def test_column(self, engine):
         with pytest.raises(ValueError):
