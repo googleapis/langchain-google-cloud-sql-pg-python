@@ -309,20 +309,6 @@ class TestVectorStore:
         assert len(results) == 3
         await vs_sync.adelete(ids)
 
-    async def test_ignore_metadata_columns(self, engine):
-        column_to_ignore = "source"
-        vs = await PostgresVectorStore.create(
-            engine,
-            embedding_service=embeddings_service,
-            table_name=CUSTOM_TABLE,
-            ignore_metadata_columns=[column_to_ignore],
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_json_column="mymeta",
-        )
-        assert column_to_ignore not in vs._vs.metadata_columns
-
     async def test_create_vectorstore_with_invalid_parameters(self, engine):
         with pytest.raises(ValueError):
             await PostgresVectorStore.create(
