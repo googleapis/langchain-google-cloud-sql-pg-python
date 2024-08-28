@@ -15,18 +15,10 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import Future
 from dataclasses import dataclass
 from threading import Thread
-from typing import (
-    TYPE_CHECKING,
-    Awaitable,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Awaitable, Dict, List, Optional, TypeVar, Union
 
 import aiohttp
 import google.auth  # type: ignore
@@ -138,58 +130,6 @@ class PostgresEngine:
         self._thread = thread
 
     @classmethod
-    def from_instance(
-        cls,
-        project_id: str,
-        region: str,
-        instance: str,
-        database: str,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
-        quota_project: Optional[str] = None,
-        iam_account_email: Optional[str] = None,
-    ) -> PostgresEngine:
-        """Create a PostgresEngine from a Postgres instance.
-
-        Args:
-            project_id (str): GCP project ID.
-            region (str): Postgres instance region.
-            instance (str): Postgres instance name.
-            database (str): Database name.
-            user (Optional[str], optional): Postgres user name. Defaults to None.
-            password (Optional[str], optional): Postgres user password. Defaults to None.
-            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
-            quota_project (Optional[str]): Project that provides quota for API calls.
-            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
-
-        Returns:
-            PostgresEngine: A newly created PostgresEngine instance.
-        """
-        # Running a loop in a background thread allows us to support
-        # async methods from non-async environments
-        if cls._default_loop is None:
-            cls._default_loop = asyncio.new_event_loop()
-            cls._default_thread = Thread(
-                target=cls._default_loop.run_forever, daemon=True
-            )
-            cls._default_thread.start()
-        coro = cls._create(
-            project_id,
-            region,
-            instance,
-            database,
-            ip_type,
-            user,
-            password,
-            loop=cls._default_loop,
-            thread=cls._default_thread,
-            quota_project=quota_project,
-            iam_account_email=iam_account_email,
-        )
-        return asyncio.run_coroutine_threadsafe(coro, cls._default_loop).result()
-
-    @classmethod
     async def _create(
         cls,
         project_id: str,
@@ -275,6 +215,84 @@ class PostgresEngine:
         return cls(cls.__create_key, engine, loop, thread)
 
     @classmethod
+    def __start_background_loop(
+        cls,
+        project_id: str,
+        region: str,
+        instance: str,
+        database: str,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
+        quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
+    ) -> Future:
+        # Running a loop in a background thread allows us to support
+        # async methods from non-async environments
+        if cls._default_loop is None:
+            cls._default_loop = asyncio.new_event_loop()
+            cls._default_thread = Thread(
+                target=cls._default_loop.run_forever, daemon=True
+            )
+            cls._default_thread.start()
+        coro = cls._create(
+            project_id,
+            region,
+            instance,
+            database,
+            ip_type,
+            user,
+            password,
+            loop=cls._default_loop,
+            thread=cls._default_thread,
+            quota_project=quota_project,
+            iam_account_email=iam_account_email,
+        )
+        return asyncio.run_coroutine_threadsafe(coro, cls._default_loop)
+
+    @classmethod
+    def from_instance(
+        cls,
+        project_id: str,
+        region: str,
+        instance: str,
+        database: str,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
+        quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
+    ) -> PostgresEngine:
+        """Create a PostgresEngine from a Postgres instance.
+
+        Args:
+            project_id (str): GCP project ID.
+            region (str): Postgres instance region.
+            instance (str): Postgres instance name.
+            database (str): Database name.
+            user (Optional[str], optional): Postgres user name. Defaults to None.
+            password (Optional[str], optional): Postgres user password. Defaults to None.
+            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
+            quota_project (Optional[str]): Project that provides quota for API calls.
+            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
+
+        Returns:
+            PostgresEngine: A newly created PostgresEngine instance.
+        """
+        future = cls.__start_background_loop(
+            project_id,
+            region,
+            instance,
+            database,
+            user,
+            password,
+            ip_type,
+            quota_project=quota_project,
+            iam_account_email=iam_account_email,
+        )
+        return future.result()
+
+    @classmethod
     async def afrom_instance(
         cls,
         project_id: str,
@@ -303,30 +321,18 @@ class PostgresEngine:
         Returns:
             PostgresEngine: A newly created PostgresEngine instance.
         """
-        # Running a loop in a background thread allows us to support
-        # async methods from non-async environments
-        if cls._default_loop is None:
-            cls._default_loop = asyncio.new_event_loop()
-            cls._default_thread = Thread(
-                target=cls._default_loop.run_forever, daemon=True
-            )
-            cls._default_thread.start()
-        coro = cls._create(
+        future = cls.__start_background_loop(
             project_id,
             region,
             instance,
             database,
-            ip_type,
             user,
             password,
-            loop=cls._default_loop,
-            thread=cls._default_thread,
+            ip_type,
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
-        return await asyncio.wrap_future(
-            asyncio.run_coroutine_threadsafe(coro, cls._default_loop)
-        )
+        return await asyncio.wrap_future(future)
 
     @classmethod
     def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
