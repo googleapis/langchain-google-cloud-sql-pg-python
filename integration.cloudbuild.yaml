@@ -32,6 +32,7 @@ steps:
       - "INSTANCE_ID=$_INSTANCE_ID"
       - "DATABASE_ID=$_DATABASE_ID"
       - "REGION=$_REGION"
+      - "IP_ADDRESS=$_IP_ADDRESS"
     secretEnv: ["DB_USER", "DB_PASSWORD", "IAM_ACCOUNT"]
 
 availableSecrets:
@@ -47,6 +48,7 @@ substitutions:
   _DATABASE_ID: test-database
   _REGION: us-central1
   _VERSION: "3.8"
+  _IP_ADDRESS: "35.226.248.190"
 
 options:
   dynamicSubstitutions: true

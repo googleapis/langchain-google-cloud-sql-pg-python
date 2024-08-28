@@ -205,7 +205,7 @@ async def test_cross_env_chat_message_history(engine):
 
 @pytest.mark.asyncio
 async def test_from_engine_args_url():
-    host = "127.0.0.1"
+    host = os.environ["IP_ADDRESS"]
     port = "5432"
     url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
     engine = PostgresEngine.from_engine_args(url)

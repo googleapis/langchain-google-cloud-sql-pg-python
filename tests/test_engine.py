@@ -35,6 +35,7 @@ CUSTOM_TABLE_SYNC = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
+host = os.environ["IP_ADDRESS"]
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -200,7 +201,6 @@ class TestEngineAsync:
         user,
         password,
     ):
-        host = "127.0.0.1"
         port = "5432"
         url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
         engine = PostgresEngine.from_engine_args(url)
@@ -212,7 +212,6 @@ class TestEngineAsync:
         user,
         password,
     ):
-        host = "127.0.0.1"
         port = "5432"
         url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
         with pytest.raises(TypeError):
@@ -224,7 +223,6 @@ class TestEngineAsync:
         user,
         password,
     ):
-        host = "127.0.0.1"
         engine = PostgresEngine.from_engine_args(
             user=user,
             password=password,

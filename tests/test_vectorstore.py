@@ -35,6 +35,7 @@ CUSTOM_TABLE = "test-table-custom" + str(uuid.uuid4())
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
+host = os.environ["IP_ADDRESS"]
 
 texts = ["foo", "bar", "baz"]
 metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))]
@@ -464,7 +465,6 @@ class TestVectorStore:
         user,
         password,
     ):
-        host = "127.0.0.1"
         port = "5432"
         url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
         engine = PostgresEngine.from_engine_args(url)
@@ -498,7 +498,6 @@ class TestVectorStore:
         user,
         password,
     ):
-        host = "127.0.0.1"
         port = "5432"
         url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
 
