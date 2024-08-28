@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
+from threading import Thread
 from typing import Sequence
 
 import pytest
@@ -394,6 +396,68 @@ class TestVectorStore:
 
             await aexecute(engine, f"DROP TABLE {table_name}")
 
+    async def test_from_engine_loop_connector(
+        self,
+        db_project,
+        db_region,
+        db_instance,
+        db_name,
+        user,
+        password,
+    ):
+        async def init_connection_pool(connector: Connector):
+            async def getconn():
+                conn = await connector.connect_async(
+                    f"{db_project}:{db_region}:{db_instance}",
+                    "asyncpg",
+                    user=user,
+                    password=password,
+                    db=db_name,
+                    enable_iam_auth=False,
+                    ip_type="PUBLIC",
+                )
+                return conn
+
+            pool = create_async_engine(
+                "postgresql+asyncpg://",
+                async_creator=getconn,
+            )
+            return pool
+
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+
+        connector = Connector(loop=loop)
+        coro = init_connection_pool(connector)
+        pool = asyncio.run_coroutine_threadsafe(coro, loop).result()
+        engine = PostgresEngine.from_engine(pool, loop)
+        table_name = "test_table" + str(uuid.uuid4()).replace("-", "_")
+        await engine.ainit_vectorstore_table(table_name, VECTOR_SIZE)
+        vs = await PostgresVectorStore.create(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=table_name,
+        )
+        await vs.aadd_texts(["foo"])
+        vs.add_texts(["foo"])
+        results = await afetch(engine, f"SELECT * FROM {table_name}")
+        assert len(results) == 2
+
+        await aexecute(engine, f"TRUNCATE TABLE {table_name}")
+
+        vs = PostgresVectorStore.create_sync(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=table_name,
+        )
+        await vs.aadd_texts(["foo"])
+        vs.add_texts(["foo"])
+        results = await afetch(engine, f"SELECT * FROM {table_name}")
+        assert len(results) == 2
+
+        await aexecute(engine, f"DROP TABLE {table_name}")
+
     async def test_from_engine_args_url(
         self,
         db_name,
@@ -404,6 +468,47 @@ class TestVectorStore:
         port = "5432"
         url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
         engine = PostgresEngine.from_engine_args(url)
+        table_name = "test_table" + str(uuid.uuid4()).replace("-", "_")
+        await engine.ainit_vectorstore_table(table_name, VECTOR_SIZE)
+        vs = await PostgresVectorStore.create(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=table_name,
+        )
+        await vs.aadd_texts(["foo"])
+        vs.add_texts(["foo"])
+        results = await afetch(engine, f"SELECT * FROM {table_name}")
+        assert len(results) == 2
+
+        await aexecute(engine, f"TRUNCATE TABLE {table_name}")
+        vs = PostgresVectorStore.create_sync(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=table_name,
+        )
+        await vs.aadd_texts(["foo"])
+        vs.add_texts(["bar"])
+        results = await afetch(engine, f"SELECT * FROM {table_name}")
+        assert len(results) == 2
+        await aexecute(engine, f"DROP TABLE {table_name}")
+
+    async def test_from_engine_loop(
+        self,
+        db_name,
+        user,
+        password,
+    ):
+        host = "127.0.0.1"
+        port = "5432"
+        url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+
+        loop = asyncio.new_event_loop()
+        thread = Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+        pool = create_async_engine(url)
+        # pool = asyncio.run_coroutine_threadsafe(coro, loop).result()
+        engine = PostgresEngine.from_engine(pool, loop)
+
         table_name = "test_table" + str(uuid.uuid4()).replace("-", "_")
         await engine.ainit_vectorstore_table(table_name, VECTOR_SIZE)
         vs = await PostgresVectorStore.create(

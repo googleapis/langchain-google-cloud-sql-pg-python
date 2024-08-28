@@ -335,9 +335,13 @@ class PostgresEngine:
         return await asyncio.wrap_future(future)
 
     @classmethod
-    def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
+    def from_engine(
+        cls,
+        engine: AsyncEngine,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+    ) -> PostgresEngine:
         """Create an PostgresEngine instance from an AsyncEngine."""
-        return cls(cls.__create_key, engine, None, None)
+        return cls(cls.__create_key, engine, loop, None)
 
     @classmethod
     def from_engine_args(
