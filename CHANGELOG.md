@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.8.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.7.0...v0.8.0) (2024-09-04)
+
+
+### Features
+
+* Add table name to default index name ([#171](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/171)) ([8e61bc7](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/8e61bc779bc8f803e40e76aaeffdb93c35a5c90f))
+* Remove langchain-community dependency ([#172](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/172)) ([b4f40bb](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/b4f40bb389b40853e3deed37e1385a7866741231))
+
+
+### Bug Fixes
+
+* Add caching for background loop/thread ([#184](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/184)) ([1489f81](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/1489f818c1d62bfee5c5a3bab42d380556662e82))
+* Fix QueryOptions not applied to similarity search bug ([#185](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/185)) ([e5dca97](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/e5dca973d625c4df4c3e741a3ad8e95be0cd1472))
+* Fixed extra char in requirements.txt ([#196](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/196)) ([50dc32f](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/50dc32f8ae476c98e3ed38a153096551ce02d340))
+
+
+### Documentation
+
+* Add index choosing guide ([#178](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/178)) ([e96ffb6](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/e96ffb6dc99425e4dafb8ac13730eed253e74c4e))
+* Added vector store initialization from documents ([#174](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/174)) ([eb2eac3](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/eb2eac303f64e809e6f3fc9bc3307be163602a4e))
+* Update README.md to fix 404 links to templates ([#182](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/182)) ([f10ae6c](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/f10ae6c9a8645874a5ab64e846ec540aeddf977a))
+
 ## [0.7.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.6.1...v0.7.0) (2024-07-23)
 
 
