@@ -1,4 +1,4 @@
-cloud-sql-python-connector[asyncpg]==1.12.0
+cloud-sql-python-connector[asyncpg]==1.10.0
 langchain-core==0.2.35
 numpy==1.24.4; python_version<='3.8'
 numpy==1.26.4; python_version>'3.8'
