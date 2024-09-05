@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.8.0...v0.9.0) (2024-09-05)
+
+
+### Features
+
+* Add support for custom schema names ([#191](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/191)) ([1e0566a](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/1e0566af98bf24c711315a791336ba212d240acd))
+
 ## [0.8.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.7.0...v0.8.0) (2024-09-04)
 
 
