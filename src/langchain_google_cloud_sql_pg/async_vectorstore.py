@@ -323,6 +323,11 @@ class AsyncPostgresVectorStore(VectorStore):
         ignore_metadata_columns: Optional[List[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
+        distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+        index_query_options: Optional[QueryOptions] = None,
         **kwargs: Any,
     ) -> AsyncPostgresVectorStore:
         """Create an AsyncPostgresVectorStore instance from texts.
@@ -339,6 +344,11 @@ class AsyncPostgresVectorStore(VectorStore):
             ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
+            k (int): Number of Documents to return from search. Defaults to 4.
+            fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
+            lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
+            index_query_options (QueryOptions): Index query option.
 
         Returns:
             AsyncPostgresVectorStore
@@ -353,6 +363,11 @@ class AsyncPostgresVectorStore(VectorStore):
             ignore_metadata_columns,
             id_column,
             metadata_json_column,
+            distance_strategy,
+            k,
+            fetch_k,
+            lambda_mult,
+            index_query_options,
         )
         await vs.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
         return vs
@@ -371,6 +386,11 @@ class AsyncPostgresVectorStore(VectorStore):
         ignore_metadata_columns: Optional[List[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
+        distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
+        k: int = 4,
+        fetch_k: int = 20,
+        lambda_mult: float = 0.5,
+        index_query_options: Optional[QueryOptions] = None,
         **kwargs: Any,
     ) -> AsyncPostgresVectorStore:
         """Create an AsyncPostgresVectorStore instance from documents.
@@ -388,6 +408,11 @@ class AsyncPostgresVectorStore(VectorStore):
             ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
+            k (int): Number of Documents to return from search. Defaults to 4.
+            fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
+            lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
+            index_query_options (QueryOptions): Index query option.
 
         Returns:
             AsyncPostgresVectorStore
@@ -402,6 +427,11 @@ class AsyncPostgresVectorStore(VectorStore):
             ignore_metadata_columns,
             id_column,
             metadata_json_column,
+            distance_strategy,
+            k,
+            fetch_k,
+            lambda_mult,
+            index_query_options,
         )
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]

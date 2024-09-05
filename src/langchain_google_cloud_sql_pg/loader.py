@@ -19,11 +19,7 @@ from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
 from langchain_core.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg.async_loader import (
-    AsyncPostgresDocumentSaver,
-    AsyncPostgresLoader,
-)
-
+from .async_loader import AsyncPostgresDocumentSaver, AsyncPostgresLoader
 from .engine import PostgresEngine
 
 DEFAULT_CONTENT_COL = "page_content"
@@ -49,11 +45,11 @@ class PostgresLoader(BaseLoader):
         Args:
             key (object): Prevent direct constructor usage.
             engine (PostgresEngine): AsyncEngine with pool connection to the postgres database
-            query (Optional[str], optional): SQL query. Defaults to None.
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
-            formatter (Optional[Callable], optional): A function to format page content (OneOf: format, formatter). Defaults to None.
-            metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            query (Optional[str]): SQL query. Defaults to None.
+            content_columns (Optional[List[str]]): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[List[str]]): Column(s) that represent a Document's metadata. Defaults to None.
+            formatter (Optional[Callable]): A function to format page content (OneOf: format, formatter). Defaults to None.
+            metadata_json_column (Optional[str]): Column to store metadata as JSON. Defaults to "langchain_metadata".
 
 
         Raises:
@@ -83,13 +79,13 @@ class PostgresLoader(BaseLoader):
 
         Args:
             engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
-            query (Optional[str], optional): SQL query. Defaults to None.
-            table_name (Optional[str], optional): Name of table to query. Defaults to None.
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
-            metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
-            format (Optional[str], optional): Format of page content (OneOf: text, csv, YAML, JSON). Defaults to 'text'.
-            formatter (Optional[Callable], optional): A function to format page content (OneOf: format, formatter). Defaults to None.
+            query (Optional[str]): SQL query. Defaults to None.
+            table_name (Optional[str]): Name of table to query. Defaults to None.
+            content_columns (Optional[List[str]]): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[List[str]]): Column(s) that represent a Document's metadata. Defaults to None.
+            metadata_json_column (Optional[str]): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            format (Optional[str]): Format of page content (OneOf: text, csv, YAML, JSON). Defaults to 'text'.
+            formatter (Optional[Callable]): A function to format page content (OneOf: format, formatter). Defaults to None.
 
         Returns:
             PostgresLoader
@@ -123,13 +119,13 @@ class PostgresLoader(BaseLoader):
 
         Args:
             engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
-            query (Optional[str], optional): SQL query. Defaults to None.
-            table_name (Optional[str], optional): Name of table to query. Defaults to None.
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
-            metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
-            format (Optional[str], optional): Format of page content (OneOf: text, csv, YAML, JSON). Defaults to 'text'.
-            formatter (Optional[Callable], optional): A function to format page content (OneOf: format, formatter). Defaults to None.
+            query (Optional[str]): SQL query. Defaults to None.
+            table_name (Optional[str]): Name of table to query. Defaults to None.
+            content_columns (Optional[List[str]]): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[List[str]]): Column(s) that represent a Document's metadata. Defaults to None.
+            metadata_json_column (Optional[str]): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            format (Optional[str]): Format of page content (OneOf: text, csv, YAML, JSON). Defaults to 'text'.
+            formatter (Optional[Callable]): A function to format page content (OneOf: format, formatter). Defaults to None.
 
         Returns:
             PostgresLoader
@@ -192,10 +188,10 @@ class PostgresDocumentSaver:
         Args:
             key (object): Prevent direct constructor usage.
             engine (PostgresEngine): AsyncEngine with pool connection to the postgres database
-            table_name (Optional[str], optional): Name of table to query. Defaults to None.
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
-            metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            table_name (Optional[str]): Name of table to query. Defaults to None.
+            content_columns (Optional[List[str]]): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[List[str]]): Column(s) that represent a Document's metadata. Defaults to None.
+            metadata_json_column (Optional[str]): Column to store metadata as JSON. Defaults to "langchain_metadata".
 
         Raises:
             Exception: if called directly by user.
@@ -220,10 +216,10 @@ class PostgresDocumentSaver:
 
         Args:
             engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
-            table_name (Optional[str], optional): Name of table to query. Defaults to None.
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
-            metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            table_name (Optional[str]): Name of table to query. Defaults to None.
+            content_columns (Optional[List[str]]): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[List[str]]): Column(s) that represent a Document's metadata. Defaults to None.
+            metadata_json_column (Optional[str]): Column to store metadata as JSON. Defaults to "langchain_metadata".
 
         Returns:
             PostgresDocumentSaver
@@ -251,10 +247,10 @@ class PostgresDocumentSaver:
 
         Args:
             engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
-            table_name (Optional[str], optional): Name of table to query. Defaults to None.
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
-            metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
+            table_name (Optional[str]): Name of table to query. Defaults to None.
+            content_columns (Optional[List[str]]): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[List[str]]): Column(s) that represent a Document's metadata. Defaults to None.
+            metadata_json_column (Optional[str]): Column to store metadata as JSON. Defaults to "langchain_metadata".
 
         Returns:
             PostgresDocumentSaver

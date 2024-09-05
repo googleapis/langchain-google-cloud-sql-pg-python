@@ -69,7 +69,7 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return await engine._run_as_async(run(engine, query))
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="module")
 class TestEngineAsync:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -195,7 +195,7 @@ class TestEngineAsync:
 
             engine = PostgresEngine.from_engine(engine)
             await aexecute(engine, "SELECT 1")
-            engine.close()
+            await engine.close()
 
     async def test_from_engine_args_url(
         self,
@@ -211,13 +211,13 @@ class TestEngineAsync:
             poolclass=NullPool,
         )
         await aexecute(engine, "SELECT 1")
-        engine.close()
+        await engine.close()
 
         engine = PostgresEngine.from_engine_args(
             URL.create("postgresql+asyncpg", user, password, host, port, db_name)
         )
         await aexecute(engine, "SELECT 1")
-        engine.close()
+        await engine.close()
 
     async def test_from_engine_args_url_error(
         self,
@@ -251,6 +251,7 @@ class TestEngineAsync:
         db_region,
         db_name,
         iam_account,
+        engine,
     ):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -264,7 +265,7 @@ class TestEngineAsync:
         await engine.close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="module")
 class TestEngineSync:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -376,6 +377,7 @@ class TestEngineSync:
         db_region,
         db_name,
         iam_account,
+        engine,
     ):
         engine = PostgresEngine.from_instance(
             project_id=db_project,

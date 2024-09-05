@@ -42,7 +42,6 @@ async def aexecute(engine: PostgresEngine, query: str) -> None:
 
 @pytest.mark.asyncio(scope="class")
 class TestLoaderAsync:
-
     @pytest_asyncio.fixture(scope="class")
     async def engine(self):
         PostgresEngine._connector = None
@@ -340,7 +339,6 @@ class TestLoaderAsync:
         await aexecute(engine, f'DROP TABLE IF EXISTS "{table_name}"')
 
     async def test_load_from_query_with_json(self, engine):
-
         table_name = "test-table" + str(uuid.uuid4())
         query = f"""
             CREATE TABLE IF NOT EXISTS "{table_name}"(
@@ -386,7 +384,6 @@ class TestLoaderAsync:
     async def test_load_from_query_customized_content_default_metadata_custom_formatter(
         self, engine
     ):
-
         table_name = "test-table" + str(uuid.uuid4())
         query = f"""
                 CREATE TABLE IF NOT EXISTS "{table_name}" (
@@ -485,7 +482,6 @@ class TestLoaderAsync:
         await self._cleanup_table(engine)
 
     async def test_save_doc_with_default_metadata(self, engine):
-
         await self._cleanup_table(engine)
         await engine._ainit_document_table(table_name)
         test_docs = [

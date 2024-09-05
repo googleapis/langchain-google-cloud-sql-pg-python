@@ -17,12 +17,13 @@ steps:
     name: ubuntu
     entrypoint: /bin/bash
     args:
-      - '-c'
+      - "-c"
       - |
         echo "FROM python:${_VERSION}
-        pip install -r requirements.txt
-        pip install .[test]
-        COPY . ." > Dockerfile-base
+        COPY . .
+        RUN pip install -r requirements.txt
+        RUN pip install .[test]" > Dockerfile-base
+        cat Dockerfile-base
 
   - id: "docker-build"
     name: "gcr.io/cloud-builders/docker"
@@ -36,7 +37,7 @@ steps:
     name: "gcr.io/cloud-builders/docker"
     entrypoint: /bin/bash
     args:
-      - '-c'
+      - "-c"
       - |
         echo "FROM $_IMAGE_NAME
         COPY --from=gcr.io/cloud-sql-connectors/cloud-sql-proxy /cloud-sql-proxy /cloudsql/cloud-sql-proxy" > Dockerfile-proxy;
@@ -54,7 +55,7 @@ steps:
       - "IP_ADDRESS=$_IP_ADDRESS"
     secretEnv: ["DB_USER", "DB_PASSWORD", "IAM_ACCOUNT"]
     args:
-      - '-c'
+      - "-c"
       - |
         /cloudsql/cloud-sql-proxy --port ${_DATABASE_PORT} ${_INSTANCE_CONNECTION_NAME} & sleep 2;
         pytest --cov=langchain_google_cloud_sql_pg --cov-config=.coveragerc tests/
@@ -71,7 +72,7 @@ availableSecrets:
 substitutions:
   _IMAGE_NAME: us-central1-docker.pkg.dev/${PROJECT_ID}/containers/test-proxy
   _INSTANCE_CONNECTION_NAME: ${PROJECT_ID}:${_REGION}:${_INSTANCE_ID}
-  _DATABASE_PORT: '5432'
+  _DATABASE_PORT: "5432"
   _DATABASE_ID: test-database
   _REGION: us-central1
   _VERSION: "3.8"

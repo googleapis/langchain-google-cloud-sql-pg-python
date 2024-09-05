@@ -116,7 +116,7 @@ class PostgresEngine:
             key (object): Prevent direct constructor usage.
             pool (AsyncEngine): Async engine connection pool.
             loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
-            thread (Optional[Thread] = None): Thread used to create the engine async.
+            thread (Optional[Thread]): Thread used to create the engine async.
 
         Raises:
             Exception: If the constructor is called directly by the user.
@@ -151,13 +151,13 @@ class PostgresEngine:
             region (str): Postgres instance region.
             instance (str): Postgres instance name.
             database (str): Database name.
-            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
-            user (Optional[str], optional): Postgres user name. Defaults to None.
-            password (Optional[str], optional): Postgres user password. Defaults to None.
+            ip_type (Union[str, IPTypes]): IP address type. Defaults to IPTypes.PUBLIC.
+            user (Optional[str]): Postgres user name. Defaults to None.
+            password (Optional[str]): Postgres user password. Defaults to None.
             loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
-            thread (Optional[Thread] = None): Thread used to create the engine async.
+            thread (Optional[Thread]): Thread used to create the engine async.
             quota_project (Optional[str]): Project that provides quota for API calls.
-            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
+            iam_account_email (Optional[str]): IAM service account email. Defaults to None.
 
         Raises:
             ValueError: If only one of `user` and `password` is specified.
@@ -349,13 +349,14 @@ class PostgresEngine:
         url: Union[str | URL],
         **kwargs: Any,
     ) -> PostgresEngine:
-        """Create an PostgresEngine instance from arguments
+        """Create an PostgresEngine instance from arguments. These parameters are pass directly into sqlalchemy's create_async_engine function.
 
         Args:
-            url (Optional[str]): the URL used to connect to a database. Use url or set other arguments.
+            url (Union[str | URL]): the URL used to connect to a database
+            **kwargs (Any, optional): sqlalchemy `create_async_engine` arguments
 
         Raises:
-            ValueError: If not all database url arguments are specified
+            ValueError: If `postgresql+asyncpg` is not specified as the PG driver
 
         Returns:
             PostgresEngine

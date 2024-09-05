@@ -25,7 +25,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
@@ -406,7 +406,7 @@ class TestVectorStore:
         user,
         password,
     ):
-        async def init_connection_pool(connector: Connector):
+        async def init_connection_pool(connector: Connector) -> AsyncEngine:
             async def getconn():
                 conn = await connector.connect_async(
                     f"{db_project}:{db_region}:{db_instance}",
