@@ -18,13 +18,21 @@ Learn more by reading [How should I write my commits?](https://github.com/google
 
 ### Run tests locally
 
-1. Set environment variables for `INSTANCE_ID`, `DATABASE_ID`, `REGION`, `DB_USER`, `DB_PASSWORD`
+1. Set environment variables for `INSTANCE_ID`, `DATABASE_ID`, `REGION`, `DB_USER`, `DB_PASSWORD`, `IAM_ACCOUNT`.
 
 1. Run pytest to automatically run all tests:
 
     ```bash
     pytest
     ```
+
+Notes:
+
+* Tests use both IAM and built-in authentication. 
+  * Learn how to set up a built-in databases user at [Cloud SQL built-in database authentication](https://cloud.google.com/sql/docs/postgres/built-in-authentication).
+  * Local tests will run against your `gcloud` credentials. Use `gcloud` to login with your personal account or a service account. This account will be used to run IAM tests. Learn how to set up access to the database at [Manage users with IAM database authentication](https://cloud.google.com/sql/docs/postgres/add-manage-iam-users). The "IAM_ACCOUNT" environment variable is also used to test authentication to override the local account. A personal account or a service account can be used for this test.
+  * You may need to grant access to the public schema for your new database user: `GRANT ALL ON SCHEMA public TO myaccount@example.com;`
+
 
 ### CI Platform Setup
 
