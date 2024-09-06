@@ -28,7 +28,7 @@ steps:
     entrypoint: sh
     args:
       - -c
-      - "wget -O /workspace/cloud_sql_proxy https://storage.googleapis.com/cloudsql-proxy/v2.13.0/cloud_sql_proxy.linux.386 &&  chmod +x /workspace/cloud_sql_proxy"
+      - "wget -O /workspace/cloud_sql_proxy https://storage.googleapis.com/cloudsql-proxy/v1.37.0/cloud_sql_proxy.linux.386 &&  chmod +x /workspace/cloud_sql_proxy"
 
   - id: Run integration tests
     name: python:${_VERSION}
