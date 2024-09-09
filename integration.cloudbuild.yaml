@@ -45,7 +45,6 @@ steps:
     args:
       - "-c"
       - |
-        /workspace/cloud_sql_proxy --help
         /workspace/cloud_sql_proxy -dir=/workspace -instances=${_INSTANCE_CONNECTION_NAME}=tcp:$_IP_ADDRESS:$_DATABASE_PORT  & sleep 2;
         python -m pytest --cov=langchain_google_cloud_sql_pg --cov-config=.coveragerc tests/
 

@@ -40,11 +40,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         Args:
             key (object): Key to prevent direct constructor usage.
             engine (PostgresEngine): Database connection pool.
-            session_id (str): Retrieve the table content with this session ID.
-            table_name (str): Table name that stores the chat message history.
-            messages (List[BaseMessage]): Messages to store.
-            schema_name (str, optional): Database schema name of the chat message history table. Defaults to "public".
-
+            history (AsyncPostgresChatMessageHistory): Native async implementation
         Raises:
             Exception: If constructor is directly called by the user.
         """
@@ -78,7 +74,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
             PostgresChatMessageHistory: A newly created instance of PostgresChatMessageHistory.
         """
         coro = AsyncPostgresChatMessageHistory.create(
-            engine, session_id, table_name
+            engine, session_id, table_name, schema_name
         )
         history = await engine._run_as_async(coro)
         return cls(cls.__create_key, engine, history)
@@ -106,7 +102,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
             PostgresChatMessageHistory: A newly created instance of PostgresChatMessageHistory.
         """
         coro = AsyncPostgresChatMessageHistory.create(
-            engine, session_id, table_name
+            engine, session_id, table_name, schema_name
         )
         history = engine._run_as_sync(coro)
         return cls(cls.__create_key, engine, history)

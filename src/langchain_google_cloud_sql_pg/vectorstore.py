@@ -235,9 +235,7 @@ class PostgresVectorStore(VectorStore):
         **kwargs: Any,
     ) -> Optional[bool]:
         """Delete records from the table."""
-        return await self._engine._run_as_async(
-            self.__vs.adelete(ids, **kwargs)
-        )
+        return await self._engine._run_as_async(self.__vs.adelete(ids, **kwargs))
 
     def delete(
         self,
@@ -429,6 +427,7 @@ class PostgresVectorStore(VectorStore):
             engine,
             embedding,
             table_name,
+            schema_name,
             content_column,
             embedding_column,
             metadata_columns,
@@ -494,6 +493,7 @@ class PostgresVectorStore(VectorStore):
             engine,
             embedding,
             table_name,
+            schema_name,
             content_column,
             embedding_column,
             metadata_columns,
@@ -577,9 +577,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected by vector similarity search."""
         return await self._engine._run_as_async(
-            self.__vs.asimilarity_search_by_vector(
-                embedding, k, filter, **kwargs
-            )
+            self.__vs.asimilarity_search_by_vector(embedding, k, filter, **kwargs)
         )
 
     def similarity_search_by_vector(
@@ -591,9 +589,7 @@ class PostgresVectorStore(VectorStore):
     ) -> List[Document]:
         """Return docs selected by vector similarity search."""
         return self._engine._run_as_sync(
-            self.__vs.asimilarity_search_by_vector(
-                embedding, k, filter, **kwargs
-            )
+            self.__vs.asimilarity_search_by_vector(embedding, k, filter, **kwargs)
         )
 
     async def asimilarity_search_with_score_by_vector(
@@ -764,18 +760,14 @@ class PostgresVectorStore(VectorStore):
         index_name: Optional[str] = None,
     ) -> None:
         """Drop the vector index."""
-        return self._engine._run_as_sync(
-            self.__vs.adrop_vector_index(index_name)
-        )
+        return self._engine._run_as_sync(self.__vs.adrop_vector_index(index_name))
 
     async def ais_valid_index(
         self,
         index_name: Optional[str] = None,
     ) -> bool:
         """Check if index exists in the table."""
-        return await self._engine._run_as_async(
-            self.__vs.is_valid_index(index_name)
-        )
+        return await self._engine._run_as_async(self.__vs.is_valid_index(index_name))
 
     def is_valid_index(
         self,

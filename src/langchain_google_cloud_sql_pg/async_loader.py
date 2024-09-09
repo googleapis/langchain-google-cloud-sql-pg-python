@@ -158,6 +158,7 @@ class AsyncPostgresLoader(BaseLoader):
         engine: PostgresEngine,
         query: Optional[str] = None,
         table_name: Optional[str] = None,
+        schema_name: str = "public",
         content_columns: Optional[List[str]] = None,
         metadata_columns: Optional[List[str]] = None,
         metadata_json_column: Optional[str] = None,
@@ -170,6 +171,7 @@ class AsyncPostgresLoader(BaseLoader):
             engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
             query (Optional[str], optional): SQL query. Defaults to None.
             table_name (Optional[str], optional): Name of table to query. Defaults to None.
+            schema_name (str, optional): Database schema name of the table. Defaults to "public".
             content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
             metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
             metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
@@ -202,7 +204,7 @@ class AsyncPostgresLoader(BaseLoader):
             formatter = text_formatter
 
         if not query:
-            query = f'SELECT * FROM "{table_name}"'
+            query = f'SELECT * FROM "{schema_name}"."{table_name}"'
 
         async with engine._pool.connect() as connection:
             result_proxy = await connection.execute(text(query))
@@ -286,6 +288,7 @@ class AsyncPostgresDocumentSaver:
         pool: AsyncEngine,
         table_name: str,
         content_column: str,
+        schema_name: str = "public",
         metadata_columns: List[str] = [],
         metadata_json_column: Optional[str] = None,
     ):
@@ -296,6 +299,7 @@ class AsyncPostgresDocumentSaver:
             engine (PostgresEngine): AsyncEngine with pool connection to the postgres database
             table_name (Optional[str], optional): Name of table to query. Defaults to None.
             content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
+            schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
             metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
 
@@ -309,6 +313,7 @@ class AsyncPostgresDocumentSaver:
         self.pool = pool
         self.table_name = table_name
         self.content_column = content_column
+        self.schema_name = schema_name
         self.metadata_columns = metadata_columns
         self.metadata_json_column = metadata_json_column
 
@@ -317,6 +322,7 @@ class AsyncPostgresDocumentSaver:
         cls,
         engine: PostgresEngine,
         table_name: str,
+        schema_name: str = "public",
         content_column: str = DEFAULT_CONTENT_COL,
         metadata_columns: List[str] = [],
         metadata_json_column: Optional[str] = DEFAULT_METADATA_COL,
@@ -333,7 +339,7 @@ class AsyncPostgresDocumentSaver:
         Returns:
             AsyncPostgresDocumentSaver
         """
-        table_schema = await engine._aload_table_schema(table_name)
+        table_schema = await engine._aload_table_schema(table_name, schema_name)
         column_names = table_schema.columns.keys()
         if content_column not in column_names:
             raise ValueError(f"Content column, {content_column}, does not exist.")
@@ -364,6 +370,7 @@ class AsyncPostgresDocumentSaver:
             cls.__create_key,
             engine._pool,
             table_name,
+            schema_name,
             content_column,
             metadata_columns,
             metadata_json_column,
@@ -390,7 +397,7 @@ class AsyncPostgresDocumentSaver:
                     row[key] = json.dumps(value)
 
             # Create list of column names
-            insert_stmt = f'INSERT INTO "{self.table_name}"({self.content_column}'
+            insert_stmt = f'INSERT INTO "{self.schema_name}"."{self.table_name}"({self.content_column}'
             values_stmt = f"VALUES (:{self.content_column}"
 
             # Add metadata
@@ -440,7 +447,7 @@ class AsyncPostgresDocumentSaver:
                     where_conditions_list.append(f"{key} = :{key}")
 
             where_conditions = " AND ".join(where_conditions_list)
-            stmt = f'DELETE FROM "{self.table_name}" WHERE {where_conditions};'
+            stmt = f'DELETE FROM "{self.schema_name}"."{self.table_name}" WHERE {where_conditions};'
             values = {}
             for key, value in row.items():
                 if type(value) is int:

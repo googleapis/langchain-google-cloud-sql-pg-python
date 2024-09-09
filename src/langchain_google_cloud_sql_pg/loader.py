@@ -96,6 +96,7 @@ class PostgresLoader(BaseLoader):
             engine,
             query,
             table_name,
+            schema_name,
             content_columns,
             metadata_columns,
             metadata_json_column,

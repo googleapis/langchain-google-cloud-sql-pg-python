@@ -36,6 +36,7 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
         pool: AsyncEngine,
         session_id: str,
         table_name: str,
+        schema_name: str = "public",
     ):
         """AsyncPostgresChatMessageHistory constructor.
 
@@ -44,7 +45,7 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
             engine (PostgresEngine): Database connection pool.
             session_id (str): Retrieve the table content with this session ID.
             table_name (str): Table name that stores the chat message history.
-            messages (List[BaseMessage]): Messages to store.
+            schema_name (str, optional): Database schema name of the chat message history table. Defaults to "public".
 
         Raises:
             Exception: If constructor is directly called by the user.
@@ -56,6 +57,7 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
         self.pool = pool
         self.session_id = session_id
         self.table_name = table_name
+        self.schema_name = schema_name
 
     @classmethod
     async def create(
@@ -63,6 +65,7 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
         engine: PostgresEngine,
         session_id: str,
         table_name: str,
+        schema_name: str = "public",
     ) -> AsyncPostgresChatMessageHistory:
         """Create a new AsyncPostgresChatMessageHistory instance.
 
@@ -70,6 +73,7 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
             engine (PostgresEngine): Postgres engine to use.
             session_id (str): Retrieve the table content with this session ID.
             table_name (str): Table name that stores the chat message history.
+            schema_name (str, optional): Database schema name for the chat message history table. Defaults to "public".
 
         Raises:
             IndexError: If the table provided does not contain required schema.
@@ -77,17 +81,17 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
         Returns:
             AsyncPostgresChatMessageHistory: A newly created instance of AsyncPostgresChatMessageHistory.
         """
-        table_schema = await engine._aload_table_schema(table_name)
+        table_schema = await engine._aload_table_schema(table_name, schema_name)
         column_names = table_schema.columns.keys()
 
         required_columns = ["id", "session_id", "data", "type"]
 
         if not (all(x in column_names for x in required_columns)):
             raise IndexError(
-                f"Table '{table_name}' has incorrect schema. Got "
+                f"Table '{schema_name}'.'{table_name}' has incorrect schema. Got "
                 f"column names '{column_names}' but required column names "
                 f"'{required_columns}'.\nPlease create table with following schema:"
-                f"\nCREATE TABLE {table_name} ("
+                f"\nCREATE TABLE {schema_name}.{table_name} ("
                 "\n    id INT AUTO_INCREMENT PRIMARY KEY,"
                 "\n    session_id TEXT NOT NULL,"
                 "\n    data JSON NOT NULL,"
@@ -98,7 +102,7 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
 
     async def aadd_message(self, message: BaseMessage) -> None:
         """Append the message to the record in PostgreSQL"""
-        query = f"""INSERT INTO "{self.table_name}"(session_id, data, type)
+        query = f"""INSERT INTO "{self.schema_name}"."{self.table_name}"(session_id, data, type)
                     VALUES (:session_id, :data, :type);
                 """
         async with self.pool.connect() as conn:
@@ -119,14 +123,14 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
 
     async def aclear(self) -> None:
         """Clear session memory from PostgreSQL"""
-        query = f"""DELETE FROM "{self.table_name}" WHERE session_id = :session_id;"""
+        query = f"""DELETE FROM "{self.schema_name}"."{self.table_name}" WHERE session_id = :session_id;"""
         async with self.pool.connect() as conn:
             await conn.execute(text(query), {"session_id": self.session_id})
             await conn.commit()
 
     async def _aget_messages(self) -> List[BaseMessage]:
         """Retrieve the messages from PostgreSQL."""
-        query = f"""SELECT data, type FROM "{self.table_name}" WHERE session_id = :session_id ORDER BY id;"""
+        query = f"""SELECT data, type FROM "{self.schema_name}"."{self.table_name}" WHERE session_id = :session_id ORDER BY id;"""
         async with self.pool.connect() as conn:
             result = await conn.execute(text(query), {"session_id": self.session_id})
             result_map = result.mappings()

@@ -18,16 +18,7 @@ import asyncio
 from concurrent.futures import Future
 from dataclasses import dataclass
 from threading import Thread
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Dict,
-    List,
-    Optional,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Dict, List, Optional, TypeVar, Union
 
 import aiohttp
 import google.auth  # type: ignore
@@ -70,9 +61,7 @@ async def _get_iam_principal_email(
         request = google.auth.transport.requests.Request()
         credentials.refresh(request)
     if hasattr(credentials, "_service_account_email"):
-        return credentials._service_account_email.replace(
-            ".gserviceaccount.com", ""
-        )
+        return credentials._service_account_email.replace(".gserviceaccount.com", "")
     # call OAuth2 api to get IAM principal email associated with OAuth2 token
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
@@ -388,9 +377,7 @@ class PostgresEngine:
             raise ValueError("Driver must be type 'postgresql+asyncpg'")
 
         engine = create_async_engine(url, **kwargs)
-        return cls(
-            cls.__create_key, engine, cls._default_loop, cls._default_thread
-        )
+        return cls(cls.__create_key, engine, cls._default_loop, cls._default_thread)
 
     async def _run_as_async(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine asynchronously"""
@@ -458,7 +445,9 @@ class PostgresEngine:
 
         if overwrite_existing:
             async with self._pool.connect() as conn:
-                await conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}"'))
+                await conn.execute(
+                    text(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"')
+                )
                 await conn.commit()
 
         query = f"""CREATE TABLE "{schema_name}"."{table_name}"(
@@ -480,6 +469,7 @@ class PostgresEngine:
         self,
         table_name: str,
         vector_size: int,
+        schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[Column] = [],
@@ -494,6 +484,8 @@ class PostgresEngine:
         Args:
             table_name (str): The Postgres database table name.
             vector_size (int): Vector size for the embedding model to be used.
+            schema_name (str): The schema name to store Postgres database table.
+                Default: "public".
             content_column (str): Name of the column to store document content.
                 Default: "page_content".
             embedding_column (str) : Name of the column to store vector embeddings.
@@ -512,6 +504,7 @@ class PostgresEngine:
             self._ainit_vectorstore_table(
                 table_name,
                 vector_size,
+                schema_name,
                 content_column,
                 embedding_column,
                 metadata_columns,
@@ -572,7 +565,9 @@ class PostgresEngine:
             )
         )
 
-    async def _ainit_chat_history_table(self, table_name: str) -> None:
+    async def _ainit_chat_history_table(
+        self, table_name: str, schema_name: str = "public"
+    ) -> None:
         """Create a Cloud SQL table to store chat history.
 
         Args:
@@ -593,7 +588,9 @@ class PostgresEngine:
             await conn.execute(text(create_table_query))
             await conn.commit()
 
-    async def ainit_chat_history_table(self, table_name: str) -> None:
+    async def ainit_chat_history_table(
+        self, table_name: str, schema_name: str = "public"
+    ) -> None:
         """Create a Cloud SQL table to store chat history.
 
         Args:
@@ -603,12 +600,12 @@ class PostgresEngine:
             None
         """
         await self._run_as_async(
-            self._ainit_chat_history_table(
-                table_name,
-            )
+            self._ainit_chat_history_table(table_name, schema_name)
         )
 
-    def init_chat_history_table(self, table_name: str) -> None:
+    def init_chat_history_table(
+        self, table_name: str, schema_name: str = "public"
+    ) -> None:
         """Create a Cloud SQL table to store chat history.
 
         Args:
@@ -635,7 +632,7 @@ class PostgresEngine:
         metadata_json_column: str = "langchain_metadata",
         store_metadata: bool = True,
     ) -> None:
-        query = f"""CREATE TABLE "{table_name}"(
+        query = f"""CREATE TABLE "{schema_name}"."{table_name}"(
             {content_column} TEXT NOT NULL
             """
         for column in metadata_columns:
@@ -653,6 +650,7 @@ class PostgresEngine:
     async def ainit_document_table(
         self,
         table_name: str,
+        schema_name: str = "public",
         content_column: str = "page_content",
         metadata_columns: List[Column] = [],
         metadata_json_column: str = "langchain_metadata",
@@ -680,6 +678,7 @@ class PostgresEngine:
         await self._run_as_async(
             self._ainit_document_table(
                 table_name,
+                schema_name,
                 content_column,
                 metadata_columns,
                 metadata_json_column,
@@ -744,8 +743,7 @@ class PostgresEngine:
                 )
             except InvalidRequestError as e:
                 raise ValueError(
-                    f"Table, '{schema_name}'.'{table_name}', does not exist: "
-                    + str(e)
+                    f"Table, '{schema_name}'.'{table_name}', does not exist: " + str(e)
                 )
 
         table = Table(table_name, metadata, schema=schema_name)

@@ -22,7 +22,7 @@ from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Typ
 import numpy as np
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from langchain_core.vectorstores import VectorStore
+from langchain_core.vectorstores import VectorStore, utils
 from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -49,6 +49,7 @@ class AsyncPostgresVectorStore(VectorStore):
         pool: AsyncEngine,
         embedding_service: Embeddings,
         table_name: str,
+        schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -66,7 +67,8 @@ class AsyncPostgresVectorStore(VectorStore):
             pool (PostgresEngine): Connection pool engine for managing connections to Postgres database.
             embedding_service (Embeddings): Text embedding model to use.
             table_name (str): Name of the existing table or the table to be created.
-            content_column (str): Column that represent a Document’s page_content. Defaults to "content".
+            schema_name (str, optional): Database schema name of the table. Defaults to "public".
+            content_column (str): Column that represent a Document's page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
@@ -89,6 +91,7 @@ class AsyncPostgresVectorStore(VectorStore):
         self.pool = pool
         self.embedding_service = embedding_service
         self.table_name = table_name
+        self.schema_name = schema_name
         self.content_column = content_column
         self.embedding_column = embedding_column
         self.metadata_columns = metadata_columns
@@ -106,6 +109,7 @@ class AsyncPostgresVectorStore(VectorStore):
         engine: PostgresEngine,
         embedding_service: Embeddings,
         table_name: str,
+        schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -124,6 +128,7 @@ class AsyncPostgresVectorStore(VectorStore):
             engine (PostgresEngine): Connection pool engine for managing connections to Cloud SQL for PostgreSQL database.
             embedding_service (Embeddings): Text embedding model to use.
             table_name (str): Name of an existing table or table to be created.
+            schema_name (str, optional): Database schema name of the table. Defaults to "public".
             content_column (str): Column that represent a Document's page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
@@ -147,7 +152,7 @@ class AsyncPostgresVectorStore(VectorStore):
         async with engine._pool.connect() as conn:
             result = await conn.execute(
                 text(
-                    f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}'"
+                    f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}'AND table_schema = '{schema_name}'"
                 )
             )
             result_map = result.mappings()
@@ -199,6 +204,7 @@ class AsyncPostgresVectorStore(VectorStore):
             engine._pool,
             embedding_service,
             table_name,
+            schema_name,
             content_column,
             embedding_column,
             metadata_columns,
@@ -235,7 +241,7 @@ class AsyncPostgresVectorStore(VectorStore):
                 if len(self.metadata_columns) > 0
                 else ""
             )
-            insert_stmt = f'INSERT INTO "{self.table_name}"({self.id_column}, {self.content_column}, {self.embedding_column}{metadata_col_names}'
+            insert_stmt = f'INSERT INTO "{self.schema_name}"."{self.table_name}"({self.id_column}, {self.content_column}, {self.embedding_column}{metadata_col_names}'
             values = {"id": id, "content": content, "embedding": str(embedding)}
             values_stmt = "VALUES (:id, :content, :embedding"
 
@@ -302,7 +308,7 @@ class AsyncPostgresVectorStore(VectorStore):
             return False
 
         id_list = ", ".join([f"'{id}'" for id in ids])
-        query = f'DELETE FROM "{self.table_name}" WHERE {self.id_column} in ({id_list})'
+        query = f'DELETE FROM "{self.schema_name}"."{self.table_name}" WHERE {self.id_column} in ({id_list})'
         async with self.pool.connect() as conn:
             await conn.execute(text(query))
             await conn.commit()
@@ -315,6 +321,7 @@ class AsyncPostgresVectorStore(VectorStore):
         embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
+        schema_name: str = "public",
         metadatas: Optional[List[dict]] = None,
         ids: Optional[List[str]] = None,
         content_column: str = "content",
@@ -336,6 +343,7 @@ class AsyncPostgresVectorStore(VectorStore):
             embedding (Embeddings): Text embedding model to use.
             engine (PostgresEngine): Connection pool engine for managing connections to Postgres database.
             table_name (str): Name of the existing table or the table to be created.
+            schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
             ids: (Optional[List[str]]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
@@ -357,6 +365,7 @@ class AsyncPostgresVectorStore(VectorStore):
             engine,
             embedding,
             table_name,
+            schema_name,
             content_column,
             embedding_column,
             metadata_columns,
@@ -379,6 +388,7 @@ class AsyncPostgresVectorStore(VectorStore):
         embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
+        schema_name: str = "public",
         ids: Optional[List[str]] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
@@ -400,9 +410,10 @@ class AsyncPostgresVectorStore(VectorStore):
             embedding (Embeddings): Text embedding model to use.
             engine (PostgresEngine): Connection pool engine for managing connections to Postgres database.
             table_name (str): Name of the existing table or the table to be created.
+            schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
             ids: (Optional[List[str]]): List of IDs to add to table records.
-            content_column (str): Column that represent a Document’s page_content. Defaults to "content".
+            content_column (str): Column that represent a Document's page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
             ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
@@ -421,6 +432,7 @@ class AsyncPostgresVectorStore(VectorStore):
             engine,
             embedding,
             table_name,
+            schema_name,
             content_column,
             embedding_column,
             metadata_columns,
@@ -451,7 +463,7 @@ class AsyncPostgresVectorStore(VectorStore):
         search_function = self.distance_strategy.search_function
 
         filter = f"WHERE {filter}" if filter else ""
-        stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM \"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
+        stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM \"{self.schema_name}\".\"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
         if self.index_query_options:
             async with self.pool.connect() as conn:
                 await conn.execute(
@@ -615,7 +627,7 @@ class AsyncPostgresVectorStore(VectorStore):
         fetch_k = fetch_k if fetch_k else self.fetch_k
         lambda_mult = lambda_mult if lambda_mult else self.lambda_mult
         embedding_list = [json.loads(row[self.embedding_column]) for row in results]
-        mmr_selected = maximal_marginal_relevance(
+        mmr_selected = utils.maximal_marginal_relevance(
             np.array(embedding, dtype=np.float32),
             embedding_list,
             k=k,
@@ -661,7 +673,7 @@ class AsyncPostgresVectorStore(VectorStore):
             if index.name == None:
                 index.name = self.table_name + DEFAULT_INDEX_NAME_SUFFIX
             name = index.name
-        stmt = f'CREATE INDEX {"CONCURRENTLY" if concurrently else ""} {name} ON "{self.table_name}" USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};'
+        stmt = f'CREATE INDEX {"CONCURRENTLY" if concurrently else ""} {name} ON "{self.schema_name}"."{self.table_name}" USING {index.index_type} ({self.embedding_column} {function}) {params} {filter};'
         if concurrently:
             async with self.pool.connect() as conn:
                 await conn.execute(text("COMMIT"))
@@ -699,7 +711,7 @@ class AsyncPostgresVectorStore(VectorStore):
         stmt = f"""
         SELECT tablename, indexname
         FROM pg_indexes
-        WHERE tablename = '{self.table_name}' AND indexname = '{index_name}';
+        WHERE tablename = '{self.table_name}' AND schemaname = '{self.schema_name}' AND indexname = '{index_name}';
         """
         async with self.pool.connect() as conn:
             result = await conn.execute(text(stmt))
@@ -861,76 +873,3 @@ class AsyncPostgresVectorStore(VectorStore):
         raise NotImplementedError(
             "Sync methods are not implemented for AsyncPostgresVectorStore. Use PostgresVectorStore interface instead."
         )
-
-
-### The following is copied from langchain-community until it's moved into core
-
-Matrix = Union[List[List[float]], List[np.ndarray], np.ndarray]
-
-
-def maximal_marginal_relevance(
-    query_embedding: np.ndarray,
-    embedding_list: list,
-    lambda_mult: float = 0.5,
-    k: int = 4,
-) -> List[int]:
-    """Calculate maximal marginal relevance."""
-    if min(k, len(embedding_list)) <= 0:
-        return []
-    if query_embedding.ndim == 1:
-        query_embedding = np.expand_dims(query_embedding, axis=0)
-    similarity_to_query = cosine_similarity(query_embedding, embedding_list)[0]
-    most_similar = int(np.argmax(similarity_to_query))
-    idxs = [most_similar]
-    selected = np.array([embedding_list[most_similar]])
-    while len(idxs) < min(k, len(embedding_list)):
-        best_score = -np.inf
-        idx_to_add = -1
-        similarity_to_selected = cosine_similarity(embedding_list, selected)
-        for i, query_score in enumerate(similarity_to_query):
-            if i in idxs:
-                continue
-            redundant_score = max(similarity_to_selected[i])
-            equation_score = (
-                lambda_mult * query_score - (1 - lambda_mult) * redundant_score
-            )
-            if equation_score > best_score:
-                best_score = equation_score
-                idx_to_add = i
-        idxs.append(idx_to_add)
-        selected = np.append(selected, [embedding_list[idx_to_add]], axis=0)
-    return idxs
-
-
-def cosine_similarity(X: Matrix, Y: Matrix) -> np.ndarray:
-    """Row-wise cosine similarity between two equal-width matrices."""
-    if len(X) == 0 or len(Y) == 0:
-        return np.array([])
-
-    X = np.array(X)
-    Y = np.array(Y)
-    if X.shape[1] != Y.shape[1]:
-        raise ValueError(
-            f"Number of columns in X and Y must be the same. X has shape {X.shape} "
-            f"and Y has shape {Y.shape}."
-        )
-    try:
-        import simsimd as simd  # type: ignore
-
-        X = np.array(X, dtype=np.float32)
-        Y = np.array(Y, dtype=np.float32)
-        Z = 1 - simd.cdist(X, Y, metric="cosine")
-        if isinstance(Z, float):
-            return np.array([Z])
-        return Z
-    except ImportError:
-        X_norm = np.linalg.norm(X, axis=1)
-        Y_norm = np.linalg.norm(Y, axis=1)
-        # Ignore divide by zero errors run time warnings as those are handled below.
-        with np.errstate(divide="ignore", invalid="ignore"):
-            similarity = np.dot(X, Y.T) / np.outer(X_norm, Y_norm)
-        similarity[np.isnan(similarity) | np.isinf(similarity)] = 0.0
-        return similarity
-
-
-### End code from langchain-community
