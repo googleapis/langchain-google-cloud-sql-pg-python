@@ -44,7 +44,7 @@ class PostgresVectorStore(VectorStore):
         Args:
             key (object): Prevent direct constructor usage.
             engine (PostgresEngine): Connection pool engine for managing connections to Postgres database.
-
+            vs (AsyncPostgresVectorstore): The async only VectorStore implementation
 
         Raises:
             Exception: If called directly by user.

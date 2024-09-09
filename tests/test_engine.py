@@ -22,8 +22,10 @@ import pytest_asyncio
 from google.cloud.sql.connector import Connector, IPTypes
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import VARCHAR, text
+from sqlalchemy.engine import URL
 from sqlalchemy.engine.row import RowMapping
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
 
@@ -34,6 +36,7 @@ CUSTOM_TABLE_SYNC = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
+host = os.environ["IP_ADDRESS"]
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -66,7 +69,7 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return await engine._run_as_async(run(engine, query))
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="module")
 class TestEngineAsync:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -192,6 +195,48 @@ class TestEngineAsync:
 
             engine = PostgresEngine.from_engine(engine)
             await aexecute(engine, "SELECT 1")
+            await engine.close()
+
+    async def test_from_engine_args_url(
+        self,
+        db_name,
+        user,
+        password,
+    ):
+        port = "5432"
+        url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+        engine = PostgresEngine.from_engine_args(
+            url,
+            echo=True,
+            poolclass=NullPool,
+        )
+        await aexecute(engine, "SELECT 1")
+        await engine.close()
+
+        engine = PostgresEngine.from_engine_args(
+            URL.create("postgresql+asyncpg", user, password, host, port, db_name)
+        )
+        await aexecute(engine, "SELECT 1")
+        await engine.close()
+
+    async def test_from_engine_args_url_error(
+        self,
+        db_name,
+        user,
+        password,
+    ):
+        port = "5432"
+        url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+        with pytest.raises(TypeError):
+            engine = PostgresEngine.from_engine_args(url, random=False)
+        with pytest.raises(ValueError):
+            PostgresEngine.from_engine_args(
+                f"postgresql+pg8000://{user}:{password}@{host}:{port}/{db_name}",
+            )
+        with pytest.raises(ValueError):
+            PostgresEngine.from_engine_args(
+                URL.create("postgresql+pg8000", user, password, host, port, db_name)
+            )
 
     async def test_column(self, engine):
         with pytest.raises(ValueError):
@@ -206,6 +251,7 @@ class TestEngineAsync:
         db_region,
         db_name,
         iam_account,
+        engine,
     ):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -219,7 +265,7 @@ class TestEngineAsync:
         await engine.close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="module")
 class TestEngineSync:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -331,6 +377,7 @@ class TestEngineSync:
         db_region,
         db_name,
         iam_account,
+        engine,
     ):
         engine = PostgresEngine.from_instance(
             project_id=db_project,

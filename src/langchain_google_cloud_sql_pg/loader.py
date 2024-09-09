@@ -19,11 +19,7 @@ from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
 from langchain_core.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 
-from langchain_google_cloud_sql_pg.async_loader import (
-    AsyncPostgresDocumentSaver,
-    AsyncPostgresLoader,
-)
-
+from .async_loader import AsyncPostgresDocumentSaver, AsyncPostgresLoader
 from .engine import PostgresEngine
 
 DEFAULT_CONTENT_COL = "page_content"

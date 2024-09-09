@@ -29,6 +29,8 @@ instance_id = os.environ["INSTANCE_ID"]
 db_name = os.environ["DATABASE_ID"]
 table_name = "message_store" + str(uuid.uuid4())
 table_name_async = "message_store" + str(uuid.uuid4())
+user = os.environ["DB_USER"]
+password = os.environ["DB_PASSWORD"]
 
 
 async def aexecute(
@@ -199,3 +201,31 @@ async def test_cross_env_chat_message_history(engine):
     messages = history.messages
     assert messages[0].content == "hi!"
     history.clear()
+
+
+@pytest.mark.asyncio
+async def test_from_engine_args_url():
+    host = os.environ["IP_ADDRESS"]
+    port = "5432"
+    url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+    engine = PostgresEngine.from_engine_args(url)
+    table_name = "test_table" + str(uuid.uuid4()).replace("-", "_")
+    await engine.ainit_chat_history_table(table_name)
+
+    history = PostgresChatMessageHistory.create_sync(
+        engine=engine, session_id="test_cross", table_name=table_name
+    )
+    await history.aadd_message(HumanMessage(content="hi!"))
+    history.add_message(HumanMessage(content="bye!"))
+    assert len(history.messages) == 2
+    await history.aclear()
+
+    history2 = await PostgresChatMessageHistory.create(
+        engine=engine, session_id="test_cross", table_name=table_name
+    )
+    await history2.aadd_message(HumanMessage(content="hi!"))
+    history2.add_message(HumanMessage(content="bye!"))
+    assert len(history2.messages) == 2
+    history2.clear()
+
+    await aexecute(engine, f"DROP TABLE {table_name}")

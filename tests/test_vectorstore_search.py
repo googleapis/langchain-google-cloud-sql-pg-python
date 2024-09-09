@@ -26,6 +26,7 @@ from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOpt
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
@@ -149,11 +150,6 @@ class TestVectorStoreSearch:
         results = await vs.asimilarity_search("foo", k=1, filter="content = 'bar'")
         assert results == [Document(page_content="bar")]
 
-    def test_asimilarity_search_cross_env(self, vs):
-        results = vs.similarity_search("foo", k=1)
-        assert len(results) == 1
-        assert results == [Document(page_content="foo")]
-
     async def test_asimilarity_search_score(self, vs):
         results = await vs.asimilarity_search_with_score("foo")
         assert len(results) == 4
@@ -230,6 +226,63 @@ class TestVectorStoreSearch:
             embedding, lambda_mult=0.75, fetch_k=10
         )
         assert results[0][0] == Document(page_content="bar")
+
+
+class TestVectorStoreSearchSync:
+    @pytest.fixture(scope="module")
+    def db_project(self) -> str:
+        return get_env_var("PROJECT_ID", "project id for google cloud")
+
+    @pytest.fixture(scope="module")
+    def db_region(self) -> str:
+        return get_env_var("REGION", "region for cloud sql instance")
+
+    @pytest.fixture(scope="module")
+    def db_instance(self) -> str:
+        return get_env_var("INSTANCE_ID", "instance for cloud sql")
+
+    @pytest.fixture(scope="module")
+    def db_name(self) -> str:
+        return get_env_var("DATABASE_ID", "instance for cloud sql")
+
+    @pytest_asyncio.fixture(scope="class")
+    async def engine_sync(self, db_project, db_region, db_instance, db_name):
+        engine = PostgresEngine.from_instance(
+            project_id=db_project,
+            instance=db_instance,
+            region=db_region,
+            database=db_name,
+        )
+        yield engine
+        await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE_SYNC}")
+        await engine.close()
+
+    @pytest.fixture(scope="class")
+    def vs_custom(self, engine_sync):
+        engine_sync.init_vectorstore_table(
+            CUSTOM_TABLE_SYNC,
+            VECTOR_SIZE,
+            id_column="myid",
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadata_columns=[
+                Column("page", "TEXT"),
+                Column("source", "TEXT"),
+            ],
+            store_metadata=False,
+        )
+
+        vs_custom = PostgresVectorStore.create_sync(
+            engine_sync,
+            embedding_service=embeddings_service,
+            table_name=CUSTOM_TABLE_SYNC,
+            id_column="myid",
+            content_column="mycontent",
+            embedding_column="myembedding",
+            index_query_options=HNSWQueryOptions(ef_search=1),
+        )
+        vs_custom.add_documents(docs, ids=ids)
+        yield vs_custom
 
     def test_similarity_search(self, vs_custom):
         results = vs_custom.similarity_search("foo", k=1)

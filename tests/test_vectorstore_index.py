@@ -110,13 +110,11 @@ class TestIndex:
         vs.drop_vector_index()
         yield vs
 
-    @pytest.mark.run(order=1)
     async def test_aapply_vector_index(self, vs):
         index = HNSWIndex()
         vs.apply_vector_index(index)
         assert vs.is_valid_index(DEFAULT_INDEX_NAME)
 
-    @pytest.mark.run(order=2)
     async def test_areindex(self, vs):
         if not vs.is_valid_index(DEFAULT_INDEX_NAME):
             index = HNSWIndex()
@@ -125,7 +123,6 @@ class TestIndex:
         vs.reindex(DEFAULT_INDEX_NAME)
         assert vs.is_valid_index(DEFAULT_INDEX_NAME)
 
-    @pytest.mark.run(order=3)
     async def test_dropindex(self, vs):
         vs.drop_vector_index()
         result = vs.is_valid_index(DEFAULT_INDEX_NAME)
@@ -191,13 +188,11 @@ class TestAsyncIndex:
         await vs.adrop_vector_index()
         yield vs
 
-    @pytest.mark.run(order=1)
     async def test_aapply_vector_index(self, vs):
         index = HNSWIndex()
         await vs.aapply_vector_index(index)
         assert await vs.ais_valid_index(DEFAULT_INDEX_NAME)
 
-    @pytest.mark.run(order=2)
     async def test_areindex(self, vs):
         if not await vs.ais_valid_index(DEFAULT_INDEX_NAME):
             index = HNSWIndex()
@@ -206,7 +201,6 @@ class TestAsyncIndex:
         await vs.areindex(DEFAULT_INDEX_NAME)
         assert await vs.ais_valid_index(DEFAULT_INDEX_NAME)
 
-    @pytest.mark.run(order=3)
     async def test_dropindex(self, vs):
         await vs.adrop_vector_index()
         result = await vs.ais_valid_index(DEFAULT_INDEX_NAME)

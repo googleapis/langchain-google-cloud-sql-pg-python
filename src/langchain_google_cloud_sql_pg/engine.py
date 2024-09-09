@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from threading import Thread
 from typing import (
     TYPE_CHECKING,
+    Any,
     Awaitable,
     Dict,
     List,
@@ -33,7 +34,7 @@ import google.auth  # type: ignore
 import google.auth.transport.requests  # type: ignore
 from google.cloud.sql.connector import Connector, IPTypes, RefreshStrategy
 from sqlalchemy import MetaData, Table, text
-from sqlalchemy.engine.row import RowMapping
+from sqlalchemy.engine import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -126,7 +127,7 @@ class PostgresEngine:
             key (object): Prevent direct constructor usage.
             pool (AsyncEngine): Async engine connection pool.
             loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
-            thread (Optional[Thread] = None): Thread used to create the engine async.
+            thread (Optional[Thread]): Thread used to create the engine async.
 
         Raises:
             Exception: If the constructor is called directly by the user.
@@ -161,13 +162,13 @@ class PostgresEngine:
             region (str): Postgres instance region.
             instance (str): Postgres instance name.
             database (str): Database name.
-            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
-            user (Optional[str], optional): Postgres user name. Defaults to None.
-            password (Optional[str], optional): Postgres user password. Defaults to None.
+            ip_type (Union[str, IPTypes]): IP address type. Defaults to IPTypes.PUBLIC.
+            user (Optional[str]): Postgres user name. Defaults to None.
+            password (Optional[str]): Postgres user password. Defaults to None.
             loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
-            thread (Optional[Thread] = None): Thread used to create the engine async.
+            thread (Optional[Thread]): Thread used to create the engine async.
             quota_project (Optional[str]): Project that provides quota for API calls.
-            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
+            iam_account_email (Optional[str]): IAM service account email. Defaults to None.
 
         Raises:
             ValueError: If only one of `user` and `password` is specified.
@@ -345,9 +346,51 @@ class PostgresEngine:
         return await asyncio.wrap_future(future)
 
     @classmethod
-    def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
+    def from_engine(
+        cls,
+        engine: AsyncEngine,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+    ) -> PostgresEngine:
         """Create an PostgresEngine instance from an AsyncEngine."""
-        return cls(cls.__create_key, engine, None, None)
+        return cls(cls.__create_key, engine, loop, None)
+
+    @classmethod
+    def from_engine_args(
+        cls,
+        url: Union[str | URL],
+        **kwargs: Any,
+    ) -> PostgresEngine:
+        """Create an PostgresEngine instance from arguments. These parameters are pass directly into sqlalchemy's create_async_engine function.
+
+        Args:
+            url (Union[str | URL]): the URL used to connect to a database
+            **kwargs (Any, optional): sqlalchemy `create_async_engine` arguments
+
+        Raises:
+            ValueError: If `postgresql+asyncpg` is not specified as the PG driver
+
+        Returns:
+            PostgresEngine
+        """
+        # Running a loop in a background thread allows us to support
+        # async methods from non-async environments
+        if cls._default_loop is None:
+            cls._default_loop = asyncio.new_event_loop()
+            cls._default_thread = Thread(
+                target=cls._default_loop.run_forever, daemon=True
+            )
+            cls._default_thread.start()
+
+        driver = "postgresql+asyncpg"
+        if (isinstance(url, str) and not url.startswith(driver)) or (
+            isinstance(url, URL) and url.drivername != driver
+        ):
+            raise ValueError("Driver must be type 'postgresql+asyncpg'")
+
+        engine = create_async_engine(url, **kwargs)
+        return cls(
+            cls.__create_key, engine, cls._default_loop, cls._default_thread
+        )
 
     async def _run_as_async(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine asynchronously"""
