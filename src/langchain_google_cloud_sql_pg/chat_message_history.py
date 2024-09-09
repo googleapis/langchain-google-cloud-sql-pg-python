@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import List, Sequence
 
 from langchain_core.chat_history import BaseChatMessageHistory

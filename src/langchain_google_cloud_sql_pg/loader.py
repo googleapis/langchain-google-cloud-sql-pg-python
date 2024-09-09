@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
+from typing import AsyncIterator, Callable, Iterator, List, Optional
 
 from langchain_core.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
@@ -236,8 +236,8 @@ class PostgresDocumentSaver:
         coro = AsyncPostgresDocumentSaver.create(
             engine,
             table_name,
-            content_column,
             schema_name,
+            content_column,
             metadata_columns,
             metadata_json_column,
         )

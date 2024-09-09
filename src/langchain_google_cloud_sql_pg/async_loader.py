@@ -15,16 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import (
-    Any,
-    AsyncIterator,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Optional,
-)
+from typing import Any, AsyncIterator, Callable, Dict, Iterable, List, Optional
 
 from langchain_core.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
@@ -370,8 +361,8 @@ class AsyncPostgresDocumentSaver:
             cls.__create_key,
             engine._pool,
             table_name,
-            schema_name,
             content_column,
+            schema_name,
             metadata_columns,
             metadata_json_column,
         )
