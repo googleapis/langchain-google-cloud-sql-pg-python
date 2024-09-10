@@ -187,10 +187,14 @@ class PostgresVectorStore(VectorStore):
         self,
         texts: Iterable[str],
         metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Embed texts and add to the table."""
+        """Embed texts and add to the table.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
+        """
         return await self._engine._run_as_async(
             self.__vs.aadd_texts(texts, metadatas, ids, **kwargs)
         )
@@ -199,10 +203,14 @@ class PostgresVectorStore(VectorStore):
         self,
         texts: Iterable[str],
         metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Embed texts and add to the table."""
+        """Embed texts and add to the table.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
+        """
         return self._engine._run_as_sync(
             self.__vs.aadd_texts(texts, metadatas, ids, **kwargs)
         )
@@ -210,10 +218,14 @@ class PostgresVectorStore(VectorStore):
     async def aadd_documents(
         self,
         documents: List[Document],
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Embed documents and add to the table"""
+        """Embed documents and add to the table.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
+        """
         return await self._engine._run_as_async(
             self.__vs.aadd_documents(documents, ids, **kwargs)
         )
@@ -221,28 +233,40 @@ class PostgresVectorStore(VectorStore):
     def add_documents(
         self,
         documents: List[Document],
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Embed documents and add to the table."""
+        """Embed documents and add to the table.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
+        """
         return self._engine._run_as_sync(
             self.__vs.aadd_documents(documents, ids, **kwargs)
         )
 
     async def adelete(
         self,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
-        """Delete records from the table."""
+        """Delete records from the table.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
+        """
         return await self._engine._run_as_async(self.__vs.adelete(ids, **kwargs))
 
     def delete(
         self,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
-        """Delete records from the table."""
+        """Delete records from the table.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
+        """
         return self._engine._run_as_sync(self.__vs.adelete(ids, **kwargs))
 
     @classmethod
@@ -254,7 +278,7 @@ class PostgresVectorStore(VectorStore):
         table_name: str,
         schema_name: str = "public",
         metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -268,6 +292,7 @@ class PostgresVectorStore(VectorStore):
         index_query_options: Optional[QueryOptions] = None,
     ) -> PostgresVectorStore:
         """Create an PostgresVectorStore instance from texts.
+
         Args:
             texts (List[str]): Texts to add to the vector store.
             embedding (Embeddings): Text embedding model to use.
@@ -275,7 +300,7 @@ class PostgresVectorStore(VectorStore):
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List[str]]): List of IDs to add to table records.
+            ids: (Optional[List]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
@@ -287,6 +312,9 @@ class PostgresVectorStore(VectorStore):
             fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
             lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
             index_query_options (QueryOptions): Index query option.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
 
         Returns:
             PostgresVectorStore
@@ -319,7 +347,7 @@ class PostgresVectorStore(VectorStore):
         engine: PostgresEngine,
         table_name: str,
         schema_name: str = "public",
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -341,7 +369,7 @@ class PostgresVectorStore(VectorStore):
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List[str]]): List of IDs to add to table records.
+            ids: (Optional[List]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
@@ -353,6 +381,9 @@ class PostgresVectorStore(VectorStore):
             fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
             lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
             index_query_options (QueryOptions): Index query option.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
 
         Returns:
             PostgresVectorStore
@@ -386,7 +417,7 @@ class PostgresVectorStore(VectorStore):
         table_name: str,
         schema_name: str = "public",
         metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -400,6 +431,7 @@ class PostgresVectorStore(VectorStore):
         index_query_options: Optional[QueryOptions] = None,
     ) -> PostgresVectorStore:
         """Create an PostgresVectorStore instance from texts.
+
         Args:
             texts (List[str]): Texts to add to the vector store.
             embedding (Embeddings): Text embedding model to use.
@@ -407,7 +439,7 @@ class PostgresVectorStore(VectorStore):
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List[str]]): List of IDs to add to table records.
+            ids: (Optional[List]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
@@ -419,6 +451,9 @@ class PostgresVectorStore(VectorStore):
             fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
             lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
             index_query_options (QueryOptions): Index query option.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
 
         Returns:
             PostgresVectorStore
@@ -451,7 +486,7 @@ class PostgresVectorStore(VectorStore):
         engine: PostgresEngine,
         table_name: str,
         schema_name: str = "public",
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -473,7 +508,7 @@ class PostgresVectorStore(VectorStore):
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List[str]]): List of IDs to add to table records.
+            ids: (Optional[List]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
@@ -485,6 +520,9 @@ class PostgresVectorStore(VectorStore):
             fetch_k (int): Number of Documents to fetch to pass to MMR algorithm.
             lambda_mult (float): Number between 0 and 1 that determines the degree of diversity among the results with 0 corresponding to maximum diversity and 1 to minimum diversity. Defaults to 0.5.
             index_query_options (QueryOptions): Index query option.
+
+        Raises:
+            :class:`InvalidTextRepresentationError <asyncpg.exceptions.InvalidTextRepresentationError>`: if the `ids` data type does not match that of the `id_column`.
 
         Returns:
             PostgresVectorStore

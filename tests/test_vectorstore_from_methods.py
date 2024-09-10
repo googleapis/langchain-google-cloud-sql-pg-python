@@ -29,6 +29,12 @@ from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVector
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE_WITH_INT_ID = "test_table_with_int_id" + str(uuid.uuid4()).replace(
+    "-", "_"
+)
+CUSTOM_TABLE_WITH_INT_ID_SYNC = "test_table_with_int_id" + str(uuid.uuid4()).replace(
+    "-", "_"
+)
 VECTOR_SIZE = 768
 
 
@@ -109,9 +115,19 @@ class TestVectorStoreFromMethods:
             metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
             store_metadata=False,
         )
+        await engine.ainit_vectorstore_table(
+            CUSTOM_TABLE_WITH_INT_ID,
+            VECTOR_SIZE,
+            id_column=Column(name="integer_id", data_type="INTEGER", nullable="False"),
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+            store_metadata=False,
+        )
         yield engine
         await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE_WITH_INT_ID}")
         await engine.close()
 
     @pytest_asyncio.fixture
@@ -123,9 +139,18 @@ class TestVectorStoreFromMethods:
             database=db_name,
         )
         engine.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
-
+        engine.init_vectorstore_table(
+            CUSTOM_TABLE_WITH_INT_ID_SYNC,
+            VECTOR_SIZE,
+            id_column=Column(name="integer_id", data_type="INTEGER", nullable="False"),
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+            store_metadata=False,
+        )
         yield engine
         await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE_SYNC}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE_WITH_INT_ID_SYNC}")
         await engine.close()
 
     async def test_afrom_texts(self, engine):
@@ -256,3 +281,45 @@ class TestVectorStoreFromMethods:
         assert results[0]["page"] == "0"
         assert results[0]["source"] == "google.com"
         await aexecute(engine, f"TRUNCATE TABLE {CUSTOM_TABLE}")
+
+    async def test_afrom_texts_custom_with_int_id(self, engine):
+        ids = [i for i in range(len(texts))]
+        await PostgresVectorStore.afrom_texts(
+            texts,
+            embeddings_service,
+            engine,
+            CUSTOM_TABLE_WITH_INT_ID,
+            metadatas=metadatas,
+            ids=ids,
+            id_column="integer_id",
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadata_columns=["page", "source"],
+        )
+        results = await afetch(engine, f"SELECT * FROM {CUSTOM_TABLE_WITH_INT_ID}")
+        assert len(results) == 3
+        for row in results:
+            assert isinstance(row["integer_id"], int)
+        await aexecute(engine, f"TRUNCATE TABLE {CUSTOM_TABLE_WITH_INT_ID}")
+
+    async def test_from_texts_custom_with_int_id(self, engine_sync):
+        ids = [i for i in range(len(texts))]
+        PostgresVectorStore.from_texts(
+            texts,
+            embeddings_service,
+            engine_sync,
+            CUSTOM_TABLE_WITH_INT_ID_SYNC,
+            metadatas=metadatas,
+            ids=ids,
+            id_column="integer_id",
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadata_columns=["page", "source"],
+        )
+        results = await afetch(
+            engine_sync, f"SELECT * FROM {CUSTOM_TABLE_WITH_INT_ID_SYNC}"
+        )
+        assert len(results) == 3
+        for row in results:
+            assert isinstance(row["integer_id"], int)
+        await aexecute(engine_sync, f"TRUNCATE TABLE {CUSTOM_TABLE_WITH_INT_ID_SYNC}")

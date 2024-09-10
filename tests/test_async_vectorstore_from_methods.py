@@ -29,6 +29,9 @@ from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorS
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE_WITH_INT_ID = "test_table_custom_with_int_it" + str(uuid.uuid4()).replace(
+    "-", "_"
+)
 VECTOR_SIZE = 768
 
 
@@ -100,9 +103,19 @@ class TestVectorStoreFromMethods:
             metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
             store_metadata=False,
         )
+        await engine._ainit_vectorstore_table(
+            CUSTOM_TABLE_WITH_INT_ID,
+            VECTOR_SIZE,
+            id_column=Column(name="integer_id", data_type="INTEGER", nullable="False"),
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+            store_metadata=False,
+        )
         yield engine
         await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE_WITH_INT_ID}")
         await engine.close()
 
     async def test_afrom_texts(self, engine):
@@ -180,3 +193,30 @@ class TestVectorStoreFromMethods:
         assert results[0]["page"] == "0"
         assert results[0]["source"] == "google.com"
         await aexecute(engine, f"TRUNCATE TABLE {CUSTOM_TABLE}")
+
+    async def test_afrom_docs_custom_with_int_id(self, engine):
+        ids = [i for i in range(len(texts))]
+        docs = [
+            Document(
+                page_content=texts[i],
+                metadata={"page": str(i), "source": "google.com"},
+            )
+            for i in range(len(texts))
+        ]
+        await AsyncPostgresVectorStore.afrom_documents(
+            docs,
+            embeddings_service,
+            engine,
+            CUSTOM_TABLE_WITH_INT_ID,
+            ids=ids,
+            id_column="integer_id",
+            content_column="mycontent",
+            embedding_column="myembedding",
+            metadata_columns=["page", "source"],
+        )
+
+        results = await afetch(engine, f"SELECT * FROM {CUSTOM_TABLE_WITH_INT_ID}")
+        assert len(results) == 3
+        for row in results:
+            assert isinstance(row["integer_id"], int)
+        await aexecute(engine, f"TRUNCATE TABLE {CUSTOM_TABLE_WITH_INT_ID}")
