@@ -381,9 +381,11 @@ class PostgresEngine:
         id_column: str = "langchain_id",
         overwrite_existing: bool = False,
         store_metadata: bool = True,
+        id_data_type: Column = Column("langchain_id", "UUID", nullable=False),
     ) -> None:
         """
         Create a table for saving of vectors to be used with PostgresVectorStore.
+        If id data type is invalid, an UNDEFINED_OBJECT_ERROR is thrown.
 
         Args:
             table_name (str): The Postgres database table name.
@@ -403,9 +405,12 @@ class PostgresEngine:
             overwrite_existing (bool): Whether to drop existing table. Default: False.
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
+            id_data_type (Column): Column class that represents the data type of the id column.
+                Default: UUID.
 
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists and overwrite flag is not set.
+            :class:`UndefinedObjectError <asyncpg.exceptions.UndefinedObjectError>`: if id_data_type is invalid.
         """
         await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
 
@@ -413,7 +418,7 @@ class PostgresEngine:
             await self._aexecute(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"')
 
         query = f"""CREATE TABLE "{schema_name}"."{table_name}"(
-            "{id_column}" UUID PRIMARY KEY,
+            "{id_column}" {id_data_type.data_type} PRIMARY KEY,
             "{content_column}" TEXT NOT NULL,
             "{embedding_column}" vector({vector_size}) NOT NULL"""
         for column in metadata_columns:
@@ -437,9 +442,11 @@ class PostgresEngine:
         id_column: str = "langchain_id",
         overwrite_existing: bool = False,
         store_metadata: bool = True,
+        id_data_type: Column = Column("langchain_id", "UUID", nullable=False),
     ) -> None:
         """
         Create a table for saving of vectors to be used with PostgresVectorStore.
+        If id data type is invalid, an UNDEFINED_OBJECT_ERROR is thrown.
 
         Args:
             table_name (str): The Postgres database table name.
@@ -459,6 +466,10 @@ class PostgresEngine:
             overwrite_existing (bool): Whether to drop existing table. Default: False.
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
+            id_data_type (Column): Column class that represents the data type of the id column.
+                Default: UUID.
+        Raises:
+            :class:`UndefinedObjectError <asyncpg.exceptions.UndefinedObjectError>`: if id_data_type is invalid.
         """
         return self._run_as_sync(
             self.ainit_vectorstore_table(
@@ -472,6 +483,7 @@ class PostgresEngine:
                 id_column,
                 overwrite_existing,
                 store_metadata,
+                id_data_type,
             )
         )
 

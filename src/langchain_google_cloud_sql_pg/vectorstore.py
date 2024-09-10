@@ -277,10 +277,10 @@ class PostgresVectorStore(VectorStore):
         texts: Iterable[str],
         embeddings: List[List[float]],
         metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Add embeddings to the table."""
+        """Add embeddings to the table. Throws an error if Id column data type doesn't match with the ids."""
         if not ids:
             ids = [str(uuid.uuid4()) for _ in texts]
         if not metadatas:
@@ -325,10 +325,10 @@ class PostgresVectorStore(VectorStore):
         self,
         texts: Iterable[str],
         metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Embed texts and add to the table."""
+        """Embed texts and add to the table. Throws an error if Id column data type doesn't match with the ids."""
         embeddings = self.embedding_service.embed_documents(list(texts))
         ids = await self._aadd_embeddings(
             texts, embeddings, metadatas=metadatas, ids=ids, **kwargs
@@ -338,10 +338,10 @@ class PostgresVectorStore(VectorStore):
     async def aadd_documents(
         self,
         documents: List[Document],
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Embed documents and add to the table"""
+        """Embed documents and add to the table. Throws an error if Id column data type doesn't match with the ids."""
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
         ids = await self.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
@@ -351,10 +351,10 @@ class PostgresVectorStore(VectorStore):
         self,
         texts: Iterable[str],
         metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Embed texts and add to the table."""
+        """Embed texts and add to the table. Throws an error if Id column data type doesn't match with the ids."""
         return self.engine._run_as_sync(
             self.aadd_texts(texts, metadatas, ids, **kwargs)
         )
@@ -362,18 +362,18 @@ class PostgresVectorStore(VectorStore):
     def add_documents(
         self,
         documents: List[Document],
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> List[str]:
-        """Embed documents and add to the table."""
+        """Embed documents and add to the table. Throws an error if Id column data type doesn't match with the ids."""
         return self.engine._run_as_sync(self.aadd_documents(documents, ids, **kwargs))
 
     async def adelete(
         self,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
-        """Delete records from the table."""
+        """Delete records from the table. Throws an error if Id column data type doesn't match with the ids."""
         if not ids:
             return False
 
@@ -384,10 +384,10 @@ class PostgresVectorStore(VectorStore):
 
     def delete(
         self,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
-        """Delete records from the table."""
+        """Delete records from the table. Throws an error if Id column data type doesn't match with the ids."""
         return self.engine._run_as_sync(self.adelete(ids, **kwargs))
 
     @classmethod
@@ -399,7 +399,7 @@ class PostgresVectorStore(VectorStore):
         table_name: str,
         schema_name: str = "public",
         metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -416,7 +416,7 @@ class PostgresVectorStore(VectorStore):
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List[str]]): List of IDs to add to table records.
+            ids: (Optional[List]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
@@ -450,7 +450,7 @@ class PostgresVectorStore(VectorStore):
         engine: PostgresEngine,
         table_name: str,
         schema_name: str = "public",
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -468,7 +468,7 @@ class PostgresVectorStore(VectorStore):
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List[str]]): List of IDs to add to table records.
+            ids: (Optional[List]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
@@ -505,7 +505,7 @@ class PostgresVectorStore(VectorStore):
         table_name: str,
         schema_name: str = "public",
         metadatas: Optional[List[dict]] = None,
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -522,7 +522,7 @@ class PostgresVectorStore(VectorStore):
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List[str]]): List of IDs to add to table records.
+            ids: (Optional[List]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
@@ -559,7 +559,7 @@ class PostgresVectorStore(VectorStore):
         engine: PostgresEngine,
         table_name: str,
         schema_name: str = "public",
-        ids: Optional[List[str]] = None,
+        ids: Optional[List] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
         metadata_columns: List[str] = [],
@@ -577,7 +577,7 @@ class PostgresVectorStore(VectorStore):
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List[str]]): List of IDs to add to table records.
+            ids: (Optional[List]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
             metadata_columns (List[str]): Column(s) that represent a document's metadata.
