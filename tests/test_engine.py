@@ -14,22 +14,29 @@
 
 import os
 import uuid
+from typing import Sequence
 
 import asyncpg  # type: ignore
 import pytest
 import pytest_asyncio
 from google.cloud.sql.connector import Connector, IPTypes
 from langchain_core.embeddings import DeterministicFakeEmbedding
-from sqlalchemy import VARCHAR
+from sqlalchemy import VARCHAR, text
+from sqlalchemy.engine import URL
+from sqlalchemy.engine.row import RowMapping
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+DEFAULT_TABLE_SYNC = "test_table" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE_SYNC = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
+host = os.environ["IP_ADDRESS"]
 
 
 def get_env_var(key: str, desc: str) -> str:
@@ -39,7 +46,30 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
-@pytest.mark.asyncio
+async def aexecute(
+    engine: PostgresEngine,
+    query: str,
+) -> None:
+    async def run(engine, query):
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    await engine._run_as_async(run(engine, query))
+
+
+async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
+    async def run(engine, query):
+        async with engine._pool.connect() as conn:
+            result = await conn.execute(text(query))
+            result_map = result.mappings()
+            result_fetch = result_map.fetchall()
+        return result_fetch
+
+    return await engine._run_as_async(run(engine, query))
+
+
+@pytest.mark.asyncio(scope="module")
 class TestEngineAsync:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -69,7 +99,7 @@ class TestEngineAsync:
     def iam_account(self) -> str:
         return get_env_var("IAM_ACCOUNT", "Cloud SQL IAM account email")
 
-    @pytest_asyncio.fixture
+    @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -78,10 +108,9 @@ class TestEngineAsync:
             database=db_name,
         )
         yield engine
-        await engine._engine.dispose()
-
-    async def test_execute(self, engine):
-        await engine._aexecute("SELECT 1")
+        await aexecute(engine, f'DROP TABLE "{CUSTOM_TABLE}"')
+        await aexecute(engine, f'DROP TABLE "{DEFAULT_TABLE}"')
+        await engine.close()
 
     async def test_init_table(self, engine):
         await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
@@ -89,12 +118,7 @@ class TestEngineAsync:
         content = "coffee"
         embedding = await embeddings_service.aembed_query(content)
         stmt = f"INSERT INTO {DEFAULT_TABLE} (langchain_id, content, embedding) VALUES ('{id}', '{content}','{embedding}');"
-        await engine._aexecute(stmt)
-
-    async def test_fetch(self, engine):
-        results = await engine._afetch(f"SELECT * FROM {DEFAULT_TABLE}")
-        assert len(results) > 0
-        await engine._aexecute(f"DROP TABLE {DEFAULT_TABLE}")
+        await aexecute(engine, stmt)
 
     async def test_init_table_custom(self, engine):
         await engine.ainit_vectorstore_table(
@@ -107,7 +131,7 @@ class TestEngineAsync:
             store_metadata=True,
         )
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{CUSTOM_TABLE}';"
-        results = await engine._afetch(stmt)
+        results = await afetch(engine, stmt)
         expected = [
             {"column_name": "uuid", "data_type": "uuid"},
             {"column_name": "my_embedding", "data_type": "USER-DEFINED"},
@@ -118,8 +142,6 @@ class TestEngineAsync:
         ]
         for row in results:
             assert row in expected
-
-        await engine._aexecute(f"DROP TABLE {CUSTOM_TABLE}")
 
     async def test_password(
         self,
@@ -140,7 +162,7 @@ class TestEngineAsync:
             password=password,
         )
         assert engine
-        await engine._aexecute("SELECT 1")
+        await aexecute(engine, "SELECT 1")
         PostgresEngine._connector = None
 
     async def test_from_engine(
@@ -172,7 +194,49 @@ class TestEngineAsync:
             )
 
             engine = PostgresEngine.from_engine(engine)
-            await engine._aexecute("SELECT 1")
+            await aexecute(engine, "SELECT 1")
+            await engine.close()
+
+    async def test_from_engine_args_url(
+        self,
+        db_name,
+        user,
+        password,
+    ):
+        port = "5432"
+        url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+        engine = PostgresEngine.from_engine_args(
+            url,
+            echo=True,
+            poolclass=NullPool,
+        )
+        await aexecute(engine, "SELECT 1")
+        await engine.close()
+
+        engine = PostgresEngine.from_engine_args(
+            URL.create("postgresql+asyncpg", user, password, host, port, db_name)
+        )
+        await aexecute(engine, "SELECT 1")
+        await engine.close()
+
+    async def test_from_engine_args_url_error(
+        self,
+        db_name,
+        user,
+        password,
+    ):
+        port = "5432"
+        url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+        with pytest.raises(TypeError):
+            engine = PostgresEngine.from_engine_args(url, random=False)
+        with pytest.raises(ValueError):
+            PostgresEngine.from_engine_args(
+                f"postgresql+pg8000://{user}:{password}@{host}:{port}/{db_name}",
+            )
+        with pytest.raises(ValueError):
+            PostgresEngine.from_engine_args(
+                URL.create("postgresql+pg8000", user, password, host, port, db_name)
+            )
 
     async def test_column(self, engine):
         with pytest.raises(ValueError):
@@ -187,6 +251,7 @@ class TestEngineAsync:
         db_region,
         db_name,
         iam_account,
+        engine,
     ):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -196,12 +261,11 @@ class TestEngineAsync:
             iam_account_email=iam_account,
         )
         assert engine
-        await engine._aexecute("SELECT 1")
-        await engine._connector.close_async()
-        await engine._engine.dispose()
+        await aexecute(engine, "SELECT 1")
+        await engine.close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(scope="module")
 class TestEngineSync:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -231,8 +295,8 @@ class TestEngineSync:
     def iam_account(self) -> str:
         return get_env_var("IAM_ACCOUNT", "Cloud SQL IAM account email")
 
-    @pytest_asyncio.fixture
-    def engine(self, db_project, db_region, db_instance, db_name):
+    @pytest_asyncio.fixture(scope="class")
+    async def engine(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
@@ -240,27 +304,21 @@ class TestEngineSync:
             database=db_name,
         )
         yield engine
-        engine._engine.dispose()
-
-    async def test_execute(self, engine):
-        engine._execute("SELECT 1")
+        await aexecute(engine, f'DROP TABLE "{CUSTOM_TABLE_SYNC}"')
+        await aexecute(engine, f'DROP TABLE "{DEFAULT_TABLE_SYNC}"')
+        await engine.close()
 
     async def test_init_table(self, engine):
-        engine.init_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        engine.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
         id = str(uuid.uuid4())
         content = "coffee"
         embedding = await embeddings_service.aembed_query(content)
-        stmt = f"INSERT INTO {DEFAULT_TABLE} (langchain_id, content, embedding) VALUES ('{id}', '{content}','{embedding}');"
-        engine._execute(stmt)
-
-    async def test_fetch(self, engine):
-        results = engine._fetch(f"SELECT * FROM {DEFAULT_TABLE}")
-        assert len(results) > 0
-        engine._execute(f"DROP TABLE {DEFAULT_TABLE}")
+        stmt = f"INSERT INTO {DEFAULT_TABLE_SYNC} (langchain_id, content, embedding) VALUES ('{id}', '{content}','{embedding}');"
+        await aexecute(engine, stmt)
 
     async def test_init_table_custom(self, engine):
         engine.init_vectorstore_table(
-            CUSTOM_TABLE,
+            CUSTOM_TABLE_SYNC,
             VECTOR_SIZE,
             id_column="uuid",
             content_column="my-content",
@@ -268,8 +326,8 @@ class TestEngineSync:
             metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
             store_metadata=True,
         )
-        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{CUSTOM_TABLE}';"
-        results = engine._fetch(stmt)
+        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{CUSTOM_TABLE_SYNC}';"
+        results = await afetch(engine, stmt)
         expected = [
             {"column_name": "uuid", "data_type": "uuid"},
             {"column_name": "my_embedding", "data_type": "USER-DEFINED"},
@@ -280,8 +338,6 @@ class TestEngineSync:
         ]
         for row in results:
             assert row in expected
-
-        engine._execute(f"DROP TABLE {CUSTOM_TABLE}")
 
     async def test_password(
         self,
@@ -303,7 +359,7 @@ class TestEngineSync:
             quota_project=db_project,
         )
         assert engine
-        engine._execute("SELECT 1")
+        await aexecute(engine, "SELECT 1")
         PostgresEngine._connector = None
 
     async def test_engine_constructor_key(
@@ -314,13 +370,14 @@ class TestEngineSync:
         with pytest.raises(Exception):
             PostgresEngine(key, engine)
 
-    def test_iam_account_override(
+    async def test_iam_account_override(
         self,
         db_project,
         db_instance,
         db_region,
         db_name,
         iam_account,
+        engine,
     ):
         engine = PostgresEngine.from_instance(
             project_id=db_project,
@@ -330,6 +387,5 @@ class TestEngineSync:
             iam_account_email=iam_account,
         )
         assert engine
-        engine._execute("SELECT 1")
-        engine._connector.close()
-        engine._engine.dispose()
+        await aexecute(engine, "SELECT 1")
+        await engine.close()

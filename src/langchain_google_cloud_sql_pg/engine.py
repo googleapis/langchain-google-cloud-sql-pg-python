@@ -15,25 +15,17 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import Future
 from dataclasses import dataclass
 from threading import Thread
-from typing import (
-    TYPE_CHECKING,
-    Awaitable,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Dict, List, Optional, TypeVar, Union
 
 import aiohttp
 import google.auth  # type: ignore
 import google.auth.transport.requests  # type: ignore
 from google.cloud.sql.connector import Connector, IPTypes, RefreshStrategy
 from sqlalchemy import MetaData, Table, text
-from sqlalchemy.engine.row import RowMapping
+from sqlalchemy.engine import URL
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -114,17 +106,17 @@ class PostgresEngine:
     def __init__(
         self,
         key: object,
-        engine: AsyncEngine,
+        pool: AsyncEngine,
         loop: Optional[asyncio.AbstractEventLoop],
         thread: Optional[Thread],
     ):
         """PostgresEngine constructor.
 
         Args:
-            key(object): Prevent direct constructor usage.
-            engine(AsyncEngine): Async engine connection pool.
+            key (object): Prevent direct constructor usage.
+            pool (AsyncEngine): Async engine connection pool.
             loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
-            thread (Optional[Thread] = None): Thread used to create the engine async.
+            thread (Optional[Thread]): Thread used to create the engine async.
 
         Raises:
             Exception: If the constructor is called directly by the user.
@@ -133,61 +125,9 @@ class PostgresEngine:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods!"
             )
-        self._engine = engine
+        self._pool = pool
         self._loop = loop
         self._thread = thread
-
-    @classmethod
-    def from_instance(
-        cls,
-        project_id: str,
-        region: str,
-        instance: str,
-        database: str,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
-        quota_project: Optional[str] = None,
-        iam_account_email: Optional[str] = None,
-    ) -> PostgresEngine:
-        """Create a PostgresEngine from a Postgres instance.
-
-        Args:
-            project_id (str): GCP project ID.
-            region (str): Postgres instance region.
-            instance (str): Postgres instance name.
-            database (str): Database name.
-            user (Optional[str], optional): Postgres user name. Defaults to None.
-            password (Optional[str], optional): Postgres user password. Defaults to None.
-            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
-            quota_project (Optional[str]): Project that provides quota for API calls.
-            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
-
-        Returns:
-            PostgresEngine: A newly created PostgresEngine instance.
-        """
-        # Running a loop in a background thread allows us to support
-        # async methods from non-async environments
-        if cls._default_loop is None:
-            cls._default_loop = asyncio.new_event_loop()
-            cls._default_thread = Thread(
-                target=cls._default_loop.run_forever, daemon=True
-            )
-            cls._default_thread.start()
-        coro = cls._create(
-            project_id,
-            region,
-            instance,
-            database,
-            ip_type,
-            user,
-            password,
-            loop=cls._default_loop,
-            thread=cls._default_thread,
-            quota_project=quota_project,
-            iam_account_email=iam_account_email,
-        )
-        return asyncio.run_coroutine_threadsafe(coro, cls._default_loop).result()
 
     @classmethod
     async def _create(
@@ -211,13 +151,13 @@ class PostgresEngine:
             region (str): Postgres instance region.
             instance (str): Postgres instance name.
             database (str): Database name.
-            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
-            user (Optional[str], optional): Postgres user name. Defaults to None.
-            password (Optional[str], optional): Postgres user password. Defaults to None.
+            ip_type (Union[str, IPTypes]): IP address type. Defaults to IPTypes.PUBLIC.
+            user (Optional[str]): Postgres user name. Defaults to None.
+            password (Optional[str]): Postgres user password. Defaults to None.
             loop (Optional[asyncio.AbstractEventLoop]): Async event loop used to create the engine.
-            thread (Optional[Thread] = None): Thread used to create the engine async.
+            thread (Optional[Thread]): Thread used to create the engine async.
             quota_project (Optional[str]): Project that provides quota for API calls.
-            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
+            iam_account_email (Optional[str]): IAM service account email. Defaults to None.
 
         Raises:
             ValueError: If only one of `user` and `password` is specified.
@@ -275,6 +215,84 @@ class PostgresEngine:
         return cls(cls.__create_key, engine, loop, thread)
 
     @classmethod
+    def __start_background_loop(
+        cls,
+        project_id: str,
+        region: str,
+        instance: str,
+        database: str,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
+        quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
+    ) -> Future:
+        # Running a loop in a background thread allows us to support
+        # async methods from non-async environments
+        if cls._default_loop is None:
+            cls._default_loop = asyncio.new_event_loop()
+            cls._default_thread = Thread(
+                target=cls._default_loop.run_forever, daemon=True
+            )
+            cls._default_thread.start()
+        coro = cls._create(
+            project_id,
+            region,
+            instance,
+            database,
+            ip_type,
+            user,
+            password,
+            loop=cls._default_loop,
+            thread=cls._default_thread,
+            quota_project=quota_project,
+            iam_account_email=iam_account_email,
+        )
+        return asyncio.run_coroutine_threadsafe(coro, cls._default_loop)
+
+    @classmethod
+    def from_instance(
+        cls,
+        project_id: str,
+        region: str,
+        instance: str,
+        database: str,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        ip_type: Union[str, IPTypes] = IPTypes.PUBLIC,
+        quota_project: Optional[str] = None,
+        iam_account_email: Optional[str] = None,
+    ) -> PostgresEngine:
+        """Create a PostgresEngine from a Postgres instance.
+
+        Args:
+            project_id (str): GCP project ID.
+            region (str): Postgres instance region.
+            instance (str): Postgres instance name.
+            database (str): Database name.
+            user (Optional[str], optional): Postgres user name. Defaults to None.
+            password (Optional[str], optional): Postgres user password. Defaults to None.
+            ip_type (Union[str, IPTypes], optional): IP address type. Defaults to IPTypes.PUBLIC.
+            quota_project (Optional[str]): Project that provides quota for API calls.
+            iam_account_email (Optional[str], optional): IAM service account email. Defaults to None.
+
+        Returns:
+            PostgresEngine: A newly created PostgresEngine instance.
+        """
+        future = cls.__start_background_loop(
+            project_id,
+            region,
+            instance,
+            database,
+            user,
+            password,
+            ip_type,
+            quota_project=quota_project,
+            iam_account_email=iam_account_email,
+        )
+        return future.result()
+
+    @classmethod
     async def afrom_instance(
         cls,
         project_id: str,
@@ -303,73 +321,87 @@ class PostgresEngine:
         Returns:
             PostgresEngine: A newly created PostgresEngine instance.
         """
-        return await cls._create(
+        future = cls.__start_background_loop(
             project_id,
             region,
             instance,
             database,
-            ip_type,
             user,
             password,
+            ip_type,
             quota_project=quota_project,
             iam_account_email=iam_account_email,
         )
+        return await asyncio.wrap_future(future)
 
     @classmethod
-    def from_engine(cls, engine: AsyncEngine) -> PostgresEngine:
+    def from_engine(
+        cls,
+        engine: AsyncEngine,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+    ) -> PostgresEngine:
         """Create an PostgresEngine instance from an AsyncEngine."""
-        return cls(cls.__create_key, engine, None, None)
+        return cls(cls.__create_key, engine, loop, None)
 
-    async def _aexecute(self, query: str, params: Optional[dict] = None) -> None:
-        """Execute a SQL query."""
-        async with self._engine.connect() as conn:
-            await conn.execute(text(query), params)
-            await conn.commit()
+    @classmethod
+    def from_engine_args(
+        cls,
+        url: Union[str | URL],
+        **kwargs: Any,
+    ) -> PostgresEngine:
+        """Create an PostgresEngine instance from arguments. These parameters are pass directly into sqlalchemy's create_async_engine function.
 
-    async def _aexecute_outside_tx(self, query: str) -> None:
-        """Execute a SQL query in a new transaction."""
-        async with self._engine.connect() as conn:
-            await conn.execute(text("COMMIT"))
-            await conn.execute(text(query))
+        Args:
+            url (Union[str | URL]): the URL used to connect to a database
+            **kwargs (Any, optional): sqlalchemy `create_async_engine` arguments
 
-    async def _afetch(
-        self, query: str, params: Optional[dict] = None
-    ) -> Sequence[RowMapping]:
-        """Fetch results from a SQL query."""
-        async with self._engine.connect() as conn:
-            result = await conn.execute(text(query), params)
-            result_map = result.mappings()
-            result_fetch = result_map.fetchall()
+        Raises:
+            ValueError: If `postgresql+asyncpg` is not specified as the PG driver
 
-        return result_fetch
+        Returns:
+            PostgresEngine
+        """
+        # Running a loop in a background thread allows us to support
+        # async methods from non-async environments
+        if cls._default_loop is None:
+            cls._default_loop = asyncio.new_event_loop()
+            cls._default_thread = Thread(
+                target=cls._default_loop.run_forever, daemon=True
+            )
+            cls._default_thread.start()
 
-    async def _afetch_with_query_options(
-        self, query: str, query_options: str
-    ) -> Sequence[RowMapping]:
-        """Set temporary database flags and fetch results from a SQL query."""
-        async with self._engine.connect() as conn:
-            await conn.execute(text(query_options))
-            result = await conn.execute(text(query))
-            result_map = result.mappings()
-            result_fetch = result_map.fetchall()
+        driver = "postgresql+asyncpg"
+        if (isinstance(url, str) and not url.startswith(driver)) or (
+            isinstance(url, URL) and url.drivername != driver
+        ):
+            raise ValueError("Driver must be type 'postgresql+asyncpg'")
 
-        return result_fetch
+        engine = create_async_engine(url, **kwargs)
+        return cls(cls.__create_key, engine, cls._default_loop, cls._default_thread)
 
-    def _execute(self, query: str, params: Optional[dict] = None) -> None:
-        """Execute a SQL query."""
-        return self._run_as_sync(self._aexecute(query, params))
-
-    def _fetch(self, query: str, params: Optional[dict] = None) -> Sequence[RowMapping]:
-        """Fetch results from a SQL query."""
-        return self._run_as_sync(self._afetch(query, params))
+    async def _run_as_async(self, coro: Awaitable[T]) -> T:
+        """Run an async coroutine asynchronously"""
+        # If a loop has not been provided, attempt to run in current thread
+        if not self._loop:
+            return await coro
+        # Otherwise, run in the background thread
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, self._loop)
+        )
 
     def _run_as_sync(self, coro: Awaitable[T]) -> T:
         """Run an async coroutine synchronously"""
         if not self._loop:
-            raise Exception("Engine was initialized async.")
+            raise Exception(
+                "Engine was initialized without a background loop and cannot call sync methods."
+            )
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
-    async def ainit_vectorstore_table(
+    async def close(self) -> None:
+        """Dispose of connection pool"""
+        await self._pool.dispose()
+
+    async def _ainit_vectorstore_table(
         self,
         table_name: str,
         vector_size: int,
@@ -407,10 +439,16 @@ class PostgresEngine:
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists and overwrite flag is not set.
         """
-        await self._aexecute("CREATE EXTENSION IF NOT EXISTS vector")
+        async with self._pool.connect() as conn:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            await conn.commit()
 
         if overwrite_existing:
-            await self._aexecute(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"')
+            async with self._pool.connect() as conn:
+                await conn.execute(
+                    text(f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"')
+                )
+                await conn.commit()
 
         query = f"""CREATE TABLE "{schema_name}"."{table_name}"(
             "{id_column}" UUID PRIMARY KEY,
@@ -423,7 +461,59 @@ class PostgresEngine:
             query += f""",\n"{metadata_json_column}" JSON"""
         query += "\n);"
 
-        await self._aexecute(query)
+        async with self._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    async def ainit_vectorstore_table(
+        self,
+        table_name: str,
+        vector_size: int,
+        schema_name: str = "public",
+        content_column: str = "content",
+        embedding_column: str = "embedding",
+        metadata_columns: List[Column] = [],
+        metadata_json_column: str = "langchain_metadata",
+        id_column: str = "langchain_id",
+        overwrite_existing: bool = False,
+        store_metadata: bool = True,
+    ) -> None:
+        """
+        Create a table for saving of vectors to be used with PostgresVectorStore.
+
+        Args:
+            table_name (str): The Postgres database table name.
+            vector_size (int): Vector size for the embedding model to be used.
+            schema_name (str): The schema name to store Postgres database table.
+                Default: "public".
+            content_column (str): Name of the column to store document content.
+                Default: "page_content".
+            embedding_column (str) : Name of the column to store vector embeddings.
+                Default: "embedding".
+            metadata_columns (List[Column]): A list of Columns to create for custom
+                metadata. Default: []. Optional.
+            metadata_json_column (str): The column to store extra metadata in JSON format.
+                Default: "langchain_metadata". Optional.
+            id_column (str):  Name of the column to store ids.
+                Default: "langchain_id". Optional,
+            overwrite_existing (bool): Whether to drop existing table. Default: False.
+            store_metadata (bool): Whether to store metadata in the table.
+                Default: True.
+        """
+        await self._run_as_async(
+            self._ainit_vectorstore_table(
+                table_name,
+                vector_size,
+                schema_name,
+                content_column,
+                embedding_column,
+                metadata_columns,
+                metadata_json_column,
+                id_column,
+                overwrite_existing,
+                store_metadata,
+            )
+        )
 
     def init_vectorstore_table(
         self,
@@ -460,8 +550,8 @@ class PostgresEngine:
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
         """
-        return self._run_as_sync(
-            self.ainit_vectorstore_table(
+        self._run_as_sync(
+            self._ainit_vectorstore_table(
                 table_name,
                 vector_size,
                 schema_name,
@@ -475,7 +565,7 @@ class PostgresEngine:
             )
         )
 
-    async def ainit_chat_history_table(
+    async def _ainit_chat_history_table(
         self, table_name: str, schema_name: str = "public"
     ) -> None:
         """Create a Cloud SQL table to store chat history.
@@ -494,7 +584,24 @@ class PostgresEngine:
             data JSONB NOT NULL,
             type TEXT NOT NULL
         );"""
-        await self._aexecute(create_table_query)
+        async with self._pool.connect() as conn:
+            await conn.execute(text(create_table_query))
+            await conn.commit()
+
+    async def ainit_chat_history_table(
+        self, table_name: str, schema_name: str = "public"
+    ) -> None:
+        """Create a Cloud SQL table to store chat history.
+
+        Args:
+            table_name (str): Table name to store chat history.
+
+        Returns:
+            None
+        """
+        await self._run_as_async(
+            self._ainit_chat_history_table(table_name, schema_name)
+        )
 
     def init_chat_history_table(
         self, table_name: str, schema_name: str = "public"
@@ -509,12 +616,36 @@ class PostgresEngine:
         Returns:
             None
         """
-        return self._run_as_sync(
-            self.ainit_chat_history_table(
+        self._run_as_sync(
+            self._ainit_chat_history_table(
                 table_name,
                 schema_name,
             )
         )
+
+    async def _ainit_document_table(
+        self,
+        table_name: str,
+        schema_name: str = "public",
+        content_column: str = "page_content",
+        metadata_columns: List[Column] = [],
+        metadata_json_column: str = "langchain_metadata",
+        store_metadata: bool = True,
+    ) -> None:
+        query = f"""CREATE TABLE "{schema_name}"."{table_name}"(
+            {content_column} TEXT NOT NULL
+            """
+        for column in metadata_columns:
+            nullable = "NOT NULL" if not column.nullable else ""
+            query += f',\n"{column.name}" {column.data_type} {nullable}'
+        metadata_json_column = metadata_json_column or "langchain_metadata"
+        if store_metadata:
+            query += f',\n"{metadata_json_column}" JSON'
+        query += "\n);"
+
+        async with self._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
 
     async def ainit_document_table(
         self,
@@ -544,19 +675,16 @@ class PostgresEngine:
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
-
-        query = f"""CREATE TABLE "{schema_name}"."{table_name}"(
-            {content_column} TEXT NOT NULL
-            """
-        for column in metadata_columns:
-            nullable = "NOT NULL" if not column.nullable else ""
-            query += f',\n"{column.name}" {column.data_type} {nullable}'
-        metadata_json_column = metadata_json_column or "langchain_metadata"
-        if store_metadata:
-            query += f',\n"{metadata_json_column}" JSON'
-        query += "\n);"
-
-        await self._aexecute(query)
+        await self._run_as_async(
+            self._ainit_document_table(
+                table_name,
+                schema_name,
+                content_column,
+                metadata_columns,
+                metadata_json_column,
+                store_metadata,
+            )
+        )
 
     def init_document_table(
         self,
@@ -575,13 +703,19 @@ class PostgresEngine:
             schema_name (str): The schema name to store PgSQL database table.
                 Default: "public".
             content_column (str): Name of the column to store document content.
+                Default: "page_content".
             metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
                 to create for custom metadata. Optional.
+            metadata_json_column (str): The column to store extra metadata in JSON format.
+                Default: "langchain_metadata". Optional.
             store_metadata (bool): Whether to store extra metadata in a metadata column
                 if not described in 'metadata' field list (Default: True).
+
+        Raises:
+            :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists.
         """
-        return self._run_as_sync(
-            self.ainit_document_table(
+        self._run_as_sync(
+            self._ainit_document_table(
                 table_name,
                 schema_name,
                 content_column,
@@ -602,7 +736,7 @@ class PostgresEngine:
             (sqlalchemy.Table): The loaded table.
         """
         metadata = MetaData()
-        async with self._engine.connect() as conn:
+        async with self._pool.connect() as conn:
             try:
                 await conn.run_sync(
                     metadata.reflect, schema=schema_name, only=[table_name]
