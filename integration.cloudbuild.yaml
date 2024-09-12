@@ -29,8 +29,8 @@ steps:
     args:
       - -c
       - |
-        wget -O /workspace/cloud_sql_proxy https://storage.googleapis.com/cloudsql-proxy/v1.37.0/cloud_sql_proxy.linux.386
-        chmod +x /workspace/cloud_sql_proxy
+        wget -O /workspace/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.13.0/cloud-sql-proxy.linux.386
+        chmod +x /workspace/cloud-sql-proxy
 
   - id: Run integration tests
     name: python:${_VERSION}
@@ -45,7 +45,7 @@ steps:
     args:
       - "-c"
       - |
-        /workspace/cloud_sql_proxy -dir=/workspace -instances=${_INSTANCE_CONNECTION_NAME}=tcp:$_IP_ADDRESS:$_DATABASE_PORT  & sleep 2;
+        /workspace/cloud-sql-proxy ${_INSTANCE_CONNECTION_NAME} --port $_DATABASE_PORT  & sleep 2;
         python -m pytest --cov=langchain_google_cloud_sql_pg --cov-config=.coveragerc tests/
 
 availableSecrets:
