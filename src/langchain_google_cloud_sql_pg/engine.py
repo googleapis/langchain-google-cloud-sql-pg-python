@@ -553,7 +553,7 @@ class PostgresEngine:
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
         Raises:
-            :class:`UndefinedObjectError <asyncpg.exceptions.UndefinedObjectError>`: if id column data type is invalid.
+            :class:`UndefinedObjectError <asyncpg.exceptions.UndefinedObjectError>`: if the `ids` data type does not match that of the `id_column`.
         """
         self._run_as_sync(
             self._ainit_vectorstore_table(
