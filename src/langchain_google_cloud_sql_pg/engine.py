@@ -483,7 +483,6 @@ class PostgresEngine:
     ) -> None:
         """
         Create a table for saving of vectors to be used with PostgresVectorStore.
-        If id column data type is invalid, an UNDEFINED_OBJECT_ERROR is thrown.
 
         Args:
             table_name (str): The Postgres database table name.
