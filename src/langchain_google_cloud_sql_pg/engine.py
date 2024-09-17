@@ -410,7 +410,7 @@ class PostgresEngine:
         embedding_column: str = "embedding",
         metadata_columns: List[Column] = [],
         metadata_json_column: str = "langchain_metadata",
-        id_column: str = "langchain_id",
+        id_column: Union[str, Column] = "langchain_id",
         overwrite_existing: bool = False,
         store_metadata: bool = True,
     ) -> None:
@@ -430,14 +430,14 @@ class PostgresEngine:
                 metadata. Default: []. Optional.
             metadata_json_column (str): The column to store extra metadata in JSON format.
                 Default: "langchain_metadata". Optional.
-            id_column (str):  Name of the column to store ids.
-                Default: "langchain_id". Optional,
+            id_column (Union[str, Column]) : Column to store ids.
+                Default: "langchain_id" column name with data type UUID. Optional.
             overwrite_existing (bool): Whether to drop existing table. Default: False.
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
-
         Raises:
             :class:`DuplicateTableError <asyncpg.exceptions.DuplicateTableError>`: if table already exists and overwrite flag is not set.
+            :class:`UndefinedObjectError <asyncpg.exceptions.UndefinedObjectError>`: if the data type of the id column is not a postgreSQL data type.
         """
         async with self._pool.connect() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
@@ -450,8 +450,11 @@ class PostgresEngine:
                 )
                 await conn.commit()
 
+        id_data_type = "UUID" if isinstance(id_column, str) else id_column.data_type
+        id_column_name = id_column if isinstance(id_column, str) else id_column.name
+
         query = f"""CREATE TABLE "{schema_name}"."{table_name}"(
-            "{id_column}" UUID PRIMARY KEY,
+            "{id_column_name}" {id_data_type} PRIMARY KEY,
             "{content_column}" TEXT NOT NULL,
             "{embedding_column}" vector({vector_size}) NOT NULL"""
         for column in metadata_columns:
@@ -474,7 +477,7 @@ class PostgresEngine:
         embedding_column: str = "embedding",
         metadata_columns: List[Column] = [],
         metadata_json_column: str = "langchain_metadata",
-        id_column: str = "langchain_id",
+        id_column: Union[str, Column] = "langchain_id",
         overwrite_existing: bool = False,
         store_metadata: bool = True,
     ) -> None:
@@ -494,8 +497,8 @@ class PostgresEngine:
                 metadata. Default: []. Optional.
             metadata_json_column (str): The column to store extra metadata in JSON format.
                 Default: "langchain_metadata". Optional.
-            id_column (str):  Name of the column to store ids.
-                Default: "langchain_id". Optional,
+            id_column (Union[str, Column]) : Column to store ids.
+                Default: "langchain_id" column name with data type UUID. Optional.
             overwrite_existing (bool): Whether to drop existing table. Default: False.
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
@@ -524,7 +527,7 @@ class PostgresEngine:
         embedding_column: str = "embedding",
         metadata_columns: List[Column] = [],
         metadata_json_column: str = "langchain_metadata",
-        id_column: str = "langchain_id",
+        id_column: Union[str, Column] = "langchain_id",
         overwrite_existing: bool = False,
         store_metadata: bool = True,
     ) -> None:
@@ -544,11 +547,13 @@ class PostgresEngine:
                 metadata. Default: []. Optional.
             metadata_json_column (str): The column to store extra metadata in JSON format.
                 Default: "langchain_metadata". Optional.
-            id_column (str):  Name of the column to store ids.
-                Default: "langchain_id". Optional,
+            id_column (Union[str, Column]) : Column to store ids.
+                Default: "langchain_id" column name with data type UUID. Optional.
             overwrite_existing (bool): Whether to drop existing table. Default: False.
             store_metadata (bool): Whether to store metadata in the table.
                 Default: True.
+        Raises:
+            :class:`UndefinedObjectError <asyncpg.exceptions.UndefinedObjectError>`: if the `ids` data type does not match that of the `id_column`.
         """
         self._run_as_sync(
             self._ainit_vectorstore_table(
