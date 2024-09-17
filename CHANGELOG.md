@@ -27,10 +27,6 @@
 * Update sample python notebooks to reflect the support for custom schema. ([#204](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/204)) ([7ef9335](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/7ef9335a45578273e9ffc0921f60a1c6cc3e89ed))
 
 
-### Miscellaneous Chores
-
-* Release 0.10.0 ([#210](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/210)) ([9709a9a](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/9709a9aa686f79698cbf4cd0b8a43fab4a9eb90d))
-
 ## [0.9.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.8.0...v0.9.0) (2024-09-05)
 
 
