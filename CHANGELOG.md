@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.10.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.9.0...v0.10.0) (2024-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* support async and sync versions of indexing methods
+* remove _aexecute(), _execute(), _afetch(), and _fetch() methods
+
+### Features
+
+* Add from_engine_args method ([de16842](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/de168427f9884f33332086b68308e1225ee9e952))
+* Add support for sync from_engine ([de16842](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/de168427f9884f33332086b68308e1225ee9e952))
+* Allow non-uuid data types for vectorstore primary key ([#209](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/209)) ([ffaa87f](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/ffaa87fd864d1c3ffeb00a34370af9e986a37cf5))
+* Refactor to support both async and sync usage ([de16842](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/de168427f9884f33332086b68308e1225ee9e952))
+
+
+### Bug Fixes
+
+* Replacing cosine_similarity and maximal_marginal_relevance local methods with the ones in langchain core. ([#190](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/190)) ([7f27092](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/7f2709225a1a5a71b33522dafd354dc7159c358f))
+* Support async and sync versions of indexing methods ([de16842](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/de168427f9884f33332086b68308e1225ee9e952))
+* Updating the minimum langchain core version to 0.2.36 ([#205](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/205)) ([0651231](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/0651231b7d77e0451ae769f78fe6dce3e724dec4))
+
+
+### Documentation
+
+* Update sample python notebooks to reflect the support for custom schema. ([#204](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/204)) ([7ef9335](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/7ef9335a45578273e9ffc0921f60a1c6cc3e89ed))
+
+
 ## [0.9.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.8.0...v0.9.0) (2024-09-05)
 
 
