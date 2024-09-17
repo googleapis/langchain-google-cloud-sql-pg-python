@@ -6,6 +6,7 @@
 ### ⚠ BREAKING CHANGES
 
 * support async and sync versions of indexing methods
+* remove _aexecute(), _execute(), _afetch(), and _fetch() methods
 
 ### Features
 
