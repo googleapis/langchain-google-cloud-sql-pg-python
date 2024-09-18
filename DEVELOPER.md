@@ -28,7 +28,7 @@ Learn more by reading [How should I write my commits?](https://github.com/google
 
 Notes:
 
-* Tests use both IAM and built-in authentication. 
+* Tests use both IAM and built-in authentication.
   * Learn how to set up a built-in databases user at [Cloud SQL built-in database authentication](https://cloud.google.com/sql/docs/postgres/built-in-authentication).
   * Local tests will run against your `gcloud` credentials. Use `gcloud` to login with your personal account or a service account. This account will be used to run IAM tests. Learn how to set up access to the database at [Manage users with IAM database authentication](https://cloud.google.com/sql/docs/postgres/add-manage-iam-users). The "IAM_ACCOUNT" environment variable is also used to test authentication to override the local account. A personal account or a service account can be used for this test.
   * You may need to grant access to the public schema for your new database user: `GRANT ALL ON SCHEMA public TO myaccount@example.com;`
@@ -42,11 +42,11 @@ These tests are registered as required tests in `.github/sync-repo-settings.yaml
 
 #### Trigger Setup
 
-Cloud Build triggers (for Python versions 3.8 to 3.11) were created with the following specs:
+Cloud Build triggers (for Python versions 3.9 to 3.11) were created with the following specs:
 
 ```YAML
-name: pg-integration-test-pr-py38
-description: Run integration tests on PR for Python 3.8
+name: pg-integration-test-pr-py39
+description: Run integration tests on PR for Python 3.9
 filename: integration.cloudbuild.yaml
 github:
   name: langchain-google-cloud-sql-pg-python
@@ -64,7 +64,7 @@ substitutions:
   _DATABASE_ID: <ADD_VALUE>
   _INSTANCE_ID: <ADD_VALUE>
   _REGION: us-central1
-  _VERSION: "3.8"
+  _VERSION: "3.9"
 ```
 
 Use `gcloud builds triggers import --source=trigger.yaml` to create triggers via the command line
@@ -89,7 +89,7 @@ To run Cloud Build tests on GitHub from external contributors, ie RenovateBot, c
 #### Code Coverage
 Please make sure your code is fully tested. The Cloud Build integration tests are run with the `pytest-cov` code coverage plugin. They fail for PRs with a code coverage less than the threshold specified in `.coveragerc`.  If your file is inside the main module and should be ignored by code coverage check, add it to the `omit` section of `.coveragerc`.
 
-Check for code coverage report in any Cloud Build integration test log. 
+Check for code coverage report in any Cloud Build integration test log.
 Here is a breakdown of the report:
 - `Stmts`:  lines of executable code (statements).
 - `Miss`: number of lines not covered by tests.
