@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
-import os
 import uuid
 
 from config import (
@@ -43,7 +42,9 @@ async def create_databases():
         password=PASSWORD,
     )
     async with engine._pool.connect() as conn:
+        await conn.execute(text("COMMIT"))
         await conn.execute(text(f'DROP DATABASE IF EXISTS "{DATABASE}"'))
+        await conn.execute(text("COMMIT"))
         await conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
     await engine.close()
     await engine._connector.close_async()
