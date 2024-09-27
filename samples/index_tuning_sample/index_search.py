@@ -81,7 +81,10 @@ async def query_vector_with_timing(vector_store, query):
 
 async def hnsw_search(vector_store, knn_docs):
     hnsw_index = HNSWIndex(
-        name="hnsw", distance_strategy=DISTANCE_STRATEGY, m=36, ef_construction=96
+        name="hnsw",
+        distance_strategy=DISTANCE_STRATEGY,
+        m=36,
+        ef_construction=96,
     )
     await vector_store.aapply_vector_index(hnsw_index)
     assert await vector_store.is_valid_index(hnsw_index.name)
@@ -156,6 +159,8 @@ async def main():
     print(
         f"IVFFLAT average recall: {ivfflat_average_recall}    IVFFLAT latency: {ivfflat_average_latency}"
     )
+    await vector_store._engine.close()
+    await vector_store._engine._connector.close()
 
 
 if __name__ == "__main__":
