@@ -44,10 +44,8 @@ async def create_databases():
     async with engine._pool.connect() as conn:
         await conn.execute(text("COMMIT"))
         await conn.execute(text(f'DROP DATABASE IF EXISTS "{DATABASE}"'))
-        await conn.execute(text("COMMIT"))
         await conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
     await engine.close()
-    await engine._connector.close_async()
 
 
 async def create_vectorstore():
@@ -72,9 +70,13 @@ async def create_vectorstore():
     )
     project_number = res.name.split("/")[1]
     IAM_USER = f"service-{project_number}@gcp-sa-aiplatform-re.iam"
-    async with engine._pool.connect() as conn:
-        await conn.execute(text(f'GRANT SELECT ON {TABLE_NAME} TO "{IAM_USER}";'))
-        await conn.commit()
+
+    async def grant_select(engine):
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(f'GRANT SELECT ON {TABLE_NAME} TO "{IAM_USER}";'))
+            await conn.commit()
+
+    await engine._run_as_async(grant_select(engine))
 
     metadata = [
         "show_id",
@@ -100,7 +102,6 @@ async def create_vectorstore():
     ids = [str(uuid.uuid4()) for i in range(len(docs))]
     await vector_store.aadd_documents(docs, ids=ids)
     await engine.close()
-    await engine._connector.close_async()
 
 
 async def main():

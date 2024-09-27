@@ -43,6 +43,7 @@ async def delete_tables():
     )
 
     async with engine._pool.connect() as conn:
+        await conn.execute(text("COMMIT"))
         await conn.execute(text(f"DROP TABLE IF EXISTS {TABLE_NAME}"))
         await conn.execute(text(f"DROP TABLE IF EXISTS {CHAT_TABLE_NAME}"))
     await engine.close()
