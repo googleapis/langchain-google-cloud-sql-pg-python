@@ -101,7 +101,6 @@ async def create_vectorstore():
 
     ids = [str(uuid.uuid4()) for i in range(len(docs))]
     await vector_store.aadd_documents(docs, ids=ids)
-    await engine.close()
 
 
 async def main():
