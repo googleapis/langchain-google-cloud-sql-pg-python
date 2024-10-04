@@ -106,6 +106,8 @@ async def create_vector_store_table(documents):
     ids = [str(uuid.uuid4()) for i in range(len(documents))]
     await vector_store.aadd_documents(documents, ids)
     print("Vector table created.")
+    await engine.close()
+    await engine._connector.close()
 
 
 async def main():
