@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.10.0...v0.11.0) (2024-10-04)
+
+
+### Features
+
+* Remove support for Python 3.8 ([#216](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/216)) ([1737adc](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/1737adc696e725488af860d031a22f6e6b66171b))
+
 ## [0.10.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.9.0...v0.10.0) (2024-09-17)
 
 
