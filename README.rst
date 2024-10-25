@@ -3,6 +3,9 @@ Cloud SQL for PostgreSQL for LangChain
 
 |preview| |pypi| |versions|
 
+- `Client Library Documentation`_
+- `Product Documentation`_
+
 The **Cloud SQL for PostgreSQL for LangChain** package provides a first class experience for connecting to
 Cloud SQL instances from the LangChain ecosystem while providing the following benefits:
 
@@ -10,9 +13,6 @@ Cloud SQL instances from the LangChain ecosystem while providing the following b
 - **Improved performance & Simplified management**: use a single-table schema can lead to faster query execution, especially for large collections.
 - **Improved metadata handling**: store metadata in columns instead of JSON, resulting in significant performance improvements.
 - **Clear separation**: clearly separate table and extension creation, allowing for distinct permissions and streamlined workflows.
-
-- `Client Library Documentation`_
-- `Product Documentation`_
 
 .. |preview| image:: https://img.shields.io/badge/support-preview-orange.svg
    :target: https://github.com/googleapis/google-cloud-python/blob/main/README.rst#stability-levels
