@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.11.0...v0.11.1) (2024-11-15)
+
+
+### Documentation
+
+* Add benefits to readme ([#224](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/224)) ([f791be0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/f791be05ea32a0da473562a63f43dcd18c00d399))
+* Adding a readme to itemise sample notebooks. ([#225](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/225)) ([4ce8be3](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/4ce8be3d43c5d0825859f21352131a71a62105af))
+
 ## [0.11.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.10.0...v0.11.0) (2024-10-04)
 
 
