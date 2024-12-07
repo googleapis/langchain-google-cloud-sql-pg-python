@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from typing import List
 
 import vertexai  # type: ignore
 from config import (
@@ -38,14 +37,14 @@ from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 engine = None  # Use global variable to share connection pooling
 
 
-def similarity_search(query: str) -> List[Document]:
+def similarity_search(query: str) -> list[Document]:
     """Searches and returns movies.
 
     Args:
       query: The user query to search for related items
 
     Returns:
-      List[Document]: A list of Documents
+      list[Document]: A list of Documents
     """
     global engine
     if not engine:  # Reuse connection pool

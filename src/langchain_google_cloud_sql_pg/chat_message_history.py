@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import List, Sequence
+from typing import Sequence
 
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict
@@ -107,7 +107,7 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         return cls(cls.__create_key, engine, history)
 
     @property  # type: ignore[override]
-    def messages(self) -> List[BaseMessage]:
+    def messages(self) -> list[BaseMessage]:
         """The abstraction required a property."""
         return self._engine._run_as_sync(self._history._aget_messages())
 

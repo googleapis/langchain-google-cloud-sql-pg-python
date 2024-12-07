@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, AsyncIterator, Callable, Dict, Iterable, List, Optional
+from typing import Any, AsyncIterator, Callable, Iterable, Optional
 
 from langchain_core.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
@@ -28,24 +28,24 @@ DEFAULT_CONTENT_COL = "page_content"
 DEFAULT_METADATA_COL = "langchain_metadata"
 
 
-def text_formatter(row: dict, content_columns: List[str]) -> str:
+def text_formatter(row: dict, content_columns: list[str]) -> str:
     """txt document formatter."""
     return " ".join(str(row[column]) for column in content_columns if column in row)
 
 
-def csv_formatter(row: dict, content_columns: List[str]) -> str:
+def csv_formatter(row: dict, content_columns: list[str]) -> str:
     """CSV document formatter."""
     return ", ".join(str(row[column]) for column in content_columns if column in row)
 
 
-def yaml_formatter(row: dict, content_columns: List[str]) -> str:
+def yaml_formatter(row: dict, content_columns: list[str]) -> str:
     """YAML document formatter."""
     return "\n".join(
         f"{column}: {str(row[column])}" for column in content_columns if column in row
     )
 
 
-def json_formatter(row: dict, content_columns: List[str]) -> str:
+def json_formatter(row: dict, content_columns: list[str]) -> str:
     """JSON document formatter."""
     dictionary = {}
     for column in content_columns:
@@ -63,7 +63,7 @@ def _parse_doc_from_row(
 ) -> Document:
     """Parse row into document."""
     page_content = formatter(row, content_columns)
-    metadata: Dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
     # unnest metadata from langchain_metadata column
     if metadata_json_column and row.get(metadata_json_column):
         for k, v in row[metadata_json_column].items():
@@ -81,10 +81,10 @@ def _parse_row_from_doc(
     column_names: Iterable[str],
     content_column: str = DEFAULT_CONTENT_COL,
     metadata_json_column: Optional[str] = DEFAULT_METADATA_COL,
-) -> Dict:
+) -> dict:
     """Parse document into a dictionary of rows."""
     doc_metadata = doc.metadata.copy()
-    row: Dict[str, Any] = {content_column: doc.page_content}
+    row: dict[str, Any] = {content_column: doc.page_content}
     for entry in doc.metadata:
         if entry in column_names:
             row[entry] = doc_metadata[entry]
@@ -111,8 +111,8 @@ class AsyncPostgresLoader(BaseLoader):
         key: object,
         pool: AsyncEngine,
         query: str,
-        content_columns: List[str],
-        metadata_columns: List[str],
+        content_columns: list[str],
+        metadata_columns: list[str],
         formatter: Callable,
         metadata_json_column: Optional[str] = None,
     ) -> None:
@@ -122,8 +122,8 @@ class AsyncPostgresLoader(BaseLoader):
             key (object): Prevent direct constructor usage.
             engine (PostgresEngine): AsyncEngine with pool connection to the postgres database
             query (Optional[str], optional): SQL query. Defaults to None.
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
+            content_columns (Optional[list[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[list[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
             formatter (Optional[Callable], optional): A function to format page content (OneOf: format, formatter). Defaults to None.
             metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
 
@@ -150,8 +150,8 @@ class AsyncPostgresLoader(BaseLoader):
         query: Optional[str] = None,
         table_name: Optional[str] = None,
         schema_name: str = "public",
-        content_columns: Optional[List[str]] = None,
-        metadata_columns: Optional[List[str]] = None,
+        content_columns: Optional[list[str]] = None,
+        metadata_columns: Optional[list[str]] = None,
         metadata_json_column: Optional[str] = None,
         format: Optional[str] = None,
         formatter: Optional[Callable] = None,
@@ -163,8 +163,8 @@ class AsyncPostgresLoader(BaseLoader):
             query (Optional[str], optional): SQL query. Defaults to None.
             table_name (Optional[str], optional): Name of table to query. Defaults to None.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
+            content_columns (Optional[list[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[list[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
             metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
             format (Optional[str], optional): Format of page content (OneOf: text, csv, YAML, JSON). Defaults to 'text'.
             formatter (Optional[Callable], optional): A function to format page content (OneOf: format, formatter). Defaults to None.
@@ -236,7 +236,7 @@ class AsyncPostgresLoader(BaseLoader):
             metadata_json_column,
         )
 
-    async def aload(self) -> List[Document]:
+    async def aload(self) -> list[Document]:
         """Load PostgreSQL data into Document objects."""
         return [doc async for doc in self.alazy_load()]
 
@@ -280,7 +280,7 @@ class AsyncPostgresDocumentSaver:
         table_name: str,
         content_column: str,
         schema_name: str = "public",
-        metadata_columns: List[str] = [],
+        metadata_columns: list[str] = [],
         metadata_json_column: Optional[str] = None,
     ):
         """AsyncPostgresDocumentSaver constructor.
@@ -289,9 +289,9 @@ class AsyncPostgresDocumentSaver:
             key (object): Prevent direct constructor usage.
             engine (PostgresEngine): AsyncEngine with pool connection to the postgres database
             table_name (Optional[str], optional): Name of table to query. Defaults to None.
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
+            content_columns (Optional[list[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
+            metadata_columns (Optional[list[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
             metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
 
         Raises:
@@ -315,7 +315,7 @@ class AsyncPostgresDocumentSaver:
         table_name: str,
         schema_name: str = "public",
         content_column: str = DEFAULT_CONTENT_COL,
-        metadata_columns: List[str] = [],
+        metadata_columns: list[str] = [],
         metadata_json_column: Optional[str] = DEFAULT_METADATA_COL,
     ) -> AsyncPostgresDocumentSaver:
         """Create an AsyncPostgresDocumentSaver instance.
@@ -323,8 +323,8 @@ class AsyncPostgresDocumentSaver:
         Args:
             engine (PostgresEngine):AsyncEngine with pool connection to the postgres database
             table_name (Optional[str], optional): Name of table to query. Defaults to None.
-            content_columns (Optional[List[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
-            metadata_columns (Optional[List[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
+            content_columns (Optional[list[str]], optional): Column that represent a Document's page_content. Defaults to the first column.
+            metadata_columns (Optional[list[str]], optional): Column(s) that represent a Document's metadata. Defaults to None.
             metadata_json_column (Optional[str], optional): Column to store metadata as JSON. Defaults to "langchain_metadata".
 
         Returns:
@@ -367,13 +367,13 @@ class AsyncPostgresDocumentSaver:
             metadata_json_column,
         )
 
-    async def aadd_documents(self, docs: List[Document]) -> None:
+    async def aadd_documents(self, docs: list[Document]) -> None:
         """
         Save documents in the DocumentSaver table. Document’s metadata is added to columns if found or
         stored in langchain_metadata JSON column.
 
         Args:
-            docs (List[langchain_core.documents.Document]): a list of documents to be saved.
+            docs (list[langchain_core.documents.Document]): a list of documents to be saved.
         """
 
         for doc in docs:
@@ -411,13 +411,13 @@ class AsyncPostgresDocumentSaver:
                 await conn.execute(text(query), row)
                 await conn.commit()
 
-    async def adelete(self, docs: List[Document]) -> None:
+    async def adelete(self, docs: list[Document]) -> None:
         """
         Delete all instances of a document from the DocumentSaver table by matching the entire Document
         object.
 
         Args:
-            docs (List[langchain_core.documents.Document]): a list of documents to be deleted.
+            docs (list[langchain_core.documents.Document]): a list of documents to be deleted.
         """
         for doc in docs:
             row = _parse_row_from_doc(
