@@ -18,7 +18,7 @@ import asyncio
 from concurrent.futures import Future
 from dataclasses import dataclass
 from threading import Thread
-from typing import TYPE_CHECKING, Any, Awaitable, Dict, List, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Optional, TypeVar, Union
 
 import aiohttp
 import google.auth  # type: ignore
@@ -66,7 +66,7 @@ async def _get_iam_principal_email(
     url = f"https://oauth2.googleapis.com/tokeninfo?access_token={credentials.token}"
     async with aiohttp.ClientSession() as client:
         response = await client.get(url, raise_for_status=True)
-        response_json: Dict = await response.json()
+        response_json: dict = await response.json()
         email = response_json.get("email")
     if email is None:
         raise ValueError(
@@ -408,7 +408,7 @@ class PostgresEngine:
         schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
-        metadata_columns: List[Column] = [],
+        metadata_columns: list[Column] = [],
         metadata_json_column: str = "langchain_metadata",
         id_column: Union[str, Column] = "langchain_id",
         overwrite_existing: bool = False,
@@ -426,7 +426,7 @@ class PostgresEngine:
                 Default: "page_content".
             embedding_column (str) : Name of the column to store vector embeddings.
                 Default: "embedding".
-            metadata_columns (List[Column]): A list of Columns to create for custom
+            metadata_columns (list[Column]): A list of Columns to create for custom
                 metadata. Default: []. Optional.
             metadata_json_column (str): The column to store extra metadata in JSON format.
                 Default: "langchain_metadata". Optional.
@@ -475,7 +475,7 @@ class PostgresEngine:
         schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
-        metadata_columns: List[Column] = [],
+        metadata_columns: list[Column] = [],
         metadata_json_column: str = "langchain_metadata",
         id_column: Union[str, Column] = "langchain_id",
         overwrite_existing: bool = False,
@@ -493,7 +493,7 @@ class PostgresEngine:
                 Default: "page_content".
             embedding_column (str) : Name of the column to store vector embeddings.
                 Default: "embedding".
-            metadata_columns (List[Column]): A list of Columns to create for custom
+            metadata_columns (list[Column]): A list of Columns to create for custom
                 metadata. Default: []. Optional.
             metadata_json_column (str): The column to store extra metadata in JSON format.
                 Default: "langchain_metadata". Optional.
@@ -525,7 +525,7 @@ class PostgresEngine:
         schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
-        metadata_columns: List[Column] = [],
+        metadata_columns: list[Column] = [],
         metadata_json_column: str = "langchain_metadata",
         id_column: Union[str, Column] = "langchain_id",
         overwrite_existing: bool = False,
@@ -543,7 +543,7 @@ class PostgresEngine:
                 Default: "page_content".
             embedding_column (str) : Name of the column to store vector embeddings.
                 Default: "embedding".
-            metadata_columns (List[Column]): A list of Columns to create for custom
+            metadata_columns (list[Column]): A list of Columns to create for custom
                 metadata. Default: []. Optional.
             metadata_json_column (str): The column to store extra metadata in JSON format.
                 Default: "langchain_metadata". Optional.
@@ -633,7 +633,7 @@ class PostgresEngine:
         table_name: str,
         schema_name: str = "public",
         content_column: str = "page_content",
-        metadata_columns: List[Column] = [],
+        metadata_columns: list[Column] = [],
         metadata_json_column: str = "langchain_metadata",
         store_metadata: bool = True,
     ) -> None:
@@ -657,7 +657,7 @@ class PostgresEngine:
         table_name: str,
         schema_name: str = "public",
         content_column: str = "page_content",
-        metadata_columns: List[Column] = [],
+        metadata_columns: list[Column] = [],
         metadata_json_column: str = "langchain_metadata",
         store_metadata: bool = True,
     ) -> None:
@@ -670,7 +670,7 @@ class PostgresEngine:
                 Default: "public".
             content_column (str): Name of the column to store document content.
                 Default: "page_content".
-            metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
+            metadata_columns (list[sqlalchemy.Column]): A list of SQLAlchemy Columns
                 to create for custom metadata. Optional.
             metadata_json_column (str): The column to store extra metadata in JSON format.
                 Default: "langchain_metadata". Optional.
@@ -696,7 +696,7 @@ class PostgresEngine:
         table_name: str,
         schema_name: str = "public",
         content_column: str = "page_content",
-        metadata_columns: List[Column] = [],
+        metadata_columns: list[Column] = [],
         metadata_json_column: str = "langchain_metadata",
         store_metadata: bool = True,
     ) -> None:
@@ -709,7 +709,7 @@ class PostgresEngine:
                 Default: "public".
             content_column (str): Name of the column to store document content.
                 Default: "page_content".
-            metadata_columns (List[sqlalchemy.Column]): A list of SQLAlchemy Columns
+            metadata_columns (list[sqlalchemy.Column]): A list of SQLAlchemy Columns
                 to create for custom metadata. Optional.
             metadata_json_column (str): The column to store extra metadata in JSON format.
                 Default: "langchain_metadata". Optional.

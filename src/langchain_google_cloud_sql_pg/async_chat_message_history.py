@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import List, Sequence
+from typing import Sequence
 
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict
@@ -128,7 +128,7 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
             await conn.execute(text(query), {"session_id": self.session_id})
             await conn.commit()
 
-    async def _aget_messages(self) -> List[BaseMessage]:
+    async def _aget_messages(self) -> list[BaseMessage]:
         """Retrieve the messages from PostgreSQL."""
         query = f"""SELECT data, type FROM "{self.schema_name}"."{self.table_name}" WHERE session_id = :session_id ORDER BY id;"""
         async with self.pool.connect() as conn:

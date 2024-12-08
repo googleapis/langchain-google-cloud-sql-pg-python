@@ -13,7 +13,6 @@
 # limitations under the License.
 import os
 import uuid
-from typing import Any, Generator
 
 import pytest
 import pytest_asyncio

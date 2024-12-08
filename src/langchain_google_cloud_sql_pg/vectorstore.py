@@ -15,7 +15,7 @@
 # TODO: Remove below import when minimum supported Python version is 3.10
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type
+from typing import Any, Callable, Iterable, Optional
 
 import numpy as np
 from langchain_core.documents import Document
@@ -66,8 +66,8 @@ class PostgresVectorStore(VectorStore):
         schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
-        metadata_columns: List[str] = [],
-        ignore_metadata_columns: Optional[List[str]] = None,
+        metadata_columns: list[str] = [],
+        ignore_metadata_columns: Optional[list[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: Optional[str] = "langchain_metadata",
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
@@ -85,8 +85,8 @@ class PostgresVectorStore(VectorStore):
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             content_column (str): Column that represent a Document's page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
-            metadata_columns (List[str]): Column(s) that represent a document's metadata.
-            ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
+            metadata_columns (list[str]): Column(s) that represent a document's metadata.
+            ignore_metadata_columns (list[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
             distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
@@ -127,8 +127,8 @@ class PostgresVectorStore(VectorStore):
         schema_name: str = "public",
         content_column: str = "content",
         embedding_column: str = "embedding",
-        metadata_columns: List[str] = [],
-        ignore_metadata_columns: Optional[List[str]] = None,
+        metadata_columns: list[str] = [],
+        ignore_metadata_columns: Optional[list[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
@@ -146,8 +146,8 @@ class PostgresVectorStore(VectorStore):
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
             content_column (str): Column that represent a Document's page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
-            metadata_columns (List[str]): Column(s) that represent a document's metadata.
-            ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
+            metadata_columns (list[str]): Column(s) that represent a document's metadata.
+            ignore_metadata_columns (list[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
             distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
@@ -186,10 +186,10 @@ class PostgresVectorStore(VectorStore):
     async def aadd_texts(
         self,
         texts: Iterable[str],
-        metadatas: Optional[List[dict]] = None,
-        ids: Optional[List] = None,
+        metadatas: Optional[list[dict]] = None,
+        ids: Optional[list] = None,
         **kwargs: Any,
-    ) -> List[str]:
+    ) -> list[str]:
         """Embed texts and add to the table.
 
         Raises:
@@ -202,10 +202,10 @@ class PostgresVectorStore(VectorStore):
     def add_texts(
         self,
         texts: Iterable[str],
-        metadatas: Optional[List[dict]] = None,
-        ids: Optional[List] = None,
+        metadatas: Optional[list[dict]] = None,
+        ids: Optional[list] = None,
         **kwargs: Any,
-    ) -> List[str]:
+    ) -> list[str]:
         """Embed texts and add to the table.
 
         Raises:
@@ -217,10 +217,10 @@ class PostgresVectorStore(VectorStore):
 
     async def aadd_documents(
         self,
-        documents: List[Document],
-        ids: Optional[List] = None,
+        documents: list[Document],
+        ids: Optional[list] = None,
         **kwargs: Any,
-    ) -> List[str]:
+    ) -> list[str]:
         """Embed documents and add to the table.
 
         Raises:
@@ -232,10 +232,10 @@ class PostgresVectorStore(VectorStore):
 
     def add_documents(
         self,
-        documents: List[Document],
-        ids: Optional[List] = None,
+        documents: list[Document],
+        ids: Optional[list] = None,
         **kwargs: Any,
-    ) -> List[str]:
+    ) -> list[str]:
         """Embed documents and add to the table.
 
         Raises:
@@ -247,7 +247,7 @@ class PostgresVectorStore(VectorStore):
 
     async def adelete(
         self,
-        ids: Optional[List] = None,
+        ids: Optional[list] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
         """Delete records from the table.
@@ -259,7 +259,7 @@ class PostgresVectorStore(VectorStore):
 
     def delete(
         self,
-        ids: Optional[List] = None,
+        ids: Optional[list] = None,
         **kwargs: Any,
     ) -> Optional[bool]:
         """Delete records from the table.
@@ -271,18 +271,18 @@ class PostgresVectorStore(VectorStore):
 
     @classmethod
     async def afrom_texts(  # type: ignore[override]
-        cls: Type[PostgresVectorStore],
-        texts: List[str],
+        cls: type[PostgresVectorStore],
+        texts: list[str],
         embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
         schema_name: str = "public",
-        metadatas: Optional[List[dict]] = None,
-        ids: Optional[List] = None,
+        metadatas: Optional[list[dict]] = None,
+        ids: Optional[list] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
-        metadata_columns: List[str] = [],
-        ignore_metadata_columns: Optional[List[str]] = None,
+        metadata_columns: list[str] = [],
+        ignore_metadata_columns: Optional[list[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
@@ -294,17 +294,17 @@ class PostgresVectorStore(VectorStore):
         """Create an PostgresVectorStore instance from texts.
 
         Args:
-            texts (List[str]): Texts to add to the vector store.
+            texts (list[str]): Texts to add to the vector store.
             embedding (Embeddings): Text embedding model to use.
             engine (PostgresEngine): Connection pool engine for managing connections to Postgres database.
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
-            metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List]): List of IDs to add to table records.
+            metadatas (Optional[list[dict]]): List of metadatas to add to table records.
+            ids: (Optional[list]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
-            metadata_columns (List[str]): Column(s) that represent a document's metadata.
-            ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
+            metadata_columns (list[str]): Column(s) that represent a document's metadata.
+            ignore_metadata_columns (list[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
             distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
@@ -341,17 +341,17 @@ class PostgresVectorStore(VectorStore):
 
     @classmethod
     async def afrom_documents(  # type: ignore[override]
-        cls: Type[PostgresVectorStore],
-        documents: List[Document],
+        cls: type[PostgresVectorStore],
+        documents: list[Document],
         embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
         schema_name: str = "public",
-        ids: Optional[List] = None,
+        ids: Optional[list] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
-        metadata_columns: List[str] = [],
-        ignore_metadata_columns: Optional[List[str]] = None,
+        metadata_columns: list[str] = [],
+        ignore_metadata_columns: Optional[list[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
@@ -363,17 +363,17 @@ class PostgresVectorStore(VectorStore):
         """Create an PostgresVectorStore instance from documents.
 
         Args:
-            documents (List[Document]): Documents to add to the vector store.
+            documents (list[Document]): Documents to add to the vector store.
             embedding (Embeddings): Text embedding model to use.
             engine (PostgresEngine): Connection pool engine for managing connections to Postgres database.
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
-            metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List]): List of IDs to add to table records.
+            metadatas (Optional[list[dict]]): List of metadatas to add to table records.
+            ids: (Optional[list]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
-            metadata_columns (List[str]): Column(s) that represent a document's metadata.
-            ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
+            metadata_columns (list[str]): Column(s) that represent a document's metadata.
+            ignore_metadata_columns (list[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
             distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
@@ -410,18 +410,18 @@ class PostgresVectorStore(VectorStore):
 
     @classmethod
     def from_texts(  # type: ignore[override]
-        cls: Type[PostgresVectorStore],
-        texts: List[str],
+        cls: type[PostgresVectorStore],
+        texts: list[str],
         embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
         schema_name: str = "public",
-        metadatas: Optional[List[dict]] = None,
-        ids: Optional[List] = None,
+        metadatas: Optional[list[dict]] = None,
+        ids: Optional[list] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
-        metadata_columns: List[str] = [],
-        ignore_metadata_columns: Optional[List[str]] = None,
+        metadata_columns: list[str] = [],
+        ignore_metadata_columns: Optional[list[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
@@ -433,17 +433,17 @@ class PostgresVectorStore(VectorStore):
         """Create an PostgresVectorStore instance from texts.
 
         Args:
-            texts (List[str]): Texts to add to the vector store.
+            texts (list[str]): Texts to add to the vector store.
             embedding (Embeddings): Text embedding model to use.
             engine (PostgresEngine): Connection pool engine for managing connections to Postgres database.
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
-            metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List]): List of IDs to add to table records.
+            metadatas (Optional[list[dict]]): List of metadatas to add to table records.
+            ids: (Optional[list]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
-            metadata_columns (List[str]): Column(s) that represent a document's metadata.
-            ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
+            metadata_columns (list[str]): Column(s) that represent a document's metadata.
+            ignore_metadata_columns (list[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
             distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
@@ -480,17 +480,17 @@ class PostgresVectorStore(VectorStore):
 
     @classmethod
     def from_documents(  # type: ignore[override]
-        cls: Type[PostgresVectorStore],
-        documents: List[Document],
+        cls: type[PostgresVectorStore],
+        documents: list[Document],
         embedding: Embeddings,
         engine: PostgresEngine,
         table_name: str,
         schema_name: str = "public",
-        ids: Optional[List] = None,
+        ids: Optional[list] = None,
         content_column: str = "content",
         embedding_column: str = "embedding",
-        metadata_columns: List[str] = [],
-        ignore_metadata_columns: Optional[List[str]] = None,
+        metadata_columns: list[str] = [],
+        ignore_metadata_columns: Optional[list[str]] = None,
         id_column: str = "langchain_id",
         metadata_json_column: str = "langchain_metadata",
         distance_strategy: DistanceStrategy = DEFAULT_DISTANCE_STRATEGY,
@@ -502,17 +502,17 @@ class PostgresVectorStore(VectorStore):
         """Create an PostgresVectorStore instance from documents.
 
         Args:
-            documents (List[Document]): Documents to add to the vector store.
+            documents (list[Document]): Documents to add to the vector store.
             embedding (Embeddings): Text embedding model to use.
             engine (PostgresEngine): Connection pool engine for managing connections to Postgres database.
             table_name (str): Name of the existing table or the table to be created.
             schema_name (str, optional): Database schema name of the table. Defaults to "public".
-            metadatas (Optional[List[dict]]): List of metadatas to add to table records.
-            ids: (Optional[List]): List of IDs to add to table records.
+            metadatas (Optional[list[dict]]): List of metadatas to add to table records.
+            ids: (Optional[list]): List of IDs to add to table records.
             content_column (str): Column that represent a Document’s page_content. Defaults to "content".
             embedding_column (str): Column for embedding vectors. The embedding is generated from the document value. Defaults to "embedding".
-            metadata_columns (List[str]): Column(s) that represent a document's metadata.
-            ignore_metadata_columns (List[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
+            metadata_columns (list[str]): Column(s) that represent a document's metadata.
+            ignore_metadata_columns (list[str]): Column(s) to ignore in pre-existing tables for a document's metadata. Can not be used with metadata_columns. Defaults to None.
             id_column (str): Column that represents the Document's id. Defaults to "langchain_id".
             metadata_json_column (str): Column to store metadata as JSON. Defaults to "langchain_metadata".
             distance_strategy (DistanceStrategy): Distance strategy to use for vector similarity search. Defaults to COSINE_DISTANCE.
@@ -553,7 +553,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected by similarity search on query."""
         return await self._engine._run_as_async(
             self.__vs.asimilarity_search(query, k, filter, **kwargs)
@@ -565,7 +565,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected by similarity search on query."""
         return self._engine._run_as_sync(
             self.__vs.asimilarity_search(query, k, filter, **kwargs)
@@ -588,7 +588,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
+    ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on query."""
         return await self._engine._run_as_async(
             self.__vs.asimilarity_search_with_score(query, k, filter, **kwargs)
@@ -600,7 +600,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
+    ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on query."""
         return self._engine._run_as_sync(
             self.__vs.asimilarity_search_with_score(query, k, filter, **kwargs)
@@ -608,11 +608,11 @@ class PostgresVectorStore(VectorStore):
 
     async def asimilarity_search_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected by vector similarity search."""
         return await self._engine._run_as_async(
             self.__vs.asimilarity_search_by_vector(embedding, k, filter, **kwargs)
@@ -620,11 +620,11 @@ class PostgresVectorStore(VectorStore):
 
     def similarity_search_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected by vector similarity search."""
         return self._engine._run_as_sync(
             self.__vs.asimilarity_search_by_vector(embedding, k, filter, **kwargs)
@@ -632,11 +632,11 @@ class PostgresVectorStore(VectorStore):
 
     async def asimilarity_search_with_score_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
+    ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by vector similarity search."""
         return await self._engine._run_as_async(
             self.__vs.asimilarity_search_with_score_by_vector(
@@ -646,11 +646,11 @@ class PostgresVectorStore(VectorStore):
 
     def similarity_search_with_score_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: Optional[int] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
+    ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on vector."""
         return self._engine._run_as_sync(
             self.__vs.asimilarity_search_with_score_by_vector(
@@ -666,7 +666,7 @@ class PostgresVectorStore(VectorStore):
         lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
         return await self._engine._run_as_async(
             self.__vs.amax_marginal_relevance_search(
@@ -682,7 +682,7 @@ class PostgresVectorStore(VectorStore):
         lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
         return self._engine._run_as_sync(
             self.__vs.amax_marginal_relevance_search(
@@ -692,13 +692,13 @@ class PostgresVectorStore(VectorStore):
 
     async def amax_marginal_relevance_search_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
         return await self._engine._run_as_async(
             self.__vs.amax_marginal_relevance_search_by_vector(
@@ -708,13 +708,13 @@ class PostgresVectorStore(VectorStore):
 
     def max_marginal_relevance_search_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
         return self._engine._run_as_sync(
             self.__vs.amax_marginal_relevance_search_by_vector(
@@ -724,13 +724,13 @@ class PostgresVectorStore(VectorStore):
 
     async def amax_marginal_relevance_search_with_score_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
+    ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected using the maximal marginal relevance."""
         return await self._engine._run_as_async(
             self.__vs.amax_marginal_relevance_search_with_score_by_vector(
@@ -740,13 +740,13 @@ class PostgresVectorStore(VectorStore):
 
     def max_marginal_relevance_search_with_score_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
         filter: Optional[str] = None,
         **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
+    ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected using the maximal marginal relevance."""
         return self._engine._run_as_sync(
             self.__vs.amax_marginal_relevance_search_with_score_by_vector(

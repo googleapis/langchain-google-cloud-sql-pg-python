@@ -15,7 +15,7 @@
 import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
 
 
 @dataclass
@@ -44,7 +44,7 @@ class BaseIndex(ABC):
     distance_strategy: DistanceStrategy = field(
         default_factory=lambda: DistanceStrategy.COSINE_DISTANCE
     )
-    partial_indexes: Optional[List[str]] = None
+    partial_indexes: Optional[list[str]] = None
 
     @abstractmethod
     def index_options(self) -> str:
