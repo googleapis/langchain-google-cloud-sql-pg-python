@@ -110,7 +110,7 @@ class TestIndex:
         vs.drop_vector_index()
         yield vs
 
-    async def test_aapply_vector_index(self, vs):
+    async def test_apply_vector_index(self, vs):
         index = HNSWIndex()
         vs.apply_vector_index(index)
         assert vs.is_valid_index(DEFAULT_INDEX_NAME)
@@ -128,7 +128,7 @@ class TestIndex:
         result = vs.is_valid_index(DEFAULT_INDEX_NAME)
         assert not result
 
-    async def test_aapply_vector_index_ivfflat(self, vs):
+    async def test_apply_vector_index_ivfflat(self, vs):
         index = IVFFlatIndex(distance_strategy=DistanceStrategy.EUCLIDEAN)
         vs.apply_vector_index(index, concurrently=True)
         assert vs.is_valid_index(DEFAULT_INDEX_NAME)
