@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.11.1...v0.12.0) (2025-01-06)
+
+
+### Features
+
+* Add engine_args argument to engine creation functions ([#242](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/242)) ([5f2f7b7](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/5f2f7b7754824fde23867137e32208ea276be43c))
+
 ## [0.11.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.11.0...v0.11.1) (2024-11-15)
 
 
