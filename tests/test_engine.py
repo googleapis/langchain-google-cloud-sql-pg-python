@@ -110,12 +110,20 @@ class TestEngineAsync:
             instance=db_instance,
             region=db_region,
             database=db_name,
+            engine_args={
+                # add some connection args to validate engine_args works correctly
+                "pool_size": 3,
+                "max_overflow": 2,
+            },
         )
         yield engine
         await aexecute(engine, f'DROP TABLE "{CUSTOM_TABLE}"')
         await aexecute(engine, f'DROP TABLE "{DEFAULT_TABLE}"')
         await aexecute(engine, f'DROP TABLE "{INT_ID_CUSTOM_TABLE}"')
         await engine.close()
+
+    async def test_engine_args(self, engine):
+        assert "Pool size: 3" in engine._pool.pool.status()
 
     async def test_init_table(self, engine):
         await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)

@@ -109,6 +109,7 @@ class TestIndex:
         index = HNSWIndex()
         await vs.aapply_vector_index(index)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
+        await vs.adrop_vector_index()
 
     async def test_areindex(self, vs):
         if not await vs.is_valid_index(DEFAULT_INDEX_NAME):
@@ -117,6 +118,7 @@ class TestIndex:
         await vs.areindex()
         await vs.areindex(DEFAULT_INDEX_NAME)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
+        await vs.adrop_vector_index()
 
     async def test_dropindex(self, vs):
         await vs.adrop_vector_index()
@@ -134,6 +136,7 @@ class TestIndex:
         await vs.aapply_vector_index(index)
         assert await vs.is_valid_index("secondindex")
         await vs.adrop_vector_index("secondindex")
+        await vs.adrop_vector_index()
 
     async def test_is_valid_index(self, vs):
         is_valid = await vs.is_valid_index("invalid_index")
