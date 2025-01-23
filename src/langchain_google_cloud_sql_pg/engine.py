@@ -1,4 +1,4 @@
-# Copyright 2024 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,6 +38,9 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 USER_AGENT = "langchain-google-cloud-sql-pg-python/" + __version__
+
+CHECKPOINTS_TABLE = "checkpoints"
+CHECKPOINT_WRITES_TABLE = "checkpoint_writes"
 
 
 async def _get_iam_principal_email(
@@ -746,6 +749,71 @@ class PostgresEngine:
                 store_metadata,
             )
         )
+
+    async def _ainit_checkpoint_table(
+            self, schema_name: str = "public") -> None:
+        """
+        Create AlloyDB tables to save checkpoints.
+        Args:
+            schema_name (str): The schema name to store the checkpoint tables.
+                Default: "public".
+        Returns:
+            None
+        """
+        create_checkpoints_table = f"""
+        CREATE TABLE IF NOT EXISTS "{schema_name}".{CHECKPOINTS_TABLE}(
+            thread_id TEXT NOT NULL,
+            checkpoint_ns TEXT NOT NULL DEFAULT '',
+            checkpoint_id TEXT NOT NULL,
+            parent_checkpoint_id TEXT,
+            type TEXT,
+            checkpoint JSONB NOT NULL,
+            metadata JSONB NOT NULL DEFAULT '{{}}',
+            PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id)
+        );"""
+
+        create_checkpoint_writes_table = f"""
+        CREATE TABLE IF NOT EXISTS "{schema_name}".{CHECKPOINT_WRITES_TABLE} (
+            thread_id TEXT NOT NULL,
+            checkpoint_ns TEXT NOT NULL DEFAULT '',
+            checkpoint_id TEXT NOT NULL,
+            task_id TEXT NOT NULL,
+            idx INTEGER NOT NULL,
+            channel TEXT NOT NULL,
+            type TEXT,
+            blob BYTEA NOT NULL,
+            PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id, task_id, idx)
+        );"""
+
+        async with self._pool.connect() as conn:
+            await conn.execute(text(create_checkpoints_table))
+            await conn.execute(text(create_checkpoint_writes_table))
+            await conn.commit()
+
+    async def ainit_checkpoint_table(self,
+                                     schema_name: str = "public") -> None:
+        """Create an AlloyDB table to save checkpoint messages.
+        Args:
+            schema_name (str): The schema name to store checkpoint tables.
+                Default: "public".
+        Returns:
+            None
+        """
+        await self._run_as_async(
+            self._ainit_checkpoint_table(
+                schema_name,
+            )
+        )
+
+    def init_checkpoint_table(self, schema_name: str = "public") -> None:
+        """Create Cloud SQL tables to store checkpoints.
+        Args:
+            schema_name (str): The schema name to store checkpoint tables.
+                Default: "public".
+        Returns:
+            None
+        """
+        self._run_as_sync(self._ainit_checkpoint_table(schema_name))
 
     async def _aload_table_schema(
         self,
