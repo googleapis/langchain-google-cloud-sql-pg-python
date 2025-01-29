@@ -751,17 +751,22 @@ class PostgresEngine:
         )
 
     async def _ainit_checkpoint_table(
-            self, schema_name: str = "public") -> None:
+        self,
+        schema_name: str = "public",
+        checkpoints_table_name: str = CHECKPOINTS_TABLE,
+        checkpoint_writes_table_name: str = CHECKPOINT_WRITES_TABLE,
+    ) -> None:
         """
         Create AlloyDB tables to save checkpoints.
         Args:
-            schema_name (str): The schema name to store the checkpoint tables.
-                Default: "public".
+            schema_name (str): The schema name to store the checkpoint tables. Default: "public".
+            checkpoints_table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
+            checkpoint_writes_table_name (str): Custom table name for checkpoint writes. Default: CHECKPOINT_WRITES_TABLE.
         Returns:
             None
         """
         create_checkpoints_table = f"""
-        CREATE TABLE IF NOT EXISTS "{schema_name}".{CHECKPOINTS_TABLE}(
+        CREATE TABLE IF NOT EXISTS "{schema_name}".{checkpoints_table_name}(
             thread_id TEXT NOT NULL,
             checkpoint_ns TEXT NOT NULL DEFAULT '',
             checkpoint_id TEXT NOT NULL,
@@ -773,7 +778,7 @@ class PostgresEngine:
         );"""
 
         create_checkpoint_writes_table = f"""
-        CREATE TABLE IF NOT EXISTS "{schema_name}".{CHECKPOINT_WRITES_TABLE} (
+        CREATE TABLE IF NOT EXISTS "{schema_name}".{checkpoint_writes_table_name} (
             thread_id TEXT NOT NULL,
             checkpoint_ns TEXT NOT NULL DEFAULT '',
             checkpoint_id TEXT NOT NULL,
@@ -790,30 +795,45 @@ class PostgresEngine:
             await conn.execute(text(create_checkpoint_writes_table))
             await conn.commit()
 
-    async def ainit_checkpoint_table(self,
-                                     schema_name: str = "public") -> None:
+    async def ainit_checkpoint_table(
+        self,
+        schema_name: str = "public",
+        checkpoints_table_name: str = CHECKPOINTS_TABLE,
+        checkpoint_writes_table_name: str = CHECKPOINT_WRITES_TABLE,
+    ) -> None:
         """Create an AlloyDB table to save checkpoint messages.
         Args:
-            schema_name (str): The schema name to store checkpoint tables.
-                Default: "public".
+            schema_name (str): The schema name to store checkpoint tables. Default: "public".
+            checkpoints_table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
+            checkpoint_writes_table_name (str): Custom table name for checkpoint writes. Default: CHECKPOINT_WRITES_TABLE.
         Returns:
             None
         """
         await self._run_as_async(
             self._ainit_checkpoint_table(
-                schema_name,
+                schema_name, checkpoints_table_name, checkpoint_writes_table_name
             )
         )
 
-    def init_checkpoint_table(self, schema_name: str = "public") -> None:
+    def init_checkpoint_table(
+        self,
+        schema_name: str = "public",
+        checkpoints_table_name: str = CHECKPOINTS_TABLE,
+        checkpoint_writes_table_name: str = CHECKPOINT_WRITES_TABLE,
+    ) -> None:
         """Create Cloud SQL tables to store checkpoints.
         Args:
-            schema_name (str): The schema name to store checkpoint tables.
-                Default: "public".
+            schema_name (str): The schema name to store checkpoint tables. Default: "public".
+              checkpoints_table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
+            checkpoint_writes_table_name (str): Custom table name for checkpoint writes. Default: CHECKPOINT_WRITES_TABLE.
         Returns:
             None
         """
-        self._run_as_sync(self._ainit_checkpoint_table(schema_name))
+        self._run_as_sync(
+            self._ainit_checkpoint_table(
+                schema_name, checkpoints_table_name, checkpoint_writes_table_name
+            )
+        )
 
     async def _aload_table_schema(
         self,
