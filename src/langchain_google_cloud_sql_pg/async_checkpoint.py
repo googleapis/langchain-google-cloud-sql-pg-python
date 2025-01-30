@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import json
-from typing import Optional
+from contextlib import asynccontextmanager
+from typing import Any, Optional
+
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
     BaseCheckpointSaver,
@@ -24,28 +26,40 @@ from langgraph.checkpoint.base import (
 from langgraph.checkpoint.serde.base import SerializerProtocol
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from sqlalchemy import text
-from .engine import CHECKPOINTS_TABLE, CHECKPOINT_WRITES_TABLE, PostgresEngine
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from .engine import CHECKPOINT_WRITES_TABLE, CHECKPOINTS_TABLE, PostgresEngine
 
 
-class AsyncPostgresCloudSQLSaver(BaseCheckpointSaver[str]):
-    """Checkpoint stored in a PostgreSQL database running on Cloud SQL (GCP)."""
+class AsyncPostgresSaver(BaseCheckpointSaver[str]):
+    """Checkpoint storage for a PostgreSQL database."""
 
     __create_key = object()
+
     jsonplus_serde = JsonPlusSerializer()
 
     def __init__(
         self,
         key: object,
-        engine: PostgresEngine,
+        pool: AsyncEngine,
         schema_name: str = "public",
         serde: Optional[SerializerProtocol] = None,
     ) -> None:
+        """
+        Initializes an AsyncPostgresSaver instance.
+
+        Args:
+            key (object): Internal key to restrict instantiation.
+            pool (AsyncEngine): The database connection pool.
+            schema_name (str, optional): The schema where the checkpoint tables reside. Defaults to "public".
+            serde (Optional[SerializerProtocol], optional): Serializer for encoding/decoding checkpoints. Defaults to None.
+        """
         super().__init__(serde=serde)
-        if key != AsyncPostgresCloudSQLSaver.__create_key:
+        if key != AsyncPostgresSaver.__create_key:
             raise Exception(
                 "Only create class through 'create' or 'create_sync' methods"
             )
-        self.engine = engine
+        self.pool = pool
         self.schema_name = schema_name
 
     @classmethod
@@ -54,19 +68,28 @@ class AsyncPostgresCloudSQLSaver(BaseCheckpointSaver[str]):
         engine: PostgresEngine,
         schema_name: str = "public",
         serde: Optional[SerializerProtocol] = None,
-    ) -> "AsyncPostgresCloudSQLSaver":
-        """Create a new AsyncPostgresCloudSQLSaver instance using a Cloud SQL connection."""
+    ) -> "AsyncPostgresSaver":
+        """
+        Creates a new AsyncPostgresSaver instance.
 
-        async with engine._pool.connect() as conn:
-            result = await conn.execute(
-                text(
-                    f"SELECT column_name FROM information_schema.columns WHERE table_schema = :schema AND table_name = :table"
-                ),
-                {"schema": schema_name, "table": CHECKPOINTS_TABLE},
-            )
-            checkpoints_column_names = [row[0] for row in result.fetchall()]
+        Args:
+            engine (PostgresEngine): The PostgreSQL engine to use.
+            schema_name (str, optional): The schema name where the table is located. Defaults to "public".
+            serde (Optional[SerializerProtocol], optional): Serializer for encoding/decoding checkpoints. Defaults to None.
 
-        required_columns = [
+        Raises:
+            IndexError: If the table does not contain the required schema.
+
+        Returns:
+            AsyncPostgresSaver: A newly created instance.
+        """
+
+        checkpoints_table_schema = await engine._aload_table_schema(
+            CHECKPOINTS_TABLE, schema_name
+        )
+        checkpoints_column_names = checkpoints_table_schema.columns.keys()
+
+        checkpoints_required_columns = [
             "thread_id",
             "checkpoint_ns",
             "checkpoint_id",
@@ -76,45 +99,49 @@ class AsyncPostgresCloudSQLSaver(BaseCheckpointSaver[str]):
             "metadata",
         ]
 
-        if not all(x in checkpoints_column_names for x in required_columns):
-            raise IndexError(
-                f"Table {schema_name}.{CHECKPOINTS_TABLE} has incorrect schema. Expected: {required_columns}, Found: {checkpoints_column_names}"
-            )
-
-        async with engine._pool.connect() as conn:
-            result = await conn.execute(
-                text(
-                    f"SELECT column_name FROM information_schema.columns WHERE table_schema = :schema AND table_name = :table"
-                ),
-                {"schema": schema_name, "table": CHECKPOINT_WRITES_TABLE},
-            )
-            checkpoint_writes_column_names = [row[0] for row in result.fetchall()]
-
-        checkpoint_writes_columns = [
-            "thread_id",
-            "checkpoint_ns",
-            "checkpoint_id",
-            "task_id",
-            "idx",
-            "channel",
-            "type",
-            "blob",
-        ]
-
-        if not all(
-            x in checkpoint_writes_column_names for x in checkpoint_writes_columns
+        if not (
+            all(x in checkpoints_column_names for x in checkpoints_required_columns)
         ):
             raise IndexError(
-                f"Table {schema_name}.{CHECKPOINT_WRITES_TABLE} has incorrect schema. Expected: {checkpoint_writes_columns}, Found: {checkpoint_writes_column_names}"
+                f"Table checkpoints.'{schema_name}' has incorrect schema. Got "
+                f"column names '{checkpoints_column_names}' but required column names "
+                f"'{checkpoints_required_columns}'.\nPlease create table with the following schema:"
+                f"\nCREATE TABLE {schema_name}.checkpoints ("
+                "\n    thread_id TEXT NOT NULL,"
+                "\n    checkpoint_ns TEXT NOT NULL,"
+                "\n    checkpoint_id TEXT NOT NULL,"
+                "\n    parent_checkpoint_id TEXT,"
+                "\n    type TEXT,"
+                "\n    checkpoint JSONB NOT NULL,"
+                "\n    metadata JSONB NOT NULL"
+                "\n);"
             )
 
-        return cls(cls.__create_key, engine, schema_name, serde)
+        return cls(cls.__create_key, engine._pool, schema_name, serde)
 
     def _dump_checkpoint(self, checkpoint: Checkpoint) -> str:
+        """
+        Serializes a checkpoint into a JSON string.
+
+        Args:
+            checkpoint (Checkpoint): The checkpoint to serialize.
+
+        Returns:
+            str: The serialized checkpoint as a JSON string.
+        """
         checkpoint["pending_sends"] = []
         return json.dumps(checkpoint)
 
     def _dump_metadata(self, metadata: CheckpointMetadata) -> str:
+        """
+        Serializes checkpoint metadata into a JSON string.
+
+        Args:
+            metadata (CheckpointMetadata): The metadata to serialize.
+
+        Returns:
+            str: The serialized metadata as a JSON string.
+        """
         serialized_metadata = self.jsonplus_serde.dumps(metadata)
         return serialized_metadata.decode().replace("\\u0000", "")
 
@@ -125,8 +152,18 @@ class AsyncPostgresCloudSQLSaver(BaseCheckpointSaver[str]):
         metadata: CheckpointMetadata,
         new_versions: ChannelVersions,
     ) -> RunnableConfig:
-        """Asynchronously store a checkpoint with its configuration and metadata in Cloud SQL."""
+        """
+        Asynchronously stores a checkpoint with its configuration and metadata.
 
+        Args:
+            config (RunnableConfig): Configuration for the checkpoint.
+            checkpoint (Checkpoint): The checkpoint to store.
+            metadata (CheckpointMetadata): Additional metadata for the checkpoint.
+            new_versions (ChannelVersions): New channel versions as of this write.
+
+        Returns:
+            RunnableConfig: Updated configuration after storing the checkpoint.
+        """
         configurable = config["configurable"].copy()
         thread_id = configurable.pop("thread_id")
         checkpoint_ns = configurable.pop("checkpoint_ns")
@@ -143,18 +180,14 @@ class AsyncPostgresCloudSQLSaver(BaseCheckpointSaver[str]):
             }
         }
 
-        query = f"""
-        INSERT INTO "{self.schema_name}".{CHECKPOINTS_TABLE}
-            (thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, checkpoint, metadata)
-        VALUES
-            (:thread_id, :checkpoint_ns, :checkpoint_id, :parent_checkpoint_id, :checkpoint, :metadata)
-        ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)
-        DO UPDATE SET
-            checkpoint = EXCLUDED.checkpoint,
-            metadata = EXCLUDED.metadata;
-        """
+        query = f"""INSERT INTO "{self.schema_name}".{CHECKPOINTS_TABLE}(thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, checkpoint, metadata)
+                    VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :parent_checkpoint_id, :checkpoint, :metadata)
+                    ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)
+                    DO UPDATE SET
+                        checkpoint = EXCLUDED.checkpoint,
+                        metadata = EXCLUDED.metadata;"""
 
-        async with self.engine._pool.connect() as conn:
+        async with self.pool.connect() as conn:
             await conn.execute(
                 text(query),
                 {
