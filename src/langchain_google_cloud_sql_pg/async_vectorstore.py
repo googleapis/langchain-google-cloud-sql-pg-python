@@ -485,8 +485,18 @@ class AsyncPostgresVectorStore(VectorStore):
         operator = self.distance_strategy.operator
         search_function = self.distance_strategy.search_function
 
+        columns = self.metadata_columns + [
+            self.id_column,
+            self.content_column,
+            self.embedding_column,
+        ]
+        if self.metadata_json_column:
+            columns.append(self.metadata_json_column)
+
+        column_names = ", ".join(f'"{col}"' for col in columns)
+
         filter = f"WHERE {filter}" if filter else ""
-        stmt = f"SELECT *, {search_function}({self.embedding_column}, '{embedding}') as distance FROM \"{self.schema_name}\".\"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
+        stmt = f"SELECT {column_names}, {search_function}({self.embedding_column}, '{embedding}') as distance FROM \"{self.schema_name}\".\"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
         if self.index_query_options:
             async with self.pool.connect() as conn:
                 await conn.execute(

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,5 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-__version__ = "0.12.0"
+
+name: Schedule Reporter
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Runs at 6 AM every morning
+
+jobs:
+  run_reporter:
+    uses: googleapis/langchain-google-alloydb-pg-python/.github/workflows/cloud_build_failure_reporter.yml@main
+    with:
+      trigger_names: "pg-integration-test-nightly,pg-continuous-test-on-merge"
