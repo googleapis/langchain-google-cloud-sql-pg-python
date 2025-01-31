@@ -117,6 +117,39 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                 "\n);"
             )
 
+        checkpoint_writes_table_schema = await engine._aload_table_schema(CHECKPOINT_WRITES_TABLE, schema_name)
+        checkpoint_writes_column_names = checkpoint_writes_table_schema.columns.keys()
+
+        checkpoint_writes_columns = [
+            "thread_id",
+            "checkpoint_ns",
+            "checkpoint_id",
+            "task_id",
+            "idx",
+            "channel",
+            "type",
+            "blob",
+        ]
+
+        if not (
+                all(x in checkpoint_writes_column_names for x in checkpoint_writes_columns)
+        ):
+            raise IndexError(
+                f"Table checkpoint_writes.'{schema_name}' has incorrect schema. Got "
+                f"column names '{checkpoint_writes_column_names}' but required column names "
+                f"'{checkpoint_writes_columns}'.\nPlease create table with following schema:"
+                f"\nCREATE TABLE {schema_name}.checkpoint_writes ("
+                "\n    thread_id TEXT NOT NULL,"
+                "\n    checkpoint_ns TEXT NOT NULL,"
+                "\n    checkpoint_id TEXT NOT NULL,"
+                "\n    task_id TEXT NOT NULL,"
+                "\n    idx INT NOT NULL,"
+                "\n    channel TEXT NOT NULL,"
+                "\n    type TEXT,"
+                "\n    blob JSONB NOT NULL"
+                "\n);"
+            )
+
         return cls(cls.__create_key, engine._pool, schema_name, serde)
 
     def _dump_checkpoint(self, checkpoint: Checkpoint) -> str:
