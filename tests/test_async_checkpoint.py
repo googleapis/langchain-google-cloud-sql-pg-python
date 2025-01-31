@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import os
-from typing import Sequence
+from typing import Sequence, Any, Tuple
 
 import pytest
 import pytest_asyncio
@@ -120,3 +120,27 @@ async def test_checkpoint_async(async_engine: PostgresEngine) -> None:
 
     # Cleanup: Remove all checkpoints after the test
     await aexecute(async_engine, f'TRUNCATE TABLE "{CHECKPOINTS_TABLE}"')
+
+
+async def test_checkpoint_aput_writes(
+    async_engine: PostgresEngine,
+) -> None:
+    checkpointer = await AsyncPostgresSaver.create(async_engine)
+
+    config: RunnableConfig = {
+        "configurable": {
+            "thread_id": "1",
+            "checkpoint_ns": "",
+            "checkpoint_id": "1ef4f797-8335-6428-8001-8a1503f9b875",
+        }
+    }
+
+    # Verify if the checkpoint writes are stored correctly in the database
+    writes: Sequence[Tuple[str, Any]] = [("test_channel1", {}), ("test_channel2", {})]
+    await checkpointer.aput_writes(config, writes, task_id="1")
+
+    results = await afetch(async_engine, f"SELECT * FROM {CHECKPOINT_WRITES_TABLE}")
+    assert len(results) == 2
+    for row in results:
+        assert isinstance(row["task_id"], str)
+    await aexecute(async_engine, f"TRUNCATE TABLE {CHECKPOINT_WRITES_TABLE}")

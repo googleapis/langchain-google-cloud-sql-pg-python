@@ -14,10 +14,11 @@
 
 import json
 from contextlib import asynccontextmanager
-from typing import Any, Optional
+from typing import Any, Optional, Sequence, Tuple, cast
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
+    WRITES_IDX_MAP,
     BaseCheckpointSaver,
     ChannelVersions,
     Checkpoint,
@@ -117,7 +118,9 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                 "\n);"
             )
 
-        checkpoint_writes_table_schema = await engine._aload_table_schema(CHECKPOINT_WRITES_TABLE, schema_name)
+        checkpoint_writes_table_schema = await engine._aload_table_schema(
+            CHECKPOINT_WRITES_TABLE, schema_name
+        )
         checkpoint_writes_column_names = checkpoint_writes_table_schema.columns.keys()
 
         checkpoint_writes_columns = [
@@ -132,7 +135,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         ]
 
         if not (
-                all(x in checkpoint_writes_column_names for x in checkpoint_writes_columns)
+            all(x in checkpoint_writes_column_names for x in checkpoint_writes_columns)
         ):
             raise IndexError(
                 f"Table checkpoint_writes.'{schema_name}' has incorrect schema. Got "
@@ -177,6 +180,30 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         """
         serialized_metadata = self.jsonplus_serde.dumps(metadata)
         return serialized_metadata.decode().replace("\\u0000", "")
+
+    def _dump_writes(
+        self,
+        thread_id: str,
+        checkpoint_ns: str,
+        checkpoint_id: str,
+        task_id: str,
+        task_path: str,
+        writes: Sequence[tuple[str, Any]],
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "thread_id": thread_id,
+                "checkpoint_ns": checkpoint_ns,
+                "checkpoint_id": checkpoint_id,
+                "task_id": task_id,
+                "task_path": task_path,
+                "idx": WRITES_IDX_MAP.get(channel, idx),
+                "channel": channel,
+                "type": self.serde.dumps_typed(value)[0],
+                "blob": self.serde.dumps_typed(value)[1],
+            }
+            for idx, (channel, value) in enumerate(writes)
+        ]
 
     async def aput(
         self,
@@ -235,3 +262,49 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             await conn.commit()
 
         return next_config
+
+    async def aput_writes(
+        self,
+        config: RunnableConfig,
+        writes: Sequence[Tuple[str, Any]],
+        task_id: str,
+        task_path: str = "",
+    ) -> None:
+        """Asynchronously store intermediate writes linked to a checkpoint.
+        Args:
+            config (RunnableConfig): Configuration of the related checkpoint.
+            writes (List[Tuple[str, Any]]): List of writes to store.
+            task_id (str): Identifier for the task creating the writes.
+            task_path (str): Path of the task creating the writes.
+
+            Returns:
+                None
+        """
+        upsert = f"""INSERT INTO "{self.schema_name}".{CHECKPOINT_WRITES_TABLE}(thread_id, checkpoint_ns, checkpoint_id, task_id, idx, channel, type, blob)
+                    VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :task_id, :idx, :channel, :type, :blob)
+                    ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id, task_id, idx) DO UPDATE SET
+                    channel = EXCLUDED.channel,
+                        type = EXCLUDED.type,
+                        blob = EXCLUDED.blob;
+                """
+        insert = f"""INSERT INTO "{self.schema_name}".{CHECKPOINT_WRITES_TABLE}(thread_id, checkpoint_ns, checkpoint_id, task_id, idx, channel, type, blob)
+                    VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :task_id, :idx, :channel, :type, :blob)
+                    ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id, task_id, idx) DO NOTHING
+                """
+        query = upsert if all(w[0] in WRITES_IDX_MAP for w in writes) else insert
+
+        params = self._dump_writes(
+            config["configurable"]["thread_id"],
+            config["configurable"]["checkpoint_ns"],
+            config["configurable"]["checkpoint_id"],
+            task_id,
+            task_path,
+            writes,
+        )
+
+        async with self.pool.connect() as conn:
+            await conn.execute(
+                text(query),
+                params,
+            )
+            await conn.commit()
