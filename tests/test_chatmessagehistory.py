@@ -165,7 +165,7 @@ async def test_chat_message_history_sync_messages(
 
 @pytest.mark.asyncio
 async def test_chat_message_history_set_messages(
-    async_engine: AlloyDBEngine,
+    async_engine: PostgresEngine,
 ) -> None:
     history = await PostgresChatMessageHistory.create(
         engine=async_engine, session_id="test", table_name=table_name_async
