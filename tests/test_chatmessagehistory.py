@@ -164,6 +164,20 @@ async def test_chat_message_history_sync_messages(
 
 
 @pytest.mark.asyncio
+async def test_chat_message_history_set_messages(
+    async_engine: AlloyDBEngine,
+) -> None:
+    history = await PostgresChatMessageHistory.create(
+        engine=async_engine, session_id="test", table_name=table_name_async
+    )
+    msg1 = HumanMessage(content="hi!")
+    msg2 = AIMessage(content="bye -_-")
+    # verify setting messages property adds to message history
+    history.messages = [msg1, msg2]
+    assert len(history.messages) == 2
+
+
+@pytest.mark.asyncio
 async def test_chat_table_async(async_engine):
     with pytest.raises(ValueError):
         await PostgresChatMessageHistory.create(
