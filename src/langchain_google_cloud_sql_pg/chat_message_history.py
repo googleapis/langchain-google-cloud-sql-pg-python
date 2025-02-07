@@ -106,10 +106,16 @@ class PostgresChatMessageHistory(BaseChatMessageHistory):
         history = engine._run_as_sync(coro)
         return cls(cls.__create_key, engine, history)
 
-    @property  # type: ignore[override]
+    @property
     def messages(self) -> list[BaseMessage]:
-        """The abstraction required a property."""
+        """Fetches all messages stored in AlloyDB."""
         return self._engine._run_as_sync(self._history._aget_messages())
+
+    @messages.setter
+    def messages(self, value: list[BaseMessage]) -> None:
+        """Clear the stored messages and appends a list of messages to the record in AlloyDB."""
+        self.clear()
+        self.add_messages(value)
 
     async def aadd_message(self, message: BaseMessage) -> None:
         """Append the message to the record in PostgreSQL"""
