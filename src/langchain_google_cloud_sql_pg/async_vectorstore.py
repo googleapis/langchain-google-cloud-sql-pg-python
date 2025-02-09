@@ -261,7 +261,9 @@ class AsyncPostgresVectorStore(VectorStore):
 
             # Add JSON column and/or close statement
             insert_stmt += (
-                f""", "{self.metadata_json_column}")""" if self.metadata_json_column else ")"
+                f""", "{self.metadata_json_column}")"""
+                if self.metadata_json_column
+                else ")"
             )
             if self.metadata_json_column:
                 values_stmt += ", :extra)"
