@@ -241,11 +241,11 @@ class AsyncPostgresVectorStore(VectorStore):
         # Insert embeddings
         for id, content, embedding, metadata in zip(ids, texts, embeddings, metadatas):
             metadata_col_names = (
-                ", " + ", ".join(self.metadata_columns)
+                ", " + ", ".join(f'"{col}"' for col in self.metadata_columns)
                 if len(self.metadata_columns) > 0
                 else ""
             )
-            insert_stmt = f'INSERT INTO "{self.schema_name}"."{self.table_name}"({self.id_column}, {self.content_column}, {self.embedding_column}{metadata_col_names}'
+            insert_stmt = f'INSERT INTO "{self.schema_name}"."{self.table_name}"("{self.id_column}", "{self.content_column}", "{self.embedding_column}"{metadata_col_names}'
             values = {
                 "id": id,
                 "content": content,
@@ -265,7 +265,9 @@ class AsyncPostgresVectorStore(VectorStore):
 
             # Add JSON column and/or close statement
             insert_stmt += (
-                f", {self.metadata_json_column})" if self.metadata_json_column else ")"
+                f""", "{self.metadata_json_column}")"""
+                if self.metadata_json_column
+                else ")"
             )
             if self.metadata_json_column:
                 values_stmt += ", :extra)"
@@ -490,8 +492,18 @@ class AsyncPostgresVectorStore(VectorStore):
         search_function = self.distance_strategy.search_function
         embedding_string = f"'{[float(dimension) for dimension in embedding]}'"
 
+        columns = self.metadata_columns + [
+            self.id_column,
+            self.content_column,
+            self.embedding_column,
+        ]
+        if self.metadata_json_column:
+            columns.append(self.metadata_json_column)
+
+        column_names = ", ".join(f'"{col}"' for col in columns)
+
         filter = f"WHERE {filter}" if filter else ""
-        stmt = f"SELECT *, {search_function}({self.embedding_column}, {embedding_string}) as distance FROM \"{self.schema_name}\".\"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} {embedding_string} LIMIT {k};"
+        stmt = f"SELECT {column_names}, {search_function}({self.embedding_column}, {embedding_string}) as distance FROM \"{self.schema_name}\".\"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} {embedding_string} LIMIT {k};"
         if self.index_query_options:
             async with self.pool.connect() as conn:
                 await conn.execute(
