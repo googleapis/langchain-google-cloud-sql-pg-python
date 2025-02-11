@@ -309,8 +309,9 @@ class TestEngineAsync:
         custom_table_name = "test_checkpoints_table"
 
         await engine.ainit_checkpoint_table(
-            schema_name="postgres", table_name=custom_table_name
+            schema_name="public", table_name=custom_table_name
         )
+
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{custom_table_name}';"
         results = await afetch(engine, stmt)
 
