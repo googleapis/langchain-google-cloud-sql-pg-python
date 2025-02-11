@@ -241,11 +241,11 @@ class AsyncPostgresVectorStore(VectorStore):
         # Insert embeddings
         for id, content, embedding, metadata in zip(ids, texts, embeddings, metadatas):
             metadata_col_names = (
-                ", " + ", ".join(self.metadata_columns)
+                ", " + ", ".join(f'"{col}"' for col in self.metadata_columns)
                 if len(self.metadata_columns) > 0
                 else ""
             )
-            insert_stmt = f'INSERT INTO "{self.schema_name}"."{self.table_name}"({self.id_column}, {self.content_column}, {self.embedding_column}{metadata_col_names}'
+            insert_stmt = f'INSERT INTO "{self.schema_name}"."{self.table_name}"("{self.id_column}", "{self.content_column}", "{self.embedding_column}"{metadata_col_names}'
             values = {"id": id, "content": content, "embedding": str(embedding)}
             values_stmt = "VALUES (:id, :content, :embedding"
 
@@ -261,7 +261,9 @@ class AsyncPostgresVectorStore(VectorStore):
 
             # Add JSON column and/or close statement
             insert_stmt += (
-                f", {self.metadata_json_column})" if self.metadata_json_column else ")"
+                f""", "{self.metadata_json_column}")"""
+                if self.metadata_json_column
+                else ")"
             )
             if self.metadata_json_column:
                 values_stmt += ", :extra)"
