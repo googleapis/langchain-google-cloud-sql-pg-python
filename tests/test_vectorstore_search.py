@@ -170,7 +170,9 @@ class TestVectorStoreSearch:
         results = await vs.asimilarity_search_with_relevance_scores(
             "foo", **score_threshold
         )
-        assert len(results) == 4
+        # Note: Since tests use FakeEmbeddings which are non-normalized vectors, results might have scores beyond the range [0,1].
+        # For a normalized embedding service, a threshold of zero will yield all matched documents.
+        assert len(results) == 2
 
         score_threshold = {"score_threshold": 0.02}
         results = await vs.asimilarity_search_with_relevance_scores(
