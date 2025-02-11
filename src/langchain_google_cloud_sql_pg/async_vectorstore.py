@@ -490,7 +490,6 @@ class AsyncPostgresVectorStore(VectorStore):
         k = k if k else self.k
         operator = self.distance_strategy.operator
         search_function = self.distance_strategy.search_function
-        embedding_string = f"'{[float(dimension) for dimension in embedding]}'"
 
         columns = self.metadata_columns + [
             self.id_column,
@@ -501,9 +500,9 @@ class AsyncPostgresVectorStore(VectorStore):
             columns.append(self.metadata_json_column)
 
         column_names = ", ".join(f'"{col}"' for col in columns)
-
         filter = f"WHERE {filter}" if filter else ""
-        stmt = f"SELECT {column_names}, {search_function}({self.embedding_column}, {embedding_string}) as distance FROM \"{self.schema_name}\".\"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} {embedding_string} LIMIT {k};"
+        embedding_string = f"'{[float(dimension) for dimension in embedding]}'"
+        stmt = f'SELECT {column_names}, {search_function}({self.embedding_column}, {embedding_string}) as distance FROM "{self.schema_name}"."{self.table_name}" {filter} ORDER BY {self.embedding_column} {operator} {embedding_string} LIMIT {k};'
         if self.index_query_options:
             async with self.pool.connect() as conn:
                 await conn.execute(
