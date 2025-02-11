@@ -27,8 +27,8 @@ from sqlalchemy.engine.row import RowMapping
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from langchain_google_cloud_sql_pg import Column, PostgresEngine
-from langchain_google_cloud_sql_pg.engine import (
+from src.langchain_google_cloud_sql_pg import Column, PostgresEngine
+from src.langchain_google_cloud_sql_pg.engine import (
     CHECKPOINT_WRITES_TABLE,
     CHECKPOINTS_TABLE,
 )
@@ -304,13 +304,12 @@ class TestEngineAsync:
         assert engine
         await aexecute(engine, "SELECT 1")
         await engine.close()
-        await engine._connector.close()
 
     async def test_ainit_checkpoints_table(self, engine):
         custom_table_name = "test_checkpoints_table"
-        await aexecute(engine, f'DROP TABLE IF EXISTS "{custom_table_name}"')
+
         await engine.ainit_checkpoint_table(
-            schema_name="public", checkpoints_table_name=custom_table_name
+            schema_name="postgres", table_name=custom_table_name
         )
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{custom_table_name}';"
         results = await afetch(engine, stmt)
@@ -329,14 +328,13 @@ class TestEngineAsync:
 
     async def test_init_checkpoint_writes_table(self, engine):
         custom_table_name = "test_checkpoint_writes_table"
-        await aexecute(engine, f'DROP TABLE IF EXISTS "{custom_table_name}"')
 
-        # Llamar al método correcto `ainit_checkpoint_table`
+        # Call the correct function init_checkpoint_table.
         await engine.ainit_checkpoint_table(
-            schema_name="public", checkpoint_writes_table_name=custom_table_name
+            schema_name="public", writes_table_name=custom_table_name
         )
 
-        # Verificar que la consulta se haga sobre la tabla personalizada
+        # Verify that the query is executed on the custom table.
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{custom_table_name}';"
         results = await afetch(engine, stmt)
 
@@ -503,18 +501,15 @@ class TestEngineSync:
         await aexecute(engine, "SELECT 1")
         await engine.close()
 
-    def test_init_checkpoints_table(self, engine):
+    async def test_init_checkpoints_table(self, engine):
         custom_table_name = "test_checkpoints_table"
-        aexecute(engine, f'DROP TABLE IF EXISTS "{custom_table_name}"')
 
-        # Llamar a la función correcta `init_checkpoint_table`
-        engine.init_checkpoint_table(
-            schema_name="public", checkpoints_table_name=custom_table_name
-        )
+        # Call the correct function init_checkpoint_table.
+        engine.init_checkpoint_table(schema_name="public", table_name=custom_table_name)
 
-        # Verificar que la consulta se haga sobre la tabla personalizada
+        # Verify that the query is executed on the custom table.
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{custom_table_name}';"
-        results = afetch(engine, stmt)
+        results = await afetch(engine, stmt)
 
         expected = [
             {"column_name": "thread_id", "data_type": "text"},
@@ -528,18 +523,17 @@ class TestEngineSync:
         for row in results:
             assert row in expected
 
-    def test_init_checkpoint_writes_table(self, engine):
+    async def test_init_checkpoint_writes_table(self, engine):
         custom_table_name = "test_checkpoint_writes_table"
-        aexecute(engine, f'DROP TABLE IF EXISTS "{custom_table_name}"')
 
-        # Llamar a la función correcta `init_checkpoint_table`
+        # Call the correct function init_checkpoint_table.
         engine.init_checkpoint_table(
-            schema_name="public", checkpoint_writes_table_name=custom_table_name
+            schema_name="public", writes_table_name=custom_table_name
         )
 
-        # Verificar que la consulta se haga sobre la tabla personalizada
+        # Verify that the query is executed on the custom table.
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{custom_table_name}';"
-        results = afetch(engine, stmt)
+        results = await afetch(engine, stmt)
 
         expected = [
             {"column_name": "thread_id", "data_type": "text"},
