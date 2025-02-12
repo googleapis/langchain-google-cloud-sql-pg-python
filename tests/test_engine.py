@@ -125,7 +125,6 @@ class TestEngineAsync:
         await aexecute(engine, f'DROP TABLE "{DEFAULT_TABLE}"')
         await aexecute(engine, f'DROP TABLE "{INT_ID_CUSTOM_TABLE}"')
         await engine.close()
-        await engine._connector.close()
 
     async def test_engine_args(self, engine):
         assert "Pool size: 3" in engine._pool.pool.status()
@@ -205,6 +204,7 @@ class TestEngineAsync:
         assert engine
         await aexecute(engine, "SELECT 1")
         PostgresEngine._connector = None
+        await engine.close()
 
     async def test_from_engine(
         self,
@@ -473,6 +473,7 @@ class TestEngineSync:
         assert engine
         await aexecute(engine, "SELECT 1")
         PostgresEngine._connector = None
+        await engine.close()
 
     async def test_engine_constructor_key(
         self,
