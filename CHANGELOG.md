@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.12.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.12.0...v0.12.1) (2025-02-12)
+
+
+### Bug Fixes
+
+* Add write messages to Chat History ([#265](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/265)) ([0f69092](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/0f690921c95cfe1123f9a7bae6b88ce8748b4a34))
+* Enquote column names to not match reserved keywords. ([#267](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/267)) ([ef63226](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/ef632262781453601364610e39aeac643c94efa1))
+* Query and return only selected metadata columns ([#253](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/253)) ([a8cc5a2](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/a8cc5a20bb3bdcac1109b61ac0d86b341f2ae84d))
+
 ## [0.12.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.11.1...v0.12.0) (2025-01-06)
 
 
