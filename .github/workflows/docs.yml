@@ -1,0 +1,40 @@
+on:
+  pull_request:
+    branches:
+      - main
+name: docs
+permissions:
+  contents: read # This applies to all jobs
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - name: Setup Python
+      uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
+      with:
+        python-version: "3.10"
+    - name: Install nox
+      run: |
+        python -m pip install --upgrade setuptools pip wheel
+        python -m pip install nox
+    - name: Run docs
+      run: |
+        nox -s docs
+  docfx:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - name: Setup Python
+      uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
+      with:
+        python-version: "3.10"
+    - name: Install nox
+      run: |
+        python -m pip install --upgrade setuptools pip wheel
+        python -m pip install nox
+    - name: Run docfx
+      run: |
+        nox -s docfx
