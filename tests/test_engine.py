@@ -27,8 +27,8 @@ from sqlalchemy.engine.row import RowMapping
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from src.langchain_google_cloud_sql_pg import Column, PostgresEngine
-from src.langchain_google_cloud_sql_pg.engine import (
+from langchain_google_cloud_sql_pg import Column, PostgresEngine
+from langchain_google_cloud_sql_pg.engine import (
     CHECKPOINT_WRITES_TABLE,
     CHECKPOINTS_TABLE,
 )
