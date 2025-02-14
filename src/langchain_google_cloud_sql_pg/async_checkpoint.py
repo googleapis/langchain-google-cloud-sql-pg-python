@@ -67,6 +67,8 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         cls,
         engine: PostgresEngine,
         schema_name: str = "public",
+        table_name: str = CHECKPOINTS_TABLE,
+        writes_table_name: str = CHECKPOINT_WRITES_TABLE,
         serde: Optional[SerializerProtocol] = None,
     ) -> "AsyncPostgresSaver":
         """
@@ -75,6 +77,8 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         Args:
             engine (PostgresEngine): The PostgreSQL engine to use.
             schema_name (str, optional): The schema name where the table is located. Defaults to "public".
+            table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
+            writes_table_name (str): Custom table name for checkpoint writes. Default: CHECKPOINT_WRITES_TABLE.
             serde (Optional[SerializerProtocol], optional): Serializer for encoding/decoding checkpoints. Defaults to None.
 
         Raises:
@@ -85,7 +89,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         """
 
         checkpoints_table_schema = await engine._aload_table_schema(
-            CHECKPOINTS_TABLE, schema_name
+            table_name, schema_name
         )
         checkpoints_column_names = checkpoints_table_schema.columns.keys()
 
@@ -117,7 +121,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                 "\n);"
             )
 
-        checkpoint_writes_table_schema = await engine._aload_table_schema(CHECKPOINT_WRITES_TABLE, schema_name)
+        checkpoint_writes_table_schema = await engine._aload_table_schema(writes_table_name, schema_name)
         checkpoint_writes_column_names = checkpoint_writes_table_schema.columns.keys()
 
         checkpoint_writes_columns = [
@@ -213,7 +217,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             }
         }
 
-        query = f"""INSERT INTO "{self.schema_name}".{CHECKPOINTS_TABLE}(thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, checkpoint, metadata)
+        query = f"""INSERT INTO "{self.schema_name}"."{CHECKPOINTS_TABLE}"(thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, checkpoint, metadata)
                     VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :parent_checkpoint_id, :checkpoint, :metadata)
                     ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)
                     DO UPDATE SET

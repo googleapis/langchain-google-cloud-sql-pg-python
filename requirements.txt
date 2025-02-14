@@ -4,8 +4,3 @@ numpy==1.26.4
 pgvector==0.3.4
 SQLAlchemy[asyncio]==2.0.35
 langgraph-checkpoint==2.0.10
-aiohttp~=3.11.11
-asyncpg~=0.30.0
-langgraph~=0.2.68
-pytest~=8.3.4
-pytest-asyncio~=0.25.2
