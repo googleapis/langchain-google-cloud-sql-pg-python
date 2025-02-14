@@ -121,7 +121,9 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                 "\n);"
             )
 
-        checkpoint_writes_table_schema = await engine._aload_table_schema(writes_table_name, schema_name)
+        checkpoint_writes_table_schema = await engine._aload_table_schema(
+            writes_table_name, schema_name
+        )
         checkpoint_writes_column_names = checkpoint_writes_table_schema.columns.keys()
 
         checkpoint_writes_columns = [
@@ -136,7 +138,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         ]
 
         if not (
-                all(x in checkpoint_writes_column_names for x in checkpoint_writes_columns)
+            all(x in checkpoint_writes_column_names for x in checkpoint_writes_columns)
         ):
             raise IndexError(
                 f"Table checkpoint_writes.'{schema_name}' has incorrect schema. Got "
