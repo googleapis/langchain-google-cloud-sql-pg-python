@@ -83,7 +83,7 @@ async def async_engine():
     )
     await async_engine._ainit_checkpoint_table()
     yield async_engine
-    # use default table for AsyncPostgresSaver
+    # use default table for AsyncPostgresSaver.
     await aexecute(async_engine, f'DROP TABLE IF EXISTS "{CHECKPOINTS_TABLE}"')
     await aexecute(async_engine, f'DROP TABLE IF EXISTS"{CHECKPOINT_WRITES_TABLE}"')
     await async_engine.close()
