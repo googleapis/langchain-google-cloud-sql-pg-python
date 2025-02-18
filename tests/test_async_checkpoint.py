@@ -13,26 +13,18 @@
 # limitations under the License.
 
 import os
-from typing import Sequence
+import uuid
+from typing import Any, Sequence, Tuple
 
 import pytest
 import pytest_asyncio
 from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.base import (
-    BaseCheckpointSaver,
-    ChannelVersions,
-    Checkpoint,
-    CheckpointMetadata,
-)
+from langgraph.checkpoint.base import Checkpoint
 from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
 
 from langchain_google_cloud_sql_pg.async_checkpoint import AsyncPostgresSaver
-from langchain_google_cloud_sql_pg.engine import (
-    CHECKPOINT_WRITES_TABLE,
-    CHECKPOINTS_TABLE,
-    PostgresEngine,
-)
+from langchain_google_cloud_sql_pg.engine import PostgresEngine
 
 write_config: RunnableConfig = {"configurable": {"thread_id": "1", "checkpoint_ns": ""}}
 read_config: RunnableConfig = {"configurable": {"thread_id": "1"}}
@@ -42,6 +34,8 @@ region = os.environ["REGION"]
 cluster_id = os.environ["CLUSTER_ID"]
 instance_id = os.environ["INSTANCE_ID"]
 db_name = os.environ["DATABASE_ID"]
+table_name = f"checkpoint{str(uuid.uuid4())}"
+table_name_writes = f"{table_name}_writes"
 
 checkpoint: Checkpoint = {
     "v": 1,
@@ -72,7 +66,7 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return result_fetch
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture  ##(scope="module")
 async def async_engine():
     async_engine = await PostgresEngine.afrom_instance(
         project_id=project_id,
@@ -81,19 +75,27 @@ async def async_engine():
         instance=instance_id,
         database=db_name,
     )
-    await async_engine._ainit_checkpoint_table()
+
     yield async_engine
     # use default table for AsyncPostgresSaver.
-    await aexecute(async_engine, f'DROP TABLE IF EXISTS "{CHECKPOINTS_TABLE}"')
-    await aexecute(async_engine, f'DROP TABLE IF EXISTS"{CHECKPOINT_WRITES_TABLE}"')
+    await aexecute(async_engine, f'DROP TABLE IF EXISTS "{table_name}"')
+    await aexecute(async_engine, f'DROP TABLE IF EXISTS"{table_name_writes}"')
     await async_engine.close()
+    await async_engine._connector.close()
+
+
+@pytest_asyncio.fixture  ##(scope="module")
+async def checkpointer(async_engine):
+    await async_engine._ainit_checkpoint_table(table_name=table_name)
+    checkpointer = await AsyncPostgresSaver.create(async_engine, table_name)
+    yield checkpointer
 
 
 @pytest.mark.asyncio
 async def test_checkpoint_async(
     async_engine: PostgresEngine,
+    checkpointer: AsyncPostgresSaver,
 ) -> None:
-    checkpointer = await AsyncPostgresSaver.create(async_engine)
     test_config = {
         "configurable": {
             "thread_id": "1",
@@ -106,8 +108,36 @@ async def test_checkpoint_async(
     assert dict(next_config) == test_config
 
     # Verify if the checkpoint is stored correctly in the database
-    results = await afetch(async_engine, f"SELECT * FROM {CHECKPOINTS_TABLE}")
+    results = await afetch(async_engine, f"SELECT * FROM {table_name}")
     assert len(results) == 1
     for row in results:
         assert isinstance(row["thread_id"], str)
-    await aexecute(async_engine, f"TRUNCATE TABLE {CHECKPOINTS_TABLE}")
+    await aexecute(async_engine, f"TRUNCATE TABLE {table_name}")
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_aput_writes(
+    async_engine: PostgresEngine,
+    checkpointer: AsyncPostgresSaver,
+) -> None:
+
+    config: RunnableConfig = {
+        "configurable": {
+            "thread_id": "1",
+            "checkpoint_ns": "",
+            "checkpoint_id": "1ef4f797-8335-6428-8001-8a1503f9b875",
+        }
+    }
+
+    # Verify if the checkpoint writes are stored correctly in the database
+    writes: Sequence[Tuple[str, Any]] = [
+        ("test_channel1", {}),
+        ("test_channel2", {}),
+    ]
+    await checkpointer.aput_writes(config, writes, task_id="1")
+
+    results = await afetch(async_engine, f'SELECT * FROM "{table_name_writes}"')
+    assert len(results) == 2
+    for row in results:
+        assert isinstance(row["task_id"], str)
+    await aexecute(async_engine, f'TRUNCATE TABLE "{table_name_writes}"')

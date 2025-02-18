@@ -14,10 +14,11 @@
 
 import json
 from contextlib import asynccontextmanager
-from typing import Any, Optional, cast
+from typing import Any, Optional, Sequence, Tuple, cast
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
+    WRITES_IDX_MAP,
     BaseCheckpointSaver,
     ChannelVersions,
     Checkpoint,
@@ -42,6 +43,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         self,
         key: object,
         pool: AsyncEngine,
+        table_name: str = CHECKPOINTS_TABLE,
         schema_name: str = "public",
         serde: Optional[SerializerProtocol] = None,
     ) -> None:
@@ -51,6 +53,8 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                 "only create class through 'create' or 'create_sync' methods"
             )
         self.pool = pool
+        self.table_name = table_name
+        self.table_name_writes = f"{table_name}_writes"
         self.schema_name = schema_name
 
     @classmethod
@@ -60,17 +64,18 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         schema_name: str = "public",
         serde: Optional[SerializerProtocol] = None,
         table_name: str = CHECKPOINTS_TABLE,
-        writes_table_name: str = CHECKPOINT_WRITES_TABLE,
     ) -> "AsyncPostgresSaver":
         """Create a new AsyncPostgresSaver instance.
+
         Args:
             engine (PostgresEngine): Postgres engine to use.
             schema_name (str): The schema name where the table is located (default: "public").
             serde (SerializerProtocol): Serializer for encoding/decoding checkpoints (default: None).
             table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
-            writes_table_name (str): Custom table name for checkpoint writes. Default: CHECKPOINT_WRITES_TABLE.
+
         Raises:
             IndexError: If the table provided does not contain required schema.
+
         Returns:
             AsyncPostgresSaver: A newly created instance of AsyncPostgresSaver.
         """
@@ -109,7 +114,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             )
 
         checkpoint_writes_table_schema = await engine._aload_table_schema(
-            writes_table_name, schema_name
+            f"{table_name}_writes", schema_name
         )
         writes_column_names = checkpoint_writes_table_schema.columns.keys()
 
@@ -140,7 +145,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                 "\n    blob JSONB NOT NULL"
                 "\n);"
             )
-        return cls(cls.__create_key, engine._pool, schema_name, serde)
+        return cls(cls.__create_key, engine._pool, table_name, schema_name, serde)
 
     def _dump_checkpoint(self, checkpoint: Checkpoint) -> str:
         checkpoint["pending_sends"] = []
@@ -151,6 +156,30 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         # NOTE: we're using JSON serializer (not msgpack), so we need to remove null characters before writing
         return serialized_metadata.decode().replace("\\u0000", "")
 
+    def _dump_writes(
+        self,
+        thread_id: str,
+        checkpoint_ns: str,
+        checkpoint_id: str,
+        task_id: str,
+        task_path: str,
+        writes: Sequence[tuple[str, Any]],
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "thread_id": thread_id,
+                "checkpoint_ns": checkpoint_ns,
+                "checkpoint_id": checkpoint_id,
+                "task_id": task_id,
+                "task_path": task_path,
+                "idx": WRITES_IDX_MAP.get(channel, idx),
+                "channel": channel,
+                "type": self.serde.dumps_typed(value)[0],
+                "blob": self.serde.dumps_typed(value)[1],
+            }
+            for idx, (channel, value) in enumerate(writes)
+        ]
+
     async def aput(
         self,
         config: RunnableConfig,
@@ -159,11 +188,13 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         new_versions: ChannelVersions,
     ) -> RunnableConfig:
         """Asynchronously store a checkpoint with its configuration and metadata.
+
         Args:
             config (RunnableConfig): Configuration for the checkpoint.
             checkpoint (Checkpoint): The checkpoint to store.
             metadata (CheckpointMetadata): Additional metadata for the checkpoint.
             new_versions (ChannelVersions): New channel versions as of this write.
+
         Returns:
             RunnableConfig: Updated configuration after storing the checkpoint.
         """
@@ -183,7 +214,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             }
         }
 
-        query = f"""INSERT INTO "{self.schema_name}"."{CHECKPOINTS_TABLE}"(thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, checkpoint, metadata)
+        query = f"""INSERT INTO "{self.schema_name}"."{self.table_name}"(thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, checkpoint, metadata)
                     VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :parent_checkpoint_id, :checkpoint, :metadata)
                     ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)
                     DO UPDATE SET
@@ -206,3 +237,48 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             await conn.commit()
 
         return next_config
+
+    async def aput_writes(
+        self,
+        config: RunnableConfig,
+        writes: Sequence[Tuple[str, Any]],
+        task_id: str,
+        task_path: str = "",
+    ) -> None:
+        """Asynchronously store intermediate writes linked to a checkpoint.
+        Args:
+            config (RunnableConfig): Configuration of the related checkpoint.
+            writes (List[Tuple[str, Any]]): List of writes to store.
+            task_id (str): Identifier for the task creating the writes.
+            task_path (str): Path of the task creating the writes.
+            Returns:
+                None
+        """
+        upsert = f"""INSERT INTO "{self.schema_name}"."{self.table_name_writes}"(thread_id, checkpoint_ns, checkpoint_id, task_id, idx, channel, type, blob)
+                       VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :task_id, :idx, :channel, :type, :blob)
+                       ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id, task_id, idx) DO UPDATE SET
+                       channel = EXCLUDED.channel,
+                           type = EXCLUDED.type,
+                           blob = EXCLUDED.blob;
+                   """
+        insert = f"""INSERT INTO "{self.schema_name}"."{self.table_name_writes}"(thread_id, checkpoint_ns, checkpoint_id, task_id, idx, channel, type, blob)
+                       VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :task_id, :idx, :channel, :type, :blob)
+                       ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id, task_id, idx) DO NOTHING
+                   """
+        query = upsert if all(w[0] in WRITES_IDX_MAP for w in writes) else insert
+
+        params = self._dump_writes(
+            config["configurable"]["thread_id"],
+            config["configurable"]["checkpoint_ns"],
+            config["configurable"]["checkpoint_id"],
+            task_id,
+            task_path,
+            writes,
+        )
+
+        async with self.pool.connect() as conn:
+            await conn.execute(
+                text(query),
+                params,
+            )
+            await conn.commit()
