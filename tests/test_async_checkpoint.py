@@ -19,7 +19,12 @@ from typing import Any, Sequence, Tuple
 import pytest
 import pytest_asyncio
 from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.base import Checkpoint
+from langgraph.checkpoint.base import (
+    Checkpoint,
+    CheckpointMetadata,
+    create_checkpoint,
+    empty_checkpoint,
+)
 from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
 
@@ -115,6 +120,70 @@ async def test_checkpoint_async(
     await aexecute(async_engine, f"TRUNCATE TABLE {table_name}")
 
 
+@pytest.fixture
+def test_data():
+    """Fixture providing test data for checkpoint tests."""
+    config_0: RunnableConfig = {"configurable": {"thread_id": "1", "checkpoint_ns": ""}}
+    config_1: RunnableConfig = {
+        "configurable": {
+            "thread_id": "thread-1",
+            # for backwards compatibility testing
+            "thread_ts": "1",
+            "checkpoint_ns": "",
+        }
+    }
+    config_2: RunnableConfig = {
+        "configurable": {
+            "thread_id": "thread-2",
+            "checkpoint_id": "2",
+            "checkpoint_ns": "",
+        }
+    }
+    config_3: RunnableConfig = {
+        "configurable": {
+            "thread_id": "thread-2",
+            "checkpoint_id": "2-inner",
+            "checkpoint_ns": "inner",
+        }
+    }
+    chkpnt_0: Checkpoint = {
+        "v": 1,
+        "ts": "2024-07-31T20:14:19.804150+00:00",
+        "id": "1ef4f797-8335-6428-8001-8a1503f9b875",
+        "channel_values": {"my_key": "meow", "node": "node"},
+        "channel_versions": {"__start__": 2, "my_key": 3, "start:node": 3, "node": 3},
+        "versions_seen": {
+            "__input__": {},
+            "__start__": {"__start__": 1},
+            "node": {"start:node": 2},
+        },
+        "pending_sends": [],
+    }
+    chkpnt_1: Checkpoint = empty_checkpoint()
+    chkpnt_2: Checkpoint = create_checkpoint(chkpnt_1, {}, 1)
+    chkpnt_3: Checkpoint = empty_checkpoint()
+
+    metadata_1: CheckpointMetadata = {
+        "source": "input",
+        "step": 2,
+        "writes": {},
+        "parents": 1,
+    }
+    metadata_2: CheckpointMetadata = {
+        "source": "loop",
+        "step": 1,
+        "writes": {"foo": "bar"},
+        "parents": None,
+    }
+    metadata_3: CheckpointMetadata = {}
+
+    return {
+        "configs": [config_0, config_1, config_2, config_3],
+        "checkpoints": [chkpnt_0, chkpnt_1, chkpnt_2, chkpnt_3],
+        "metadata": [metadata_1, metadata_2, metadata_3],
+    }
+
+
 @pytest.mark.asyncio
 async def test_checkpoint_aput_writes(
     async_engine: PostgresEngine,
@@ -141,3 +210,70 @@ async def test_checkpoint_aput_writes(
     for row in results:
         assert isinstance(row["task_id"], str)
     await aexecute(async_engine, f'TRUNCATE TABLE "{table_name_writes}"')
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_alist(
+    async_engine: PostgresEngine,
+    checkpointer: AsyncPostgresSaver,
+    test_data: dict[str, Any],
+) -> None:
+    configs = test_data["configs"]
+    checkpoints = test_data["checkpoints"]
+    metadata = test_data["metadata"]
+
+    await checkpointer.aput(configs[1], checkpoints[1], metadata[0], {})
+    await checkpointer.aput(configs[2], checkpoints[2], metadata[1], {})
+    await checkpointer.aput(configs[3], checkpoints[3], metadata[2], {})
+
+    # call method / assertions
+    query_1 = {"source": "input"}  # search by 1 key
+    query_2 = {
+        "step": 1,
+        "writes": {"foo": "bar"},
+    }  # search by multiple keys
+    query_3: dict[str, Any] = {}  # search by no keys, return all checkpoints
+    query_4 = {"source": "update", "step": 1}  # no match
+
+    search_results_1 = [c async for c in checkpointer.alist(None, filter=query_1)]
+    assert len(search_results_1) == 1
+    assert search_results_1[0].metadata == metadata[0]
+
+    search_results_2 = [c async for c in checkpointer.alist(None, filter=query_2)]
+    assert len(search_results_2) == 1
+    assert search_results_2[0].metadata == metadata[1]
+
+    search_results_3 = [c async for c in checkpointer.alist(None, filter=query_3)]
+    assert len(search_results_3) == 3
+
+    search_results_4 = [c async for c in checkpointer.alist(None, filter=query_4)]
+    assert len(search_results_4) == 0
+
+    # search by config (defaults to checkpoints across all namespaces)
+    search_results_5 = [
+        c async for c in checkpointer.alist({"configurable": {"thread_id": "thread-2"}})
+    ]
+    assert len(search_results_5) == 2
+    assert {
+        search_results_5[0].config["configurable"]["checkpoint_ns"],
+        search_results_5[1].config["configurable"]["checkpoint_ns"],
+    } == {"", "inner"}
+
+
+@pytest.mark.asyncio
+async def test_null_chars(
+    checkpointer: AsyncPostgresSaver,
+    test_data: dict[str, Any],
+) -> None:
+    config = await checkpointer.aput(
+        test_data["configs"][0],
+        test_data["checkpoints"][0],
+        {"my_key": "\x00abc"},  # type: ignore
+        {},
+    )
+    # assert (await checkpointer.aget_tuple(config)).metadata["my_key"] == "abc"  # type: ignore
+    assert [c async for c in checkpointer.alist(None, filter={"my_key": "abc"})][
+        0
+    ].metadata[
+        "my_key"  # type: ignore
+    ] == "abc"  # type: ignore
