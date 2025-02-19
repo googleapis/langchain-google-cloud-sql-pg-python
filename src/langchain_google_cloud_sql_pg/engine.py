@@ -40,7 +40,6 @@ T = TypeVar("T")
 USER_AGENT = "langchain-google-cloud-sql-pg-python/" + __version__
 
 CHECKPOINTS_TABLE = "checkpoints"
-CHECKPOINT_WRITES_TABLE = "checkpoint_writes"
 
 
 async def _get_iam_principal_email(
@@ -751,22 +750,21 @@ class PostgresEngine:
         )
 
     async def _ainit_checkpoint_table(
-        self,
-        schema_name: str = "public",
-        table_name: str = CHECKPOINTS_TABLE,
-        writes_table_name: str = CHECKPOINT_WRITES_TABLE,
+        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
         """
-        Create AlloyDB tables to save checkpoints.
+        Create PgSQL tables to save checkpoints.
+
         Args:
-            schema_name (str): The schema name to store the checkpoint tables. Default: "public".
-            table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
-            writes_table_name (str): Custom table name for checkpoint writes. Default: CHECKPOINT_WRITES_TABLE.
+            schema_name (str): The schema name to store the checkpoint tables.
+                Default: "public".
+            table_name (str): Custom table name for checkpoints.
+                Default: CHECKPOINTS_TABLE.
+
         Returns:
             None
         """
-        create_checkpoints_table = f"""
-        CREATE TABLE IF NOT EXISTS "{schema_name}".{table_name}(
+        create_checkpoints_table = f"""CREATE TABLE "{schema_name}"."{table_name}"(
             thread_id TEXT NOT NULL,
             checkpoint_ns TEXT NOT NULL DEFAULT '',
             checkpoint_id TEXT NOT NULL,
@@ -777,8 +775,7 @@ class PostgresEngine:
             PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id)
         );"""
 
-        create_checkpoint_writes_table = f"""
-        CREATE TABLE IF NOT EXISTS "{schema_name}".{writes_table_name} (
+        create_checkpoint_writes_table = f"""CREATE TABLE "{schema_name}"."{table_name + "_writes"}"(
             thread_id TEXT NOT NULL,
             checkpoint_ns TEXT NOT NULL DEFAULT '',
             checkpoint_id TEXT NOT NULL,
@@ -799,36 +796,34 @@ class PostgresEngine:
         self,
         schema_name: str = "public",
         table_name: str = CHECKPOINTS_TABLE,
-        writes_table_name: str = CHECKPOINT_WRITES_TABLE,
     ) -> None:
         """Create an AlloyDB table to save checkpoint messages.
         Args:
             schema_name (str): The schema name to store checkpoint tables. Default: "public".
             table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
-            writes_table_name (str): Custom table name for checkpoint writes. Default: CHECKPOINT_WRITES_TABLE.
+
         Returns:
             None
         """
         await self._run_as_async(
-            self._ainit_checkpoint_table(schema_name, table_name, writes_table_name)
+            self._ainit_checkpoint_table(schema_name=schema_name, table_name=table_name)
         )
 
     def init_checkpoint_table(
         self,
         schema_name: str = "public",
         table_name: str = CHECKPOINTS_TABLE,
-        writes_table_name: str = CHECKPOINT_WRITES_TABLE,
     ) -> None:
         """Create Cloud SQL tables to store checkpoints.
         Args:
             schema_name (str): The schema name to store checkpoint tables. Default: "public".
-              table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
-            writes_table_name (str): Custom table name for checkpoint writes. Default: CHECKPOINT_WRITES_TABLE.
+            table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
+
         Returns:
             None
         """
         self._run_as_sync(
-            self._ainit_checkpoint_table(schema_name, table_name, writes_table_name)
+            self._ainit_checkpoint_table(schema_name=schema_name, table_name=table_name)
         )
 
     async def _aload_table_schema(
@@ -849,7 +844,7 @@ class PostgresEngine:
                 )
             except InvalidRequestError as e:
                 raise ValueError(
-                    f"Table, '{schema_name}'.'{table_name}', does not exist: " + str(e)
+                    f'Table, "{schema_name}"."{table_name}", does not exist: ' + str(e)
                 )
 
         table = Table(table_name, metadata, schema=schema_name)
@@ -865,4 +860,4 @@ class PostgresEngine:
                 }
             )
 
-        return metadata.tables[f"{schema_name}.{table_name}"]
+        return metadata.tables[f'"{schema_name}"."{table_name}"']
