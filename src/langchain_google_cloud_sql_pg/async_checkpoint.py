@@ -91,16 +91,16 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             )
         self.pool = pool
         self.table_name = table_name
-        self.table_name_writes = f"{table_name}_writes"
+        self.table_name_writes = f'"{table_name}"_writes'
         self.schema_name = schema_name
 
     @classmethod
     async def create(
         cls,
         engine: PostgresEngine,
+        table_name: str = CHECKPOINTS_TABLE,
         schema_name: str = "public",
         serde: Optional[SerializerProtocol] = None,
-        table_name: str = CHECKPOINTS_TABLE,
     ) -> "AsyncPostgresSaver":
         """Create a new AsyncPostgresSaver instance.
 
@@ -151,7 +151,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             )
 
         checkpoint_writes_table_schema = await engine._aload_table_schema(
-            f"{table_name}_writes", schema_name
+            f'"{table_name}"_writes', schema_name
         )
         writes_column_names = checkpoint_writes_table_schema.columns.keys()
 

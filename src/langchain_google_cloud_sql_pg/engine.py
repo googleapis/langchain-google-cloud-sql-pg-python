@@ -750,22 +750,21 @@ class PostgresEngine:
         )
 
     async def _ainit_checkpoint_table(
-        self,
-        schema_name: str = "public",
-        table_name: str = CHECKPOINTS_TABLE,
+        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
         """
-        Create PostgreSQL tables to save checkpoints.
+        Create PgSQL tables to save checkpoints.
 
         Args:
-            schema_name (str): The schema name to store the checkpoint tables. Default: "public".
-            table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
+            schema_name (str): The schema name to store the checkpoint tables.
+                Default: "public".
+            table_name (str): Custom table name for checkpoints.
+                Default: CHECKPOINTS_TABLE.
 
         Returns:
             None
         """
-        create_checkpoints_table = f"""
-        CREATE TABLE IF NOT EXISTS "{schema_name}".{table_name}(
+        create_checkpoints_table = f"""CREATE TABLE "{schema_name}"."{table_name}"(
             thread_id TEXT NOT NULL,
             checkpoint_ns TEXT NOT NULL DEFAULT '',
             checkpoint_id TEXT NOT NULL,
@@ -776,8 +775,7 @@ class PostgresEngine:
             PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id)
         );"""
 
-        create_checkpoint_writes_table = f"""
-        CREATE TABLE IF NOT EXISTS "{schema_name}".{table_name + "_writes"} (
+        create_checkpoint_writes_table = f"""CREATE TABLE "{schema_name}"."{table_name + "_writes"}"(
             thread_id TEXT NOT NULL,
             checkpoint_ns TEXT NOT NULL DEFAULT '',
             checkpoint_id TEXT NOT NULL,
@@ -846,7 +844,7 @@ class PostgresEngine:
                 )
             except InvalidRequestError as e:
                 raise ValueError(
-                    f"Table, '{schema_name}'.'{table_name}', does not exist: " + str(e)
+                    f'Table, "{schema_name}"."{table_name}", does not exist: ' + str(e)
                 )
 
         table = Table(table_name, metadata, schema=schema_name)
@@ -862,4 +860,4 @@ class PostgresEngine:
                 }
             )
 
-        return metadata.tables[f"{schema_name}.{table_name}"]
+        return metadata.tables[f'"{schema_name}"."{table_name}"']

@@ -34,9 +34,6 @@ from langchain_google_cloud_sql_pg.engine import PostgresEngine
 write_config: RunnableConfig = {"configurable": {"thread_id": "1", "checkpoint_ns": ""}}
 read_config: RunnableConfig = {"configurable": {"thread_id": "1"}}
 
-project_id = os.environ["PROJECT_ID"]
-region = os.environ["REGION"]
-cluster_id = os.environ["CLUSTER_ID"]
 instance_id = os.environ["INSTANCE_ID"]
 db_name = os.environ["DATABASE_ID"]
 table_name = f"checkpoint{str(uuid.uuid4())}"
@@ -71,12 +68,9 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return result_fetch
 
 
-@pytest_asyncio.fixture  ##(scope="module")
+@pytest_asyncio.fixture
 async def async_engine():
     async_engine = await PostgresEngine.afrom_instance(
-        project_id=project_id,
-        region=region,
-        cluster=cluster_id,
         instance=instance_id,
         database=db_name,
     )
@@ -84,12 +78,12 @@ async def async_engine():
     yield async_engine
     # use default table for AsyncPostgresSaver.
     await aexecute(async_engine, f'DROP TABLE IF EXISTS "{table_name}"')
-    await aexecute(async_engine, f'DROP TABLE IF EXISTS"{table_name_writes}"')
+    await aexecute(async_engine, f'DROP TABLE IF EXISTS "{table_name_writes}"')
     await async_engine.close()
     await async_engine._connector.close()
 
 
-@pytest_asyncio.fixture  ##(scope="module")
+@pytest_asyncio.fixture
 async def checkpointer(async_engine):
     await async_engine._ainit_checkpoint_table(table_name=table_name)
     checkpointer = await AsyncPostgresSaver.create(async_engine, table_name)
@@ -113,11 +107,11 @@ async def test_checkpoint_async(
     assert dict(next_config) == test_config
 
     # Verify if the checkpoint is stored correctly in the database
-    results = await afetch(async_engine, f"SELECT * FROM {table_name}")
+    results = await afetch(async_engine, f'SELECT * FROM "{table_name}"')
     assert len(results) == 1
     for row in results:
         assert isinstance(row["thread_id"], str)
-    await aexecute(async_engine, f"TRUNCATE TABLE {table_name}")
+    await aexecute(async_engine, f'TRUNCATE TABLE "{table_name}"')
 
 
 @pytest.fixture
