@@ -1,7 +1,7 @@
 {
   "extends": [
     "config:base", // https://docs.renovatebot.com/presets-config/#configbase
-    ":semanticCommits", // https://docs.renovatebot.com/presets-default/#semanticcommits
+    ":semanticCommitTypeAll(chore)", // https://docs.renovatebot.com/presets-default/#semanticcommittypeallarg0
     ":ignoreUnstable", // https://docs.renovatebot.com/presets-default/#ignoreunstable
     "group:allNonMajor", // https://docs.renovatebot.com/presets-group/#groupallnonmajor
     ":separateMajorReleases", // https://docs.renovatebot.com/presets-default/#separatemajorreleases
