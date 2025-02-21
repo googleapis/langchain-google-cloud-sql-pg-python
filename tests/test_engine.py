@@ -309,7 +309,7 @@ class TestEngineAsync:
         table_name = f"checkpoint{uuid.uuid4()}"
         table_name_writes = f"{table_name}_writes"
         await engine.ainit_checkpoint_table(table_name=table_name)
-        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name_writes}';"
+        stmt = f'SELECT column_name, data_type FROM information_schema.columns WHERE table_name = "{table_name_writes}";'
         results = await afetch(engine, stmt)
         expected = [
             {"column_name": "thread_id", "data_type": "text"},
@@ -323,7 +323,7 @@ class TestEngineAsync:
         ]
         for row in results:
             assert row in expected
-        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';"
+        stmt = f'SELECT column_name, data_type FROM information_schema.columns WHERE table_name = "{table_name}";'
         results = await afetch(engine, stmt)
         expected = [
             {"column_name": "thread_id", "data_type": "text"},
@@ -494,7 +494,7 @@ class TestEngineSync:
         table_name = f"checkpoint{uuid.uuid4()}"
         table_name_writes = f"{table_name}_writes"
         engine.init_checkpoint_table(table_name=table_name)
-        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';"
+        stmt = f'SELECT column_name, data_type FROM information_schema.columns WHERE table_name = "{table_name}";'
         results = await afetch(engine, stmt)
         expected = [
             {"column_name": "thread_id", "data_type": "text"},
@@ -507,7 +507,7 @@ class TestEngineSync:
         ]
         for row in results:
             assert row in expected
-        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name_writes}';"
+        stmt = f'SELECT column_name, data_type FROM information_schema.columns WHERE table_name = "{table_name_writes}";'
         results = await afetch(engine, stmt)
         expected = [
             {"column_name": "thread_id", "data_type": "text"},

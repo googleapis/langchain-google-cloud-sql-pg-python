@@ -76,7 +76,7 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return result_fetch
 
 
-@pytest_asyncio.fixture  ##(scope="module")
+@pytest_asyncio.fixture
 async def async_engine():
     async_engine = await PostgresEngine.afrom_instance(
         project_id=project_id,
@@ -94,7 +94,7 @@ async def async_engine():
     await async_engine._connector.close()
 
 
-@pytest_asyncio.fixture  ##(scope="module")
+@pytest_asyncio.fixture
 async def checkpointer(async_engine):
     await async_engine._ainit_checkpoint_table(table_name=table_name)
     checkpointer = await AsyncPostgresSaver.create(async_engine, table_name)
