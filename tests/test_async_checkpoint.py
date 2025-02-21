@@ -34,17 +34,25 @@ from langchain_google_cloud_sql_pg.engine import PostgresEngine
 write_config: RunnableConfig = {"configurable": {"thread_id": "1", "checkpoint_ns": ""}}
 read_config: RunnableConfig = {"configurable": {"thread_id": "1"}}
 
+project_id = os.environ["PROJECT_ID"]
+region = os.environ["REGION"]
+cluster_id = os.environ["CLUSTER_ID"]
 instance_id = os.environ["INSTANCE_ID"]
 db_name = os.environ["DATABASE_ID"]
-table_name = f"checkpoint{str(uuid.uuid4())}"
-table_name_writes = f"{table_name}_writes"
+table_name = "checkpoint" + str(uuid.uuid4())
+table_name_writes = table_name + "_writes"
 
 checkpoint: Checkpoint = {
     "v": 1,
     "ts": "2024-07-31T20:14:19.804150+00:00",
     "id": "1ef4f797-8335-6428-8001-8a1503f9b875",
     "channel_values": {"my_key": "meow", "node": "node"},
-    "channel_versions": {"__start__": 2, "my_key": 3, "start:node": 3, "node": 3},
+    "channel_versions": {
+        "__start__": 2,
+        "my_key": 3,
+        "start:node": 3,
+        "node": 3,
+    },
     "versions_seen": {
         "__input__": {},
         "__start__": {"__start__": 1},
@@ -68,22 +76,25 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return result_fetch
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture  ##(scope="module")
 async def async_engine():
     async_engine = await PostgresEngine.afrom_instance(
+        project_id=project_id,
+        region=region,
+        cluster=cluster_id,
         instance=instance_id,
         database=db_name,
     )
 
     yield async_engine
-    # use default table for AsyncPostgresSaver.
+
     await aexecute(async_engine, f'DROP TABLE IF EXISTS "{table_name}"')
     await aexecute(async_engine, f'DROP TABLE IF EXISTS "{table_name_writes}"')
     await async_engine.close()
     await async_engine._connector.close()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture  ##(scope="module")
 async def checkpointer(async_engine):
     await async_engine._ainit_checkpoint_table(table_name=table_name)
     checkpointer = await AsyncPostgresSaver.create(async_engine, table_name)
@@ -95,6 +106,7 @@ async def test_checkpoint_async(
     async_engine: PostgresEngine,
     checkpointer: AsyncPostgresSaver,
 ) -> None:
+
     test_config = {
         "configurable": {
             "thread_id": "1",

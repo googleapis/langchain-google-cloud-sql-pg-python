@@ -32,7 +32,7 @@ from langgraph.checkpoint.serde.types import TASKS
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from .engine import CHECKPOINTS_TABLE, PostgresEngine
+from .engine import CHECKPOINT_WRITES_TABLE, CHECKPOINTS_TABLE, PostgresEngine
 
 MetadataInput = Optional[dict[str, Any]]
 
@@ -70,7 +70,7 @@ from checkpoints
 
 
 class AsyncPostgresSaver(BaseCheckpointSaver[str]):
-    """Checkpoint stored in an PostgreSQL database."""
+    """Checkpoint stored in an PostgreSQL for PostgreSQL database."""
 
     __create_key = object()
 
@@ -91,7 +91,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             )
         self.pool = pool
         self.table_name = table_name
-        self.table_name_writes = f'"{table_name}"_writes'
+        self.table_name_writes = f"{table_name}_writes"
         self.schema_name = schema_name
 
     @classmethod
@@ -105,10 +105,10 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         """Create a new AsyncPostgresSaver instance.
 
         Args:
-            engine (PostgresEngine): Postgres engine to use.
+            engine (PostgresEngine): PostgresEngine engine to use.
+            table_name (str): Customized table name to use.
             schema_name (str): The schema name where the table is located (default: "public").
             serde (SerializerProtocol): Serializer for encoding/decoding checkpoints (default: None).
-            table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
 
         Raises:
             IndexError: If the table provided does not contain required schema.
@@ -151,9 +151,9 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             )
 
         checkpoint_writes_table_schema = await engine._aload_table_schema(
-            f'"{table_name}"_writes', schema_name
+            f"{table_name}_writes", schema_name
         )
-        writes_column_names = checkpoint_writes_table_schema.columns.keys()
+        checkpoint_writes_column_names = checkpoint_writes_table_schema.columns.keys()
 
         checkpoint_writes_columns = [
             "thread_id",
@@ -166,10 +166,12 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             "blob",
         ]
 
-        if not (all(x in writes_column_names for x in checkpoint_writes_columns)):
+        if not (
+            all(x in checkpoint_writes_column_names for x in checkpoint_writes_columns)
+        ):
             raise IndexError(
                 f"Table checkpoint_writes.'{schema_name}' has incorrect schema. Got "
-                f"column names '{writes_column_names}' but required column names "
+                f"column names '{checkpoint_writes_column_names}' but required column names "
                 f"'{checkpoint_writes_columns}'.\nPlease create table with following schema:"
                 f"\nCREATE TABLE {schema_name}.checkpoint_writes ("
                 "\n    thread_id TEXT NOT NULL,"
@@ -343,7 +345,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             }
         }
 
-        query = f"""INSERT INTO "{self.schema_name}"."{self.table_name}"(thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, checkpoint, metadata)
+        query = f"""INSERT INTO "{self.schema_name}"."{self.table_name}" (thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, checkpoint, metadata)
                     VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :parent_checkpoint_id, :checkpoint, :metadata)
                     ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)
                     DO UPDATE SET
@@ -380,20 +382,21 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             writes (List[Tuple[str, Any]]): List of writes to store.
             task_id (str): Identifier for the task creating the writes.
             task_path (str): Path of the task creating the writes.
+
             Returns:
                 None
         """
         upsert = f"""INSERT INTO "{self.schema_name}"."{self.table_name_writes}"(thread_id, checkpoint_ns, checkpoint_id, task_id, idx, channel, type, blob)
-                       VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :task_id, :idx, :channel, :type, :blob)
-                       ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id, task_id, idx) DO UPDATE SET
-                       channel = EXCLUDED.channel,
-                           type = EXCLUDED.type,
-                           blob = EXCLUDED.blob;
-                   """
+                    VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :task_id, :idx, :channel, :type, :blob)
+                    ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id, task_id, idx) DO UPDATE SET
+                    channel = EXCLUDED.channel,
+                        type = EXCLUDED.type,
+                        blob = EXCLUDED.blob;
+                """
         insert = f"""INSERT INTO "{self.schema_name}"."{self.table_name_writes}"(thread_id, checkpoint_ns, checkpoint_id, task_id, idx, channel, type, blob)
-                       VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :task_id, :idx, :channel, :type, :blob)
-                       ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id, task_id, idx) DO NOTHING
-                   """
+                    VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :task_id, :idx, :channel, :type, :blob)
+                    ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id, task_id, idx) DO NOTHING
+                """
         query = upsert if all(w[0] in WRITES_IDX_MAP for w in writes) else insert
 
         params = self._dump_writes(

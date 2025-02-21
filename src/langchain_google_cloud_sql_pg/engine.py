@@ -40,6 +40,7 @@ T = TypeVar("T")
 USER_AGENT = "langchain-google-cloud-sql-pg-python/" + __version__
 
 CHECKPOINTS_TABLE = "checkpoints"
+CHECKPOINT_WRITES_TABLE = "checkpoint_writes"
 
 
 async def _get_iam_principal_email(
@@ -793,38 +794,41 @@ class PostgresEngine:
             await conn.commit()
 
     async def ainit_checkpoint_table(
-        self,
-        schema_name: str = "public",
-        table_name: str = CHECKPOINTS_TABLE,
+        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
         """Create an AlloyDB table to save checkpoint messages.
+
         Args:
-            schema_name (str): The schema name to store checkpoint tables. Default: "public".
-            table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
+            schema_name (str): The schema name to store checkpoint tables.
+                Default: "public".
+            table_name (str): Custom table name for checkpoints.
+                Default: CHECKPOINTS_TABLE.
 
         Returns:
             None
         """
         await self._run_as_async(
-            self._ainit_checkpoint_table(schema_name=schema_name, table_name=table_name)
+            self._ainit_checkpoint_table(
+                table_name,
+                schema_name,
+            )
         )
 
     def init_checkpoint_table(
-        self,
-        schema_name: str = "public",
-        table_name: str = CHECKPOINTS_TABLE,
+        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
         """Create Cloud SQL tables to store checkpoints.
+
         Args:
-            schema_name (str): The schema name to store checkpoint tables. Default: "public".
-            table_name (str): Custom table name for checkpoints. Default: CHECKPOINTS_TABLE.
+            schema_name (str): The schema name to store checkpoint tables.
+                Default: "public".
+            table_name (str): Custom table name for checkpoints.
+                Default: CHECKPOINTS_TABLE.
 
         Returns:
             None
         """
-        self._run_as_sync(
-            self._ainit_checkpoint_table(schema_name=schema_name, table_name=table_name)
-        )
+        self._run_as_sync(self._ainit_checkpoint_table(table_name, schema_name))
 
     async def _aload_table_schema(
         self,
