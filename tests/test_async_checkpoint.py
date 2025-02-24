@@ -89,7 +89,7 @@ async def async_engine():
     await aexecute(async_engine, f'DROP TABLE IF EXISTS "{table_name}"')
     await aexecute(async_engine, f'DROP TABLE IF EXISTS "{table_name_writes}"')
     await async_engine.close()
-    await async_engine._connector.close()
+    await async_engine._connector.close_async()
 
 
 @pytest_asyncio.fixture

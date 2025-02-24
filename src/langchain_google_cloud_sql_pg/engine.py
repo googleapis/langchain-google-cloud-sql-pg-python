@@ -864,4 +864,4 @@ class PostgresEngine:
                 }
             )
 
-        return metadata.tables[f'"{schema_name}"."{table_name}"']
+        return metadata.tables[f"{schema_name}.{table_name}"]
