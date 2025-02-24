@@ -44,7 +44,8 @@ test = [
     "mypy==1.13.0",
     "pytest-asyncio==0.24.0",
     "pytest==8.3.4",
-    "pytest-cov==6.0.0"
+    "pytest-cov==6.0.0",
+    "langchain-tests==0.3.12"
 ]
 
 [build-system]
