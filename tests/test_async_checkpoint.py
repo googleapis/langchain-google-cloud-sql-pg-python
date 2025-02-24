@@ -36,7 +36,6 @@ read_config: RunnableConfig = {"configurable": {"thread_id": "1"}}
 
 project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
-cluster_id = os.environ["CLUSTER_ID"]
 instance_id = os.environ["INSTANCE_ID"]
 db_name = os.environ["DATABASE_ID"]
 table_name = "checkpoint" + str(uuid.uuid4())
