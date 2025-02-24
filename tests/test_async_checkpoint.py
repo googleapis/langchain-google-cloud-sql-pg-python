@@ -80,7 +80,6 @@ async def async_engine():
     async_engine = await PostgresEngine.afrom_instance(
         project_id=project_id,
         region=region,
-        cluster=cluster_id,
         instance=instance_id,
         database=db_name,
     )
