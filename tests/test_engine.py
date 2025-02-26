@@ -323,7 +323,7 @@ class TestEngineAsync:
         ]
         for row in results:
             assert row in expected
-        stmt = f'SELECT column_name, data_type FROM information_schema.columns WHERE table_name = "{table_name}";'
+        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';"
         results = await afetch(engine, stmt)
         expected = [
             {"column_name": "thread_id", "data_type": "text"},

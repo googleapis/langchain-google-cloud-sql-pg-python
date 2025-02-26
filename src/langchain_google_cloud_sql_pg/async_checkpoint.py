@@ -435,13 +435,21 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             AsyncIterator[CheckpointTuple]: Async iterator of matching checkpoint tuples.
         """
 
+        if filter:
+            for key, value in filter.items():
+                if isinstance(value, dict):
+                    filter[key] = json.dumps(value)
+
         where, args = self._search_where(config, filter, before)
+
+        args_dict = {f"param_{i}": v for i, v in enumerate(args)}
+
         query = SELECT + where + " ORDER BY checkpoint_id DESC"
         if limit:
             query += f" LIMIT {limit}"
 
         async with self.pool.connect() as conn:
-            result = await conn.stream(text(query), args)
+            result = await conn.stream(text(query), args_dict)
             async for row in result:
                 value = dict(row._mapping)
                 yield CheckpointTuple(
