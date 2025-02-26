@@ -157,3 +157,4 @@ class TestStandardSuiteAsync(VectorStoreIntegrationTests):
         )
 
         yield vs
+
