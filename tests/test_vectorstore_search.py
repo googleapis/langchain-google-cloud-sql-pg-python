@@ -100,7 +100,6 @@ class TestVectorStoreSearch:
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
         )
-        ids = [str(uuid.uuid4()) for i in range(len(texts))]
         await vs.aadd_documents(docs, ids=ids)
         yield vs
 
@@ -146,23 +145,23 @@ class TestVectorStoreSearch:
     async def test_asimilarity_search(self, vs):
         results = await vs.asimilarity_search("foo", k=1)
         assert len(results) == 1
-        assert results == [Document(page_content="foo")]
+        assert results == [Document(page_content="foo", id=ids[0])]
         results = await vs.asimilarity_search("foo", k=1, filter="content = 'bar'")
-        assert results == [Document(page_content="bar")]
+        assert results == [Document(page_content="bar", id=ids[1])]
 
     async def test_asimilarity_search_score(self, vs):
         results = await vs.asimilarity_search_with_score("foo")
         assert len(results) == 4
-        assert results[0][0] == Document(page_content="foo")
+        assert results[0][0] == Document(page_content="foo", id=ids[0])
         assert results[0][1] == 0
 
     async def test_asimilarity_search_by_vector(self, vs):
         embedding = embeddings_service.embed_query("foo")
         results = await vs.asimilarity_search_by_vector(embedding)
         assert len(results) == 4
-        assert results[0] == Document(page_content="foo")
+        assert results[0] == Document(page_content="foo", id=ids[0])
         results = await vs.asimilarity_search_with_score_by_vector(embedding)
-        assert results[0][0] == Document(page_content="foo")
+        assert results[0][0] == Document(page_content="foo", id=ids[0])
         assert results[0][1] == 0
 
     async def test_similarity_search_with_relevance_scores_threshold_cosine(self, vs):
@@ -185,7 +184,7 @@ class TestVectorStoreSearch:
             "foo", **score_threshold
         )
         assert len(results) == 1
-        assert results[0][0] == Document(page_content="foo")
+        assert results[0][0] == Document(page_content="foo", id=ids[0])
 
     async def test_similarity_search_with_relevance_scores_threshold_euclidean(
         self, engine
@@ -202,32 +201,32 @@ class TestVectorStoreSearch:
             "foo", **score_threshold
         )
         assert len(results) == 1
-        assert results[0][0] == Document(page_content="foo")
+        assert results[0][0] == Document(page_content="foo", id=ids[0])
 
     async def test_amax_marginal_relevance_search(self, vs):
         results = await vs.amax_marginal_relevance_search("bar")
-        assert results[0] == Document(page_content="bar")
+        assert results[0] == Document(page_content="bar", id=ids[1])
         results = await vs.amax_marginal_relevance_search(
             "bar", filter="content = 'boo'"
         )
-        assert results[0] == Document(page_content="boo")
+        assert results[0] == Document(page_content="boo", id=ids[3])
 
     async def test_amax_marginal_relevance_search_vector(self, vs):
         embedding = embeddings_service.embed_query("bar")
         results = await vs.amax_marginal_relevance_search_by_vector(embedding)
-        assert results[0] == Document(page_content="bar")
+        assert results[0] == Document(page_content="bar", id=ids[1])
 
     async def test_amax_marginal_relevance_search_vector_score(self, vs):
         embedding = embeddings_service.embed_query("bar")
         results = await vs.amax_marginal_relevance_search_with_score_by_vector(
             embedding
         )
-        assert results[0][0] == Document(page_content="bar")
+        assert results[0][0] == Document(page_content="bar", id=ids[1])
 
         results = await vs.amax_marginal_relevance_search_with_score_by_vector(
             embedding, lambda_mult=0.75, fetch_k=10
         )
-        assert results[0][0] == Document(page_content="bar")
+        assert results[0][0] == Document(page_content="bar", id=ids[1])
 
 
 class TestVectorStoreSearchSync:
@@ -289,46 +288,46 @@ class TestVectorStoreSearchSync:
     def test_similarity_search(self, vs_custom):
         results = vs_custom.similarity_search("foo", k=1)
         assert len(results) == 1
-        assert results == [Document(page_content="foo")]
+        assert results == [Document(page_content="foo", id=ids[0])]
         results = vs_custom.similarity_search("foo", k=1, filter="mycontent = 'bar'")
-        assert results == [Document(page_content="bar")]
+        assert results == [Document(page_content="bar", id=ids[1])]
 
     def test_similarity_search_score(self, vs_custom):
         results = vs_custom.similarity_search_with_score("foo")
         assert len(results) == 4
-        assert results[0][0] == Document(page_content="foo")
+        assert results[0][0] == Document(page_content="foo", id=ids[0])
         assert results[0][1] == 0
 
     def test_similarity_search_by_vector(self, vs_custom):
         embedding = embeddings_service.embed_query("foo")
         results = vs_custom.similarity_search_by_vector(embedding)
         assert len(results) == 4
-        assert results[0] == Document(page_content="foo")
+        assert results[0] == Document(page_content="foo", id=ids[0])
         results = vs_custom.similarity_search_with_score_by_vector(embedding)
-        assert results[0][0] == Document(page_content="foo")
+        assert results[0][0] == Document(page_content="foo", id=ids[0])
         assert results[0][1] == 0
 
     def test_max_marginal_relevance_search(self, vs_custom):
         results = vs_custom.max_marginal_relevance_search("bar")
-        assert results[0] == Document(page_content="bar")
+        assert results[0] == Document(page_content="bar", id=ids[1])
         results = vs_custom.max_marginal_relevance_search(
             "bar", filter="mycontent = 'boo'"
         )
-        assert results[0] == Document(page_content="boo")
+        assert results[0] == Document(page_content="boo", id=ids[3])
 
     def test_max_marginal_relevance_search_vector(self, vs_custom):
         embedding = embeddings_service.embed_query("bar")
         results = vs_custom.max_marginal_relevance_search_by_vector(embedding)
-        assert results[0] == Document(page_content="bar")
+        assert results[0] == Document(page_content="bar", id=ids[1])
 
     def test_max_marginal_relevance_search_vector_score(self, vs_custom):
         embedding = embeddings_service.embed_query("bar")
         results = vs_custom.max_marginal_relevance_search_with_score_by_vector(
             embedding
         )
-        assert results[0][0] == Document(page_content="bar")
+        assert results[0][0] == Document(page_content="bar", id=ids[1])
 
         results = vs_custom.max_marginal_relevance_search_with_score_by_vector(
             embedding, lambda_mult=0.75, fetch_k=10
         )
-        assert results[0][0] == Document(page_content="bar")
+        assert results[0][0] == Document(page_content="bar", id=ids[1])
