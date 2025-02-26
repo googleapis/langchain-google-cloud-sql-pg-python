@@ -237,6 +237,7 @@ class AsyncPostgresVectorStore(VectorStore):
         if not ids:
             ids = [str(uuid.uuid4()) for _ in texts]
         else:
+            # This is done to fill in any missing ids
             ids = [id if id is not None else str(uuid.uuid4()) for id in ids]
         if not metadatas:
             metadatas = [{} for _ in texts]
