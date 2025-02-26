@@ -41,8 +41,8 @@ Changelog = "https://github.com/googleapis/langchain-google-cloud-sql-pg-python/
 test = [
     "black[jupyter]==25.1.0",
     "isort==6.0.0",
-    "mypy==1.13.0",
-    "pytest-asyncio==0.24.0",
+    "mypy==1.15.0",
+    "pytest-asyncio==0.25.3",
     "pytest==8.3.4",
     "pytest-cov==6.0.0"
 ]
