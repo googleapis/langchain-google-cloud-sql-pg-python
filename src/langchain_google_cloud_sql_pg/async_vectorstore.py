@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Any, Callable, Iterable, Optional, Sequence
+from typing import Any, Callable, Iterable, List, Optional, Sequence
 
 import numpy as np
 from langchain_core.documents import Document
@@ -290,6 +290,54 @@ class AsyncPostgresVectorStore(VectorStore):
                 await conn.commit()
 
         return ids
+
+    async def aget_by_ids(self, ids: Sequence[str]) -> List[Document]:
+        """Get documents by ids."""
+
+        quoted_ids = [f"'{id_val}'" for id_val in ids]
+        id_list_str = ", ".join(quoted_ids)
+
+        columns = self.metadata_columns + [
+            self.id_column,
+            self.content_column,
+        ]
+        if self.metadata_json_column:
+            columns.append(self.metadata_json_column)
+
+        column_names = ", ".join(f'"{col}"' for col in columns)
+
+        query = f'SELECT {column_names} FROM "{self.schema_name}"."{self.table_name}" WHERE {self.id_column} IN ({id_list_str});'
+
+        async with self.pool.connect() as conn:
+            result = await conn.execute(text(query))
+            result_map = result.mappings()
+            results = result_map.fetchall()
+
+        documents = []
+        for row in results:
+            metadata = (
+                row[self.metadata_json_column]
+                if self.metadata_json_column and row[self.metadata_json_column]
+                else {}
+            )
+            for col in self.metadata_columns:
+                metadata[col] = row[col]
+            documents.append(
+                (
+                    Document(
+                        page_content=row[self.content_column],
+                        metadata=metadata,
+                        id=row[self.id_column],
+                    )
+                )
+            )
+
+        return documents
+
+    def get_by_ids(self, ids: Sequence[str]) -> List[Document]:
+        raise NotImplementedError(
+            "Sync methods are not implemented for AsyncAlloyDBVectorStore. Use AlloyDBVectorStore interface instead."
+        )
 
     async def aadd_texts(
         self,

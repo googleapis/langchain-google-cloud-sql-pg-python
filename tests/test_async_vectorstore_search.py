@@ -269,3 +269,15 @@ class TestVectorStoreSearch:
             embedding, lambda_mult=0.75, fetch_k=10
         )
         assert results[0][0] == Document(page_content="bar", id=ids[1])
+
+    async def test_aget_by_ids(self, vs):
+        test_ids = [ids[0]]
+        results = await vs.aget_by_ids(ids=test_ids)
+
+        assert results[0] == Document(page_content="foo", id=ids[0])
+
+    async def test_aget_by_ids_custom_vs(self, vs_custom):
+        test_ids = [ids[0]]
+        results = await vs_custom.aget_by_ids(ids=test_ids)
+
+        assert results[0] == Document(page_content="foo", id=ids[0])
