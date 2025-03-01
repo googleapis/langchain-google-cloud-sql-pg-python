@@ -15,7 +15,7 @@
 # TODO: Remove below import when minimum supported Python version is 3.10
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, List, Optional, Sequence
+from typing import Any, Callable, Iterable, Optional, Sequence
 
 import numpy as np
 from langchain_core.documents import Document
@@ -814,10 +814,10 @@ class PostgresVectorStore(VectorStore):
         """Check if index exists in the table."""
         return self._engine._run_as_sync(self.__vs.is_valid_index(index_name))
 
-    async def aget_by_ids(self, ids: Sequence[str]) -> List[Document]:
+    async def aget_by_ids(self, ids: Sequence[str]) -> list[Document]:
         """Get documents by ids."""
         return await self._engine._run_as_async(self.__vs.aget_by_ids(ids=ids))
 
-    def get_by_ids(self, ids: Sequence[str]) -> List[Document]:
+    def get_by_ids(self, ids: Sequence[str]) -> list[Document]:
         """Get documents by ids."""
         return self._engine._run_as_sync(self.__vs.aget_by_ids(ids=ids))
