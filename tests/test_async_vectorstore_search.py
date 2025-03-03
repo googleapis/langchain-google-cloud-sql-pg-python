@@ -28,6 +28,7 @@ from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOpt
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
+sync_method_exception_str = "Sync methods are not implemented for AsyncPostgresVectorStore. Use PostgresVectorStore interface instead."
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
@@ -281,3 +282,8 @@ class TestVectorStoreSearch:
         results = await vs_custom.aget_by_ids(ids=test_ids)
 
         assert results[0] == Document(page_content="foo", id=ids[0])
+
+    def test_get_by_ids(self, vs):
+        test_ids = [ids[0]]
+        with pytest.raises(Exception, match=sync_method_exception_str):
+            vs.get_by_ids(ids=test_ids)

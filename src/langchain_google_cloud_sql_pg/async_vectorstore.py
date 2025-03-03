@@ -334,11 +334,6 @@ class AsyncPostgresVectorStore(VectorStore):
 
         return documents
 
-    def get_by_ids(self, ids: Sequence[str]) -> list[Document]:
-        raise NotImplementedError(
-            "Sync methods are not implemented for AsyncAlloyDBVectorStore. Use AlloyDBVectorStore interface instead."
-        )
-
     async def aadd_texts(
         self,
         texts: Iterable[str],
@@ -819,6 +814,11 @@ class AsyncPostgresVectorStore(VectorStore):
             results = result_map.fetchall()
 
         return bool(len(results) == 1)
+
+    def get_by_ids(self, ids: Sequence[str]) -> list[Document]:
+        raise NotImplementedError(
+            "Sync methods are not implemented for AsyncPostgresVectorStore. Use PostgresVectorStore interface instead."
+        )
 
     def similarity_search(
         self,
