@@ -327,7 +327,7 @@ class AsyncPostgresVectorStore(VectorStore):
                     Document(
                         page_content=row[self.content_column],
                         metadata=metadata,
-                        id=row[self.id_column],
+                        id=str(row[self.id_column]),
                     )
                 )
             )
@@ -651,7 +651,7 @@ class AsyncPostgresVectorStore(VectorStore):
                     Document(
                         page_content=row[self.content_column],
                         metadata=metadata,
-                        id=row[self.id_column],
+                        id=str(row[self.id_column]),
                     ),
                     row["distance"],
                 )
@@ -742,7 +742,7 @@ class AsyncPostgresVectorStore(VectorStore):
                     Document(
                         page_content=row[self.content_column],
                         metadata=metadata,
-                        id=row[self.id_column],
+                        id=str(row[self.id_column]),
                     ),
                     row["distance"],
                 )
