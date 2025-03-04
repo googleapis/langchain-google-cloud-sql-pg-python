@@ -751,7 +751,7 @@ class PostgresEngine:
         )
 
     async def _ainit_checkpoint_table(
-        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
+            self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
         """
         Create PgSQL tables to save checkpoints.
@@ -759,8 +759,6 @@ class PostgresEngine:
         Args:
             schema_name (str): The schema name to store the checkpoint tables.
                 Default: "public".
-            table_name (str): Custom table name for checkpoints.
-                Default: CHECKPOINTS_TABLE.
 
         Returns:
             None
@@ -771,8 +769,8 @@ class PostgresEngine:
             checkpoint_id TEXT NOT NULL,
             parent_checkpoint_id TEXT,
             type TEXT,
-            checkpoint JSONB NOT NULL,
-            metadata JSONB NOT NULL DEFAULT '{{}}',
+            checkpoint BYTEA,
+            metadata BYTEA,
             PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id)
         );"""
 
@@ -785,6 +783,7 @@ class PostgresEngine:
             channel TEXT NOT NULL,
             type TEXT,
             blob BYTEA NOT NULL,
+            task_path TEXT NOT NULL DEFAULT '',
             PRIMARY KEY (thread_id, checkpoint_ns, checkpoint_id, task_id, idx)
         );"""
 
@@ -794,15 +793,13 @@ class PostgresEngine:
             await conn.commit()
 
     async def ainit_checkpoint_table(
-        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
+            self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
-        """Create an AlloyDB table to save checkpoint messages.
+        """Create an PgSQL table to save checkpoint messages.
 
         Args:
             schema_name (str): The schema name to store checkpoint tables.
                 Default: "public".
-            table_name (str): Custom table name for checkpoints.
-                Default: CHECKPOINTS_TABLE.
 
         Returns:
             None
@@ -815,15 +812,13 @@ class PostgresEngine:
         )
 
     def init_checkpoint_table(
-        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
+            self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
         """Create Cloud SQL tables to store checkpoints.
 
         Args:
             schema_name (str): The schema name to store checkpoint tables.
                 Default: "public".
-            table_name (str): Custom table name for checkpoints.
-                Default: CHECKPOINTS_TABLE.
 
         Returns:
             None

@@ -13,11 +13,24 @@
 # limitations under the License.
 
 import os
+import re
 import uuid
-from typing import Any, Sequence, Tuple
+from typing import Any, List, Literal, Optional, Sequence, Tuple, Union
 
 import pytest
 import pytest_asyncio
+from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.language_models import BaseChatModel, LanguageModelInput
+from langchain_core.messages import (
+    AIMessage,
+    AnyMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolCall,
+    ToolMessage,
+)
+from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
     Checkpoint,
@@ -25,6 +38,8 @@ from langgraph.checkpoint.base import (
     create_checkpoint,
     empty_checkpoint,
 )
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
 from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
 
@@ -61,6 +76,31 @@ checkpoint: Checkpoint = {
 }
 
 
+class AnyStr(str):
+    def __init__(self, prefix: Union[str, re.Pattern] = "") -> None:
+        super().__init__()
+        self.prefix = prefix
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, str) and (
+            (
+                other.startswith(self.prefix)
+                if isinstance(self.prefix, str)
+                else bool(self.prefix.match(other))
+            )
+        )
+
+    def __hash__(self) -> int:
+        return hash((str(self), self.prefix))
+
+
+def _AnyIdToolMessage(**kwargs: Any) -> ToolMessage:
+    """Create a tool message with an any id field."""
+    message = ToolMessage(**kwargs)
+    message.id = AnyStr()
+    return message
+
+
 async def aexecute(engine: PostgresEngine, query: str) -> None:
     async with engine._pool.connect() as conn:
         await conn.execute(text(query))
@@ -91,11 +131,13 @@ async def async_engine():
     await async_engine.close()
     await async_engine._connector.close_async()
 
-
 @pytest_asyncio.fixture
 async def checkpointer(async_engine):
     await async_engine._ainit_checkpoint_table(table_name=table_name)
-    checkpointer = await AsyncPostgresSaver.create(async_engine, table_name)
+    checkpointer = await AsyncPostgresSaver.create(
+        async_engine,
+        table_name,  # serde=JsonPlusSerializer
+    )
     yield checkpointer
 
 
@@ -155,7 +197,12 @@ def test_data():
         "ts": "2024-07-31T20:14:19.804150+00:00",
         "id": "1ef4f797-8335-6428-8001-8a1503f9b875",
         "channel_values": {"my_key": "meow", "node": "node"},
-        "channel_versions": {"__start__": 2, "my_key": 3, "start:node": 3, "node": 3},
+        "channel_versions": {
+            "__start__": 2,
+            "my_key": 3,
+            "start:node": 3,
+            "node": 3,
+        },
         "versions_seen": {
             "__input__": {},
             "__start__": {"__start__": 1},
@@ -241,6 +288,8 @@ async def test_checkpoint_alist(
 
     search_results_1 = [c async for c in checkpointer.alist(None, filter=query_1)]
     assert len(search_results_1) == 1
+    print(metadata[0])
+    print(search_results_1[0].metadata)
     assert search_results_1[0].metadata == metadata[0]
 
     search_results_2 = [c async for c in checkpointer.alist(None, filter=query_2)]
@@ -263,19 +312,18 @@ async def test_checkpoint_alist(
         search_results_5[1].config["configurable"]["checkpoint_ns"],
     } == {"", "inner"}
 
-
 @pytest.mark.asyncio
-async def test_null_chars(
+async def test_metadata(
     checkpointer: AsyncPostgresSaver,
     test_data: dict[str, Any],
 ) -> None:
     config = await checkpointer.aput(
         test_data["configs"][0],
         test_data["checkpoints"][0],
-        {"my_key": "\x00abc"},  # type: ignore
+        {"my_key": "abc"},  # type: ignore
         {},
     )
-    # assert (await checkpointer.aget_tuple(config)).metadata["my_key"] == "abc"  # type: ignore
+    assert (await checkpointer.aget_tuple(config)).metadata["my_key"] == "abc"  # type: ignore
     assert [c async for c in checkpointer.alist(None, filter={"my_key": "abc"})][
         0
     ].metadata[

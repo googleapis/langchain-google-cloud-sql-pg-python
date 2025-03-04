@@ -13,8 +13,7 @@
 # limitations under the License.
 
 import json
-from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Optional, Sequence, Tuple, cast
+from typing import Any, AsyncIterator, Optional, Sequence, Tuple
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
@@ -32,45 +31,12 @@ from langgraph.checkpoint.serde.types import TASKS
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from .engine import CHECKPOINT_WRITES_TABLE, CHECKPOINTS_TABLE, PostgresEngine
+from .engine import CHECKPOINTS_TABLE, PostgresEngine
 
 MetadataInput = Optional[dict[str, Any]]
 
-# Select SQL used in `alist` method
-SELECT = f"""
-select
-    thread_id,
-    checkpoint,
-    checkpoint_ns,
-    checkpoint_id,
-    parent_checkpoint_id,
-    metadata,
-    (
-        select array_agg(array[bl.channel::bytea, bl.type::bytea, bl.blob])
-        from jsonb_each_text(checkpoint -> 'channel_versions')
-    ) as channel_values,
-    (
-        select
-        array_agg(array[cw.task_id::text::bytea, cw.channel::bytea, cw.type::bytea, cw.blob] order by cw.task_id, cw.idx)
-        from checkpoint_writes cw
-        where cw.thread_id = checkpoints.thread_id
-            and cw.checkpoint_ns = checkpoints.checkpoint_ns
-            and cw.checkpoint_id = checkpoints.checkpoint_id
-    ) as pending_writes,
-    (
-        select array_agg(array[cw.type::bytea, cw.blob] order by cw.task_path, cw.task_id, cw.idx)
-        from checkpoint_writes cw
-        where cw.thread_id = checkpoints.thread_id
-            and cw.checkpoint_ns = checkpoints.checkpoint_ns
-            and cw.checkpoint_id = checkpoints.parent_checkpoint_id
-            and cw.channel = '{TASKS}'
-    ) as pending_sends
-from checkpoints
-"""
-
-
 class AsyncPostgresSaver(BaseCheckpointSaver[str]):
-    """Checkpoint stored in an PostgreSQL for PostgreSQL database."""
+    """Checkpoint stored in PgSQL"""
 
     __create_key = object()
 
@@ -106,9 +72,9 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
 
         Args:
             engine (PostgresEngine): PostgresEngine engine to use.
-            table_name (str): Customized table name to use.
             schema_name (str): The schema name where the table is located (default: "public").
             serde (SerializerProtocol): Serializer for encoding/decoding checkpoints (default: None).
+            table_name (str): Custom table name to use (default: CHECKPOINTS_TABLE).
 
         Raises:
             IndexError: If the table provided does not contain required schema.
@@ -186,15 +152,6 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             )
         return cls(cls.__create_key, engine._pool, table_name, schema_name, serde)
 
-    def _dump_checkpoint(self, checkpoint: Checkpoint) -> str:
-        checkpoint["pending_sends"] = []
-        return json.dumps(checkpoint)
-
-    def _dump_metadata(self, metadata: CheckpointMetadata) -> str:
-        serialized_metadata = self.jsonplus_serde.dumps(metadata)
-        # NOTE: we're using JSON serializer (not msgpack), so we need to remove null characters before writing
-        return serialized_metadata.decode().replace("\\u0000", "")
-
     def _dump_writes(
         self,
         thread_id: str,
@@ -219,38 +176,6 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             for idx, (channel, value) in enumerate(writes)
         ]
 
-    def _load_blobs(
-        self, blob_values: list[tuple[bytes, bytes, bytes]]
-    ) -> dict[str, Any]:
-        if not blob_values:
-            return {}
-        return {
-            k.decode(): self.serde.loads_typed((t.decode(), v))
-            for k, t, v in blob_values
-            if t.decode() != "empty"
-        }
-
-    def _load_checkpoint(
-        self,
-        checkpoint: dict[str, Any],
-        channel_values: list[tuple[bytes, bytes, bytes]],
-        pending_sends: list[tuple[bytes, bytes]],
-    ) -> Checkpoint:
-        return Checkpoint(
-            v=checkpoint["v"],
-            ts=checkpoint["ts"],
-            id=checkpoint["id"],
-            channel_values=self._load_blobs(channel_values),
-            channel_versions=checkpoint["channel_versions"].copy(),
-            versions_seen={k: v.copy() for k, v in checkpoint["versions_seen"].items()},
-            pending_sends=[
-                self.serde.loads_typed((c.decode(), b)) for c, b in pending_sends or []
-            ],
-        )
-
-    def _load_metadata(self, metadata: str) -> CheckpointMetadata:
-        return self.jsonplus_serde.loads(self.jsonplus_serde.dumps(metadata))
-
     def _load_writes(
         self, writes: list[tuple[bytes, bytes, bytes, bytes]]
     ) -> list[tuple[str, str, Any]]:
@@ -272,39 +197,39 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         config: Optional[RunnableConfig],
         filter: MetadataInput,
         before: Optional[RunnableConfig] = None,
-    ) -> tuple[str, list[Any]]:
+    ) -> tuple[str, dict[str, Any]]:
         """Return WHERE clause predicates for alist() given config, filter, before.
 
         This method returns a tuple of a string and a tuple of values. The string
-        is the parametered WHERE clause predicate (including the WHERE keyword):
+        is the parameterized WHERE clause predicate (including the WHERE keyword):
         "WHERE column1 = $1 AND column2 IS $2". The list of values contains the
         values for each of the corresponding parameters.
         """
         wheres = []
-        param_values = []
+        param_values = {}
 
         # construct predicate for config filter
         if config:
-            wheres.append("thread_id = %s ")
-            param_values.append(config["configurable"]["thread_id"])
+            wheres.append("thread_id = :thread_id")
+            param_values.update({"thread_id": config["configurable"]["thread_id"]})
             checkpoint_ns = config["configurable"].get("checkpoint_ns")
             if checkpoint_ns is not None:
-                wheres.append("checkpoint_ns = %s")
-                param_values.append(checkpoint_ns)
+                wheres.append("checkpoint_ns = :checkpoint_ns")
+                param_values.update({"checkpoint_ns": checkpoint_ns})
 
             if checkpoint_id := get_checkpoint_id(config):
-                wheres.append("checkpoint_id = %s ")
-                param_values.append(checkpoint_id)
+                wheres.append("checkpoint_id = :checkpoint_id")
+                param_values.update({"checkpoint_id": checkpoint_id})
 
         # construct predicate for metadata filter
         if filter:
-            wheres.append("metadata @> %s ")
-            param_values.append(json.dumps(filter))
+            wheres.append("encode(metadata,'escape')::jsonb @> :metadata ")
+            param_values.update({"metadata": f"{json.dumps(filter)}"})
 
         # construct predicate for `before`
         if before is not None:
-            wheres.append("checkpoint_id < %s ")
-            param_values.append(get_checkpoint_id(before))
+            wheres.append("checkpoint_id < :checkpoint_id")
+            param_values.update({"checkpoint_id": get_checkpoint_id(before)})
 
         return (
             "WHERE " + " AND ".join(wheres) if wheres else "",
@@ -336,7 +261,6 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             "checkpoint_id", configurable.pop("thread_ts", None)
         )
 
-        copy = checkpoint.copy()
         next_config: RunnableConfig = {
             "configurable": {
                 "thread_id": thread_id,
@@ -345,8 +269,8 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             }
         }
 
-        query = f"""INSERT INTO "{self.schema_name}"."{self.table_name}" (thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, checkpoint, metadata)
-                    VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :parent_checkpoint_id, :checkpoint, :metadata)
+        query = f"""INSERT INTO "{self.schema_name}"."{self.table_name}" (thread_id, checkpoint_ns, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata)
+                    VALUES (:thread_id, :checkpoint_ns, :checkpoint_id, :parent_checkpoint_id, :type, :checkpoint, :metadata)
                     ON CONFLICT (thread_id, checkpoint_ns, checkpoint_id)
                     DO UPDATE SET
                         checkpoint = EXCLUDED.checkpoint,
@@ -354,6 +278,8 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
             """
 
         async with self.pool.connect() as conn:
+            type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
+            serialized_metadata = self.jsonplus_serde.dumps(metadata)
             await conn.execute(
                 text(query),
                 {
@@ -361,8 +287,9 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                     "checkpoint_ns": checkpoint_ns,
                     "checkpoint_id": checkpoint["id"],
                     "parent_checkpoint_id": checkpoint_id,
-                    "checkpoint": self._dump_checkpoint(copy),
-                    "metadata": self._dump_metadata(metadata),
+                    "type": type_,
+                    "checkpoint": serialized_checkpoint,
+                    "metadata": serialized_metadata,
                 },
             )
             await conn.commit()
@@ -434,24 +361,45 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         Returns:
             AsyncIterator[CheckpointTuple]: Async iterator of matching checkpoint tuples.
         """
-
-        if filter:
-            for key, value in filter.items():
-                if isinstance(value, dict):
-                    filter[key] = json.dumps(value)
+        SELECT = f"""
+        SELECT
+            thread_id,
+            checkpoint,
+            checkpoint_ns,
+            checkpoint_id,
+            parent_checkpoint_id,
+            metadata,
+            type,
+            (
+                SELECT array_agg(array[cw.task_id::text::bytea, cw.channel::bytea, cw.type::bytea, cw.blob] order by cw.task_id, cw.idx)
+                FROM "{self.schema_name}"."{self.table_name_writes}" cw
+                where cw.thread_id = c.thread_id
+                    AND cw.checkpoint_ns = c.checkpoint_ns
+                    AND cw.checkpoint_id = c.checkpoint_id
+            ) AS pending_writes,
+            (
+                SELECT array_agg(array[cw.type::bytea, cw.blob] order by cw.task_path, cw.task_id, cw.idx)
+                FROM "{self.schema_name}"."{self.table_name_writes}" cw
+                WHERE cw.thread_id = c.thread_id
+                    AND cw.checkpoint_ns = c.checkpoint_ns
+                    AND cw.checkpoint_id = c.parent_checkpoint_id
+                    AND cw.channel = '{TASKS}'
+            ) AS pending_sends
+        FROM "{self.schema_name}"."{self.table_name}" c
+        """
 
         where, args = self._search_where(config, filter, before)
-
-        args_dict = {f"param_{i}": v for i, v in enumerate(args)}
-
         query = SELECT + where + " ORDER BY checkpoint_id DESC"
         if limit:
             query += f" LIMIT {limit}"
 
         async with self.pool.connect() as conn:
-            result = await conn.stream(text(query), args_dict)
-            async for row in result:
-                value = dict(row._mapping)
+            result = await conn.execute(text(query), args)
+            while True:
+                row = result.fetchone()
+                if not row:
+                    break
+                value = row._mapping
                 yield CheckpointTuple(
                     config={
                         "configurable": {
@@ -460,12 +408,14 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                             "checkpoint_id": value["checkpoint_id"],
                         }
                     },
-                    checkpoint=self._load_checkpoint(
-                        value["checkpoint"],
-                        value["channel_values"],
-                        value["pending_sends"],
+                    checkpoint=self.serde.loads_typed(
+                        (value["type"], value["checkpoint"])
                     ),
-                    metadata=self._load_metadata(value["metadata"]),
+                    metadata=(
+                        self.jsonplus_serde.loads(value["metadata"])
+                        if value["metadata"] is not None
+                        else {}
+                    ),
                     parent_config=(
                         {
                             "configurable": {
