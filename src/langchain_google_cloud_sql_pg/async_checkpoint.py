@@ -35,6 +35,7 @@ from .engine import CHECKPOINTS_TABLE, PostgresEngine
 
 MetadataInput = Optional[dict[str, Any]]
 
+
 class AsyncPostgresSaver(BaseCheckpointSaver[str]):
     """Checkpoint stored in PgSQL"""
 

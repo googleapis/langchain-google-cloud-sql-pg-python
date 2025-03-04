@@ -39,7 +39,6 @@ from langgraph.checkpoint.base import (
     empty_checkpoint,
 )
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-
 from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
 
@@ -130,6 +129,7 @@ async def async_engine():
     await aexecute(async_engine, f'DROP TABLE IF EXISTS "{table_name_writes}"')
     await async_engine.close()
     await async_engine._connector.close_async()
+
 
 @pytest_asyncio.fixture
 async def checkpointer(async_engine):
@@ -311,6 +311,7 @@ async def test_checkpoint_alist(
         search_results_5[0].config["configurable"]["checkpoint_ns"],
         search_results_5[1].config["configurable"]["checkpoint_ns"],
     } == {"", "inner"}
+
 
 @pytest.mark.asyncio
 async def test_metadata(

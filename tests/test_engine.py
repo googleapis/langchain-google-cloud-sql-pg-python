@@ -341,7 +341,6 @@ class TestEngineAsync:
         await aexecute(engine, f'DROP TABLE IF EXISTS "{table_name_writes}"')
 
 
-
 @pytest.mark.asyncio(scope="module")
 class TestEngineSync:
     @pytest.fixture(scope="module")

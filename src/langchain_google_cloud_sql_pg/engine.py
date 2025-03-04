@@ -751,7 +751,7 @@ class PostgresEngine:
         )
 
     async def _ainit_checkpoint_table(
-            self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
+        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
         """
         Create PgSQL tables to save checkpoints.
@@ -793,7 +793,7 @@ class PostgresEngine:
             await conn.commit()
 
     async def ainit_checkpoint_table(
-            self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
+        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
         """Create an PgSQL table to save checkpoint messages.
 
@@ -812,7 +812,7 @@ class PostgresEngine:
         )
 
     def init_checkpoint_table(
-            self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
+        self, table_name: str = CHECKPOINTS_TABLE, schema_name: str = "public"
     ) -> None:
         """Create Cloud SQL tables to store checkpoints.
 
