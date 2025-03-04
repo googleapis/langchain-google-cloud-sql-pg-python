@@ -12,7 +12,7 @@ authors = [
 dependencies = [
     "cloud-sql-python-connector[asyncpg] >= 1.10.0, <2.0.0",
     "langchain-core>=0.2.36, <1.0.0 ",
-    "numpy>=1.24.4, <2.0.0",
+    "numpy>=2.2.3, <2.3.0",
     "pgvector>=0.2.5, <1.0.0",
     "SQLAlchemy[asyncio]>=2.0.25, <3.0.0"
 ]
