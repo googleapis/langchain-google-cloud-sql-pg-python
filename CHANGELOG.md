@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.2](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.12.1...v0.12.2) (2025-03-04)
+
+
+### Bug Fixes
+
+* **deps:** Update dependency numpy to v2 ([#251](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/251)) ([a164aa2](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/a164aa2d54575461e993594a1c98b8fac0e06ea2))
+
 ## [0.12.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.12.0...v0.12.1) (2025-02-12)
 
 
