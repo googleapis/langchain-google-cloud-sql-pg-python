@@ -759,7 +759,7 @@ class PostgresEngine:
             schema_name (str): The schema name to store the checkpoint tables.
                 Default: "public".
             table_name (str): The PgSQL database table name.
-                Default: "CHECKPOINTS_TABLE".
+                Default: "checkpoints".
 
         Returns:
             None
@@ -802,7 +802,7 @@ class PostgresEngine:
             schema_name (str): The schema name to store checkpoint tables.
                 Default: "public".
             table_name (str): The PgSQL database table name.
-                Default: "CHECKPOINTS_TABLE".
+                Default: "checkpoints".
 
         Returns:
             None
@@ -823,7 +823,7 @@ class PostgresEngine:
             schema_name (str): The schema name to store checkpoint tables.
                 Default: "public".
             table_name (str): The PgSQL database table name.
-                Default: "CHECKPOINTS_TABLE".
+                Default: "checkpoints".
 
         Returns:
             None

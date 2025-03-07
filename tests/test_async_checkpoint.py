@@ -53,6 +53,7 @@ from langchain_google_cloud_sql_pg.engine import PostgresEngine
 
 write_config: RunnableConfig = {"configurable": {"thread_id": "1", "checkpoint_ns": ""}}
 read_config: RunnableConfig = {"configurable": {"thread_id": "1"}}
+thread_agent_config: RunnableConfig = {"configurable": {"thread_id": "123"}}
 
 project_id = os.environ["PROJECT_ID"]
 region = os.environ["REGION"]
@@ -362,8 +363,9 @@ async def test_checkpoint_aget_tuple(
 
     agent = create_react_agent(model, [], checkpointer=checkpointer)
     inputs = [HumanMessage("hi?")]
-    thread = {"configurable": {"thread_id": "123"}}
-    response = await agent.ainvoke({"messages": inputs}, config=thread, debug=True)
+    response = await agent.ainvoke(
+        {"messages": inputs}, config=thread_agent_config, debug=True
+    )
     expected_response = {"messages": inputs + [AIMessage(content="hi?", id="0")]}
     assert response == expected_response
 
@@ -373,7 +375,7 @@ async def test_checkpoint_aget_tuple(
         message.id = AnyStr()
         return message
 
-    saved = await checkpointer.aget_tuple(thread)
+    saved = await checkpointer.aget_tuple(thread_agent_config)
     assert saved is not None
     assert saved.checkpoint["channel_values"] == {
         "messages": [

@@ -45,7 +45,6 @@ test = [
     "pytest-asyncio==0.24.0",
     "pytest==8.3.3",
     "pytest-cov==6.0.0",
-    "Pillow==11.0.0",
     "langgraph==0.2.74"
 ]
 langgraph = ["langgraph-checkpoint"]
