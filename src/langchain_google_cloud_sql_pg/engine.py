@@ -40,7 +40,6 @@ T = TypeVar("T")
 USER_AGENT = "langchain-google-cloud-sql-pg-python/" + __version__
 
 CHECKPOINTS_TABLE = "checkpoints"
-CHECKPOINT_WRITES_TABLE = "checkpoint_writes"
 
 
 async def _get_iam_principal_email(
@@ -759,6 +758,8 @@ class PostgresEngine:
         Args:
             schema_name (str): The schema name to store the checkpoint tables.
                 Default: "public".
+            table_name (str): The PgSQL database table name.
+                Default: "checkpoints".
 
         Returns:
             None
@@ -800,6 +801,8 @@ class PostgresEngine:
         Args:
             schema_name (str): The schema name to store checkpoint tables.
                 Default: "public".
+            table_name (str): The PgSQL database table name.
+                Default: "checkpoints".
 
         Returns:
             None
@@ -819,6 +822,8 @@ class PostgresEngine:
         Args:
             schema_name (str): The schema name to store checkpoint tables.
                 Default: "public".
+            table_name (str): The PgSQL database table name.
+                Default: "checkpoints".
 
         Returns:
             None
