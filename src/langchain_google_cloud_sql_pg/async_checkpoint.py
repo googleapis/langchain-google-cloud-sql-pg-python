@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import json
-from typing import Any, AsyncIterator, Optional, Sequence, Tuple
+from typing import Any, AsyncIterator, Iterator, Optional, Sequence, Tuple
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
@@ -515,3 +515,82 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                 ),
                 pending_writes=self._load_writes(value["pending_writes"]),
             )
+
+    def put(
+        self,
+        config: RunnableConfig,
+        checkpoint: Checkpoint,
+        metadata: CheckpointMetadata,
+        new_versions: ChannelVersions,
+    ) -> RunnableConfig:
+        """Asynchronously store a checkpoint with its configuration and metadata.
+
+        Args:
+            config (RunnableConfig): Configuration for the checkpoint.
+            checkpoint (Checkpoint): The checkpoint to store.
+            metadata (CheckpointMetadata): Additional metadata for the checkpoint.
+            new_versions (ChannelVersions): New channel versions as of this write.
+
+        Returns:
+            RunnableConfig: Updated configuration after storing the checkpoint.
+        """
+        raise NotImplementedError(
+            "Sync methods are not implemented for AsyncPostgresSaver. Use PostgresSaver interface instead."
+        )
+
+    def put_writes(
+        self,
+        config: RunnableConfig,
+        writes: Sequence[Tuple[str, Any]],
+        task_id: str,
+        task_path: str = "",
+    ) -> None:
+        """Asynchronously store intermediate writes linked to a checkpoint.
+        Args:
+            config (RunnableConfig): Configuration of the related checkpoint.
+            writes (List[Tuple[str, Any]]): List of writes to store.
+            task_id (str): Identifier for the task creating the writes.
+            task_path (str): Path of the task creating the writes.
+
+            Returns:
+                None
+        """
+        raise NotImplementedError(
+            "Sync methods are not implemented for AsyncPostgresSaver. Use PostgresSaver interface instead."
+        )
+
+    def list(
+        self,
+        config: Optional[RunnableConfig],
+        *,
+        filter: Optional[dict[str, Any]] = None,
+        before: Optional[RunnableConfig] = None,
+        limit: Optional[int] = None,
+    ) -> Iterator[CheckpointTuple]:
+        """Asynchronously list checkpoints that match the given criteria.
+
+        Args:
+            config (Optional[RunnableConfig]): Base configuration for filtering checkpoints.
+            filter (Optional[Dict[str, Any]]): Additional filtering criteria for metadata.
+            before (Optional[RunnableConfig]): List checkpoints created before this configuration.
+            limit (Optional[int]): Maximum number of checkpoints to return.
+
+        Returns:
+            AsyncIterator[CheckpointTuple]: Async iterator of matching checkpoint tuples.
+        """
+        raise NotImplementedError(
+            "Sync methods are not implemented for AsyncPostgresSaver. Use PostgresSaver interface instead."
+        )
+
+    def get_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
+        """Asynchronously fetch a checkpoint tuple using the given configuration.
+
+        Args:
+            config (RunnableConfig): Configuration specifying which checkpoint to retrieve.
+
+        Returns:
+            Optional[CheckpointTuple]: The requested checkpoint tuple, or None if not found.
+        """
+        raise NotImplementedError(
+            "Sync methods are not implemented for AsyncPostgresSaver. Use PostgresSaver interface instead."
+        )

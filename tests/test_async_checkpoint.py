@@ -355,7 +355,7 @@ class FakeToolCallingModel(BaseChatModel):
 
 
 @pytest.mark.asyncio
-async def test_checkpoint_aget_tuple(
+async def test_checkpoint_with_agent(
     checkpointer: AsyncPostgresSaver,
 ) -> None:
     # from the tests in https://github.com/langchain-ai/langgraph/blob/909190cede6a80bb94a2d4cfe7dedc49ef0d4127/libs/langgraph/tests/test_prebuilt.py
@@ -392,6 +392,25 @@ async def test_checkpoint_aget_tuple(
         "thread_id": "123",
     }
     assert saved.pending_writes == []
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_aget_tuple(
+    checkpointer: AsyncPostgresSaver,
+    test_data: dict[str, Any],
+) -> None:
+    configs = test_data["configs"]
+    checkpoints = test_data["checkpoints"]
+    metadata = test_data["metadata"]
+
+    new_config = await checkpointer.aput(configs[1], checkpoints[1], metadata[0], {})
+
+    # Matching checkpoint
+    search_results_1 = await checkpointer.aget_tuple(new_config)
+    assert search_results_1.metadata == metadata[0]  # type: ignore
+
+    # No matching checkpoint
+    assert await checkpointer.aget_tuple(configs[0]) is None
 
 
 @pytest.mark.asyncio
