@@ -166,7 +166,7 @@ Use ``Checkpoint`` to save snapshots of the graph state at a given point in time
 .. code:: python
 
    from langchain_google_cloud_sql_pg import PostgresSaver, PostgresEngine
-   engine = PostgresEngine.from_instance("project-id", "region", "my-cluster", "my-instance", "my-database")
+   engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
    checkpoint = PostgresSaver.create_sync(
        engine,
        table_name="checkpoints"
