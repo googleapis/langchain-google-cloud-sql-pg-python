@@ -161,7 +161,7 @@ See the full `Chat Message History`_ tutorial.
 Langgraph Checkpoint Usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Use ``Checkpoint`` to save snapshots of the graph state at a given point in time.
+Use ``PostgresSaver`` to save snapshots of the graph state at a given point in time.
 
 .. code:: python
 
