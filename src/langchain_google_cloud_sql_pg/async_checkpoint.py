@@ -35,6 +35,27 @@ from .engine import CHECKPOINTS_TABLE, PostgresEngine
 
 MetadataInput = Optional[dict[str, Any]]
 
+checkpoints_columns = [
+    "thread_id",
+    "checkpoint_ns",
+    "checkpoint_id",
+    "parent_checkpoint_id",
+    "type",
+    "checkpoint",
+    "metadata",
+]
+
+writes_columns = [
+    "thread_id",
+    "checkpoint_ns",
+    "checkpoint_id",
+    "task_id",
+    "idx",
+    "channel",
+    "type",
+    "blob",
+]
+
 
 class AsyncPostgresSaver(BaseCheckpointSaver[str]):
     """Checkpoint stored in PgSQL"""
@@ -89,23 +110,11 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         )
         checkpoints_column_names = checkpoints_table_schema.columns.keys()
 
-        checkpoints_required_columns = [
-            "thread_id",
-            "checkpoint_ns",
-            "checkpoint_id",
-            "parent_checkpoint_id",
-            "type",
-            "checkpoint",
-            "metadata",
-        ]
-
-        if not (
-            all(x in checkpoints_column_names for x in checkpoints_required_columns)
-        ):
+        if not (all(x in checkpoints_column_names for x in checkpoints_columns)):
             raise IndexError(
                 f"Table checkpoints.'{schema_name}' has incorrect schema. Got "
                 f"column names '{checkpoints_column_names}' but required column names "
-                f"'{checkpoints_required_columns}'.\nPlease create table with following schema:"
+                f"'{checkpoints_columns}'.\nPlease create table with following schema:"
                 f"\nCREATE TABLE {schema_name}.checkpoints ("
                 "\n    thread_id TEXT NOT NULL,"
                 "\n    checkpoint_ns TEXT NOT NULL,"
@@ -122,24 +131,11 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         )
         checkpoint_writes_column_names = checkpoint_writes_table_schema.columns.keys()
 
-        checkpoint_writes_columns = [
-            "thread_id",
-            "checkpoint_ns",
-            "checkpoint_id",
-            "task_id",
-            "idx",
-            "channel",
-            "type",
-            "blob",
-        ]
-
-        if not (
-            all(x in checkpoint_writes_column_names for x in checkpoint_writes_columns)
-        ):
+        if not (all(x in checkpoint_writes_column_names for x in writes_columns)):
             raise IndexError(
                 f"Table checkpoint_writes.'{schema_name}' has incorrect schema. Got "
                 f"column names '{checkpoint_writes_column_names}' but required column names "
-                f"'{checkpoint_writes_columns}'.\nPlease create table with following schema:"
+                f"'{writes_columns}'.\nPlease create table with following schema:"
                 f"\nCREATE TABLE {schema_name}.checkpoint_writes ("
                 "\n    thread_id TEXT NOT NULL,"
                 "\n    checkpoint_ns TEXT NOT NULL,"
@@ -255,11 +251,11 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
         Returns:
             RunnableConfig: Updated configuration after storing the checkpoint.
         """
-        configurable = config["configurable"].copy()
-        thread_id = configurable.pop("thread_id")
-        checkpoint_ns = configurable.pop("checkpoint_ns")
-        checkpoint_id = configurable.pop(
-            "checkpoint_id", configurable.pop("thread_ts", None)
+        configurable = config["configurable"]
+        thread_id = configurable.get("thread_id")
+        checkpoint_ns = configurable.get("checkpoint_ns")
+        checkpoint_id = configurable.get(
+            "checkpoint_id", configurable.get("thread_ts", None)
         )
 
         next_config: RunnableConfig = {
@@ -413,7 +409,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                         (value["type"], value["checkpoint"])
                     ),
                     metadata=(
-                        self.jsonplus_serde.loads(value["metadata"])
+                        self.jsonplus_serde.loads(value["metadata"])  # type: ignore
                         if value["metadata"] is not None
                         else {}
                     ),
@@ -498,7 +494,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                 },
                 checkpoint=self.serde.loads_typed((value["type"], value["checkpoint"])),
                 metadata=(
-                    self.jsonplus_serde.loads(value["metadata"])
+                    self.jsonplus_serde.loads(value["metadata"])  # type: ignore
                     if value["metadata"] is not None
                     else {}
                 ),

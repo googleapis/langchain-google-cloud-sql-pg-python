@@ -14,6 +14,7 @@
 
 from . import indexes
 from .chat_message_history import PostgresChatMessageHistory
+from .checkpoint import PostgresSaver
 from .engine import Column, PostgresEngine
 from .loader import PostgresDocumentSaver, PostgresLoader
 from .vectorstore import PostgresVectorStore
@@ -27,5 +28,6 @@ __all__ = [
     "PostgresEngine",
     "PostgresLoader",
     "PostgresDocumentSaver",
+    "PostgresSaver",
     "__version__",
 ]
