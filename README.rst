@@ -169,6 +169,7 @@ Use ``PostgresSaver`` to save snapshots of the graph state at a given point in t
    
    engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
    checkpoint = PostgresSaver.create_sync(engine)
+
 See the full `Checkpoint`_ tutorial.
 
 .. _`Checkpoint`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/langgraph_checkpointer.ipynb
