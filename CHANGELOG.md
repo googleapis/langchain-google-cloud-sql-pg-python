@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.13.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.12.1...v0.13.0) (2025-03-17)
+
+
+### Features
+
+* **langgraph:** Add Langgraph Checkpointer ([#284](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/284)) ([14a4240](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/14a4240e1e5769b203e9463d016d08ac2e6f603e))
+
+
+### Bug Fixes
+
+* **deps:** Update dependency numpy to v2 ([#251](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/251)) ([a164aa2](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/a164aa2d54575461e993594a1c98b8fac0e06ea2))
+* **engine:** Loop error on close ([#285](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/285)) ([e8bd4ae](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/e8bd4ae9f03a3e60af0a1335d976423b0ae6e41a))
+
 ## [0.12.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.12.0...v0.12.1) (2025-02-12)
 
 
