@@ -356,8 +356,8 @@ class TestVectorStoreSearchSync:
         vs_custom.add_documents(docs, ids=ids)
         yield vs_custom
 
-    @pytest_asyncio.fixture(scope="class")
-    async def vs_custom_filter_sync(self, engine_sync):
+    @pytest.fixture(scope="class")
+    def vs_custom_filter_sync(self, engine_sync):
         engine_sync.init_vectorstore_table(
             CUSTOM_FILTER_TABLE_SYNC,
             VECTOR_SIZE,
@@ -375,7 +375,7 @@ class TestVectorStoreSearchSync:
             overwrite_existing=True,
         )
 
-        vs_custom_filter_sync = await PostgresVectorStore.create(
+        vs_custom_filter_sync = PostgresVectorStore.create_sync(
             engine_sync,
             embedding_service=embeddings_service,
             table_name=CUSTOM_FILTER_TABLE_SYNC,
@@ -448,7 +448,7 @@ class TestVectorStoreSearchSync:
         assert results[0] == Document(page_content="foo", id=ids[0])
 
     @pytest.mark.parametrize("test_filter, expected_ids", FILTERING_TEST_CASES)
-    async def test_sync_vectorstore_with_metadata_filters(
+    def test_sync_vectorstore_with_metadata_filters(
         self,
         vs_custom_filter_sync,
         test_filter,
