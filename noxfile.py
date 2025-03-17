@@ -41,7 +41,7 @@ nox.options.error_on_missing_interpreters = True
 def docs(session):
     """Build the docs for this library."""
 
-    session.install("-e", ".")
+    session.install("-e", ".[test]")
     session.install(
         # We need to pin to specific versions of the `sphinxcontrib-*` packages
         # which still support sphinx 4.x.
