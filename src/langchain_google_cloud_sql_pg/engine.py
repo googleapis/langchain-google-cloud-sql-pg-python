@@ -418,7 +418,7 @@ class PostgresEngine:
 
     async def close(self) -> None:
         """Dispose of connection pool"""
-        await self._pool.dispose()
+        await self._run_as_async(self._pool.dispose())
 
     async def _ainit_vectorstore_table(
         self,
