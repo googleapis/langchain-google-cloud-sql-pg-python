@@ -19,6 +19,7 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from metadata_filtering_data import FILTERING_TEST_CASES, METADATAS
 from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
@@ -27,6 +28,7 @@ from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOpt
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_FILTER_TABLE = "test_table_custom_filter" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 sync_method_exception_str = "Sync methods are not implemented for AsyncPostgresVectorStore. Use PostgresVectorStore interface instead."
 
@@ -38,7 +40,9 @@ metadatas = [{"page": str(i), "source": "google.com"} for i in range(len(texts))
 docs = [
     Document(page_content=texts[i], metadata=metadatas[i]) for i in range(len(texts))
 ]
-
+filter_docs = [
+    Document(page_content=texts[i], metadata=METADATAS[i]) for i in range(len(texts))
+]
 embeddings = [embeddings_service.embed_query("foo") for i in range(len(texts))]
 
 
@@ -87,6 +91,7 @@ class TestVectorStoreSearch:
         yield engine
         await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_FILTER_TABLE}")
         await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
@@ -128,6 +133,42 @@ class TestVectorStoreSearch:
         )
         await vs_custom.aadd_documents(docs, ids=ids)
         yield vs_custom
+
+    @pytest_asyncio.fixture(scope="class")
+    async def vs_custom_filter(self, engine):
+        await engine._ainit_vectorstore_table(
+            CUSTOM_FILTER_TABLE,
+            VECTOR_SIZE,
+            metadata_columns=[
+                Column("name", "TEXT"),
+                Column("code", "TEXT"),
+                Column("price", "FLOAT"),
+                Column("is_available", "BOOLEAN"),
+                Column("tags", "TEXT[]"),
+                Column("inventory_location", "INTEGER[]"),
+                Column("available_quantity", "INTEGER", nullable=True),
+            ],
+            id_column="langchain_id",
+            store_metadata=False,
+        )
+
+        vs_custom_filter = await AsyncPostgresVectorStore.create(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=CUSTOM_FILTER_TABLE,
+            metadata_columns=[
+                "name",
+                "code",
+                "price",
+                "is_available",
+                "tags",
+                "inventory_location",
+                "available_quantity",
+            ],
+            id_column="langchain_id",
+        )
+        await vs_custom_filter.aadd_documents(filter_docs, ids=ids)
+        yield vs_custom_filter
 
     async def test_asimilarity_search(self, vs):
         results = await vs.asimilarity_search("foo", k=1)
@@ -287,3 +328,16 @@ class TestVectorStoreSearch:
         test_ids = [ids[0]]
         with pytest.raises(Exception, match=sync_method_exception_str):
             vs.get_by_ids(ids=test_ids)
+
+    @pytest.mark.parametrize("test_filter, expected_ids", FILTERING_TEST_CASES)
+    async def test_vectorstore_with_metadata_filters(
+        self,
+        vs_custom_filter,
+        test_filter,
+        expected_ids,
+    ):
+        """Test end to end construction and search."""
+        docs = await vs_custom_filter.asimilarity_search(
+            "meow", k=5, filter=test_filter
+        )
+        assert [doc.metadata["code"] for doc in docs] == expected_ids, test_filter
