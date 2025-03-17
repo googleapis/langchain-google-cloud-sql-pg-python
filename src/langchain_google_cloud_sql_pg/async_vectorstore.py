@@ -773,7 +773,7 @@ class AsyncPostgresVectorStore(VectorStore):
             documents_with_scores.append(
                 (
                     Document(
-                        page_content=str(ow[self.content_column]),
+                        page_content=str(row[self.content_column]),
                         metadata=metadata,
                         id=row[self.id_column],
                     ),
