@@ -249,3 +249,12 @@ FILTERING_TEST_CASES = [
         ["WB003"],
     ),
 ]
+
+NEGATIVE_TEST_CASES = [
+    {"$nor": [{"code": "WH001"}, {"code": "EC002"}]},
+    {"$and": {"is_available": True}},
+    {"is_available": {"$and": True}},
+    {"is_available": {"name": "{Wireless Headphones", "code": "EC002"}},
+    {"my column": {"$and": True}},
+    {"is_available": {"code": "WH001", "code": "EC002"}},
+]
