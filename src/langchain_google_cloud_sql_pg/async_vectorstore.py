@@ -356,9 +356,9 @@ class AsyncPostgresVectorStore(VectorStore):
             documents.append(
                 (
                     Document(
-                        page_content=str(row[self.content_column]),
+                        page_content=row[self.content_column],
                         metadata=metadata,
-                        id=row[self.id_column],
+                        id=str(row[self.id_column]),
                     )
                 )
             )
@@ -682,9 +682,9 @@ class AsyncPostgresVectorStore(VectorStore):
             documents_with_scores.append(
                 (
                     Document(
-                        page_content=str(row[self.content_column]),
+                        page_content=row[self.content_column],
                         metadata=metadata,
-                        id=row[self.id_column],
+                        id=str(row[self.id_column]),
                     ),
                     row["distance"],
                 )
@@ -773,9 +773,9 @@ class AsyncPostgresVectorStore(VectorStore):
             documents_with_scores.append(
                 (
                     Document(
-                        page_content=str(row[self.content_column]),
+                        page_content=row[self.content_column],
                         metadata=metadata,
-                        id=row[self.id_column],
+                        id=str(row[self.id_column]),
                     ),
                     row["distance"],
                 )
