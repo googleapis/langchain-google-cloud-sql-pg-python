@@ -280,7 +280,11 @@ class AsyncPostgresVectorStore(VectorStore):
                 else ""
             )
             insert_stmt = f'INSERT INTO "{self.schema_name}"."{self.table_name}"("{self.id_column}", "{self.content_column}", "{self.embedding_column}"{metadata_col_names}'
-            values = {"id": id, "content": content, "embedding": str(embedding)}
+            values = {
+                "id": id,
+                "content": content,
+                "embedding": str([float(dimension) for dimension in embedding]),
+            }
             values_stmt = "VALUES (:id, :content, :embedding"
 
             # Add metadata
@@ -589,7 +593,8 @@ class AsyncPostgresVectorStore(VectorStore):
         if filter and isinstance(filter, dict):
             filter = self._create_filter_clause(filter)
         filter = f"WHERE {filter}" if filter else ""
-        stmt = f"SELECT {column_names}, {search_function}({self.embedding_column}, '{embedding}') as distance FROM \"{self.schema_name}\".\"{self.table_name}\" {filter} ORDER BY {self.embedding_column} {operator} '{embedding}' LIMIT {k};"
+        embedding_string = f"'{[float(dimension) for dimension in embedding]}'"
+        stmt = f'SELECT {column_names}, {search_function}({self.embedding_column}, {embedding_string}) as distance FROM "{self.schema_name}"."{self.table_name}" {filter} ORDER BY {self.embedding_column} {operator} {embedding_string} LIMIT {k};'
         if self.index_query_options:
             async with self.pool.connect() as conn:
                 await conn.execute(

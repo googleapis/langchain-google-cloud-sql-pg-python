@@ -12,7 +12,8 @@ authors = [
 dependencies = [
     "cloud-sql-python-connector[asyncpg] >= 1.10.0, <2.0.0",
     "langchain-core>=0.2.36, <1.0.0 ",
-    "numpy>=1.24.4, <2.0.0",
+    "numpy>=1.24.4, <3.0.0; python_version > '3.9'",
+    "numpy>=1.24.4, <=2.0.2; python_version <= '3.9'",
     "pgvector>=0.2.5, <1.0.0",
     "SQLAlchemy[asyncio]>=2.0.25, <3.0.0"
 ]
@@ -38,14 +39,18 @@ Repository = "https://github.com/googleapis/langchain-google-cloud-sql-pg-python
 Changelog = "https://github.com/googleapis/langchain-google-cloud-sql-pg-python/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+langgraph = [
+    "langgraph-checkpoint>=2.0.9, <3.0.0"
+]
 test = [
     "black[jupyter]==25.1.0",
-    "isort==6.0.0",
-    "mypy==1.13.0",
-    "pytest-asyncio==0.24.0",
+    "isort==6.0.1",
+    "mypy==1.15.0",
+    "pytest-asyncio==0.25.3",
     "pytest==8.3.4",
     "pytest-cov==6.0.0",
-    "langchain-tests==0.3.12"
+    "langchain-tests==0.3.12",
+    "langgraph==0.2.74"
 ]
 
 [build-system]

@@ -158,6 +158,22 @@ See the full `Chat Message History`_ tutorial.
 
 .. _`Chat Message History`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/chat_message_history.ipynb
 
+Langgraph Checkpoint Usage
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use ``PostgresSaver`` to save snapshots of the graph state at a given point in time.
+
+.. code:: python
+
+   from langchain_google_cloud_sql_pg import PostgresSaver, PostgresEngine
+   
+   engine = PostgresEngine.from_instance("project-id", "region", "my-instance", "my-database")
+   checkpoint = PostgresSaver.create_sync(engine)
+
+See the full `Checkpoint`_ tutorial.
+
+.. _`Checkpoint`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/langgraph_checkpointer.ipynb
+
 Contributions
 ~~~~~~~~~~~~~
 
