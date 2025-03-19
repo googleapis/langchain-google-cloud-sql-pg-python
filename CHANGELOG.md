@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.13.0...v0.14.0) (2025-03-19)
+
+
+### Features
+
+* Update Postgres VectorStore to expected LangChain functionality ([#290](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/290)) ([605c31d](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/605c31dad924d359e2de0bc26476c5830a0cba69))
+
 ## [0.13.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.12.1...v0.13.0) (2025-03-17)
 
 
