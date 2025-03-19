@@ -15,6 +15,7 @@
 # TODO: Remove below import when minimum supported Python version is 3.10
 from __future__ import annotations
 
+import copy
 import json
 import uuid
 from typing import Any, Callable, Iterable, Optional, Sequence
@@ -35,6 +36,36 @@ from .indexes import (
     DistanceStrategy,
     ExactNearestNeighbor,
     QueryOptions,
+)
+
+COMPARISONS_TO_NATIVE = {
+    "$eq": "=",
+    "$ne": "!=",
+    "$lt": "<",
+    "$lte": "<=",
+    "$gt": ">",
+    "$gte": ">=",
+}
+
+SPECIAL_CASED_OPERATORS = {
+    "$in",
+    "$nin",
+    "$between",
+    "$exists",
+}
+
+TEXT_OPERATORS = {
+    "$like",
+    "$ilike",
+}
+
+LOGICAL_OPERATORS = {"$and", "$or", "$not"}
+
+SUPPORTED_OPERATORS = (
+    set(COMPARISONS_TO_NATIVE)
+    .union(TEXT_OPERATORS)
+    .union(LOGICAL_OPERATORS)
+    .union(SPECIAL_CASED_OPERATORS)
 )
 
 
@@ -236,6 +267,9 @@ class AsyncPostgresVectorStore(VectorStore):
         """
         if not ids:
             ids = [str(uuid.uuid4()) for _ in texts]
+        else:
+            # This is done to fill in any missing ids
+            ids = [id if id is not None else str(uuid.uuid4()) for id in ids]
         if not metadatas:
             metadatas = [{} for _ in texts]
         # Insert embeddings
@@ -254,7 +288,7 @@ class AsyncPostgresVectorStore(VectorStore):
             values_stmt = "VALUES (:id, :content, :embedding"
 
             # Add metadata
-            extra = metadata
+            extra = copy.deepcopy(metadata)
             for metadata_column in self.metadata_columns:
                 if metadata_column in metadata:
                     values_stmt += f", :{metadata_column}"
@@ -275,12 +309,65 @@ class AsyncPostgresVectorStore(VectorStore):
             else:
                 values_stmt += ")"
 
-            query = insert_stmt + values_stmt
+            upsert_stmt = f' ON CONFLICT ("{self.id_column}") DO UPDATE SET "{self.content_column}" = EXCLUDED."{self.content_column}", "{self.embedding_column}" = EXCLUDED."{self.embedding_column}"'
+
+            if self.metadata_json_column:
+                upsert_stmt += f', "{self.metadata_json_column}" = EXCLUDED."{self.metadata_json_column}"'
+
+            for column in self.metadata_columns:
+                upsert_stmt += f', "{column}" = EXCLUDED."{column}"'
+
+            upsert_stmt += ";"
+
+            query = insert_stmt + values_stmt + upsert_stmt
             async with self.pool.connect() as conn:
                 await conn.execute(text(query), values)
                 await conn.commit()
 
         return ids
+
+    async def aget_by_ids(self, ids: Sequence[str]) -> list[Document]:
+        """Get documents by ids."""
+
+        quoted_ids = [f"'{id_val}'" for id_val in ids]
+        id_list_str = ", ".join(quoted_ids)
+
+        columns = self.metadata_columns + [
+            self.id_column,
+            self.content_column,
+        ]
+        if self.metadata_json_column:
+            columns.append(self.metadata_json_column)
+
+        column_names = ", ".join(f'"{col}"' for col in columns)
+
+        query = f'SELECT {column_names} FROM "{self.schema_name}"."{self.table_name}" WHERE "{self.id_column}" IN ({id_list_str});'
+
+        async with self.pool.connect() as conn:
+            result = await conn.execute(text(query))
+            result_map = result.mappings()
+            results = result_map.fetchall()
+
+        documents = []
+        for row in results:
+            metadata = (
+                row[self.metadata_json_column]
+                if self.metadata_json_column and row[self.metadata_json_column]
+                else {}
+            )
+            for col in self.metadata_columns:
+                metadata[col] = row[col]
+            documents.append(
+                (
+                    Document(
+                        page_content=row[self.content_column],
+                        metadata=metadata,
+                        id=str(row[self.id_column]),
+                    )
+                )
+            )
+
+        return documents
 
     async def aadd_texts(
         self,
@@ -313,6 +400,8 @@ class AsyncPostgresVectorStore(VectorStore):
         """
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
+        if not ids:
+            ids = [doc.id for doc in documents]
         ids = await self.aadd_texts(texts, metadatas=metadatas, ids=ids, **kwargs)
         return ids
 
@@ -483,7 +572,7 @@ class AsyncPostgresVectorStore(VectorStore):
         self,
         embedding: list[float],
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> Sequence[RowMapping]:
         """Perform similarity search query on the vector store table."""
@@ -500,6 +589,9 @@ class AsyncPostgresVectorStore(VectorStore):
             columns.append(self.metadata_json_column)
 
         column_names = ", ".join(f'"{col}"' for col in columns)
+
+        if filter and isinstance(filter, dict):
+            filter = self._create_filter_clause(filter)
         filter = f"WHERE {filter}" if filter else ""
         embedding_string = f"'{[float(dimension) for dimension in embedding]}'"
         stmt = f'SELECT {column_names}, {search_function}({self.embedding_column}, {embedding_string}) as distance FROM "{self.schema_name}"."{self.table_name}" {filter} ORDER BY {self.embedding_column} {operator} {embedding_string} LIMIT {k};'
@@ -522,7 +614,7 @@ class AsyncPostgresVectorStore(VectorStore):
         self,
         query: str,
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected by similarity search on query."""
@@ -547,7 +639,7 @@ class AsyncPostgresVectorStore(VectorStore):
         self,
         query: str,
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on query."""
@@ -561,7 +653,7 @@ class AsyncPostgresVectorStore(VectorStore):
         self,
         embedding: list[float],
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected by vector similarity search."""
@@ -575,7 +667,7 @@ class AsyncPostgresVectorStore(VectorStore):
         self,
         embedding: list[float],
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by vector similarity search."""
@@ -597,6 +689,7 @@ class AsyncPostgresVectorStore(VectorStore):
                     Document(
                         page_content=row[self.content_column],
                         metadata=metadata,
+                        id=str(row[self.id_column]),
                     ),
                     row["distance"],
                 )
@@ -610,7 +703,7 @@ class AsyncPostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
@@ -631,7 +724,7 @@ class AsyncPostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
@@ -654,7 +747,7 @@ class AsyncPostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected using the maximal marginal relevance."""
@@ -687,6 +780,7 @@ class AsyncPostgresVectorStore(VectorStore):
                     Document(
                         page_content=row[self.content_column],
                         metadata=metadata,
+                        id=str(row[self.id_column]),
                     ),
                     row["distance"],
                 )
@@ -759,11 +853,204 @@ class AsyncPostgresVectorStore(VectorStore):
 
         return bool(len(results) == 1)
 
+    def _handle_field_filter(
+        self,
+        field: str,
+        value: Any,
+    ) -> str:
+        """Create a filter for a specific field.
+        Args:
+            field: name of field
+            value: value to filter
+                If provided as is then this will be an equality filter
+                If provided as a dictionary then this will be a filter, the key
+                will be the operator and the value will be the value to filter by
+        Returns:
+            sql where query as a string
+        """
+        if not isinstance(field, str):
+            raise ValueError(
+                f"field should be a string but got: {type(field)} with value: {field}"
+            )
+
+        if field.startswith("$"):
+            raise ValueError(
+                f"Invalid filter condition. Expected a field but got an operator: "
+                f"{field}"
+            )
+
+        # Allow [a-zA-Z0-9_], disallow $ for now until we support escape characters
+        if not field.isidentifier():
+            raise ValueError(
+                f"Invalid field name: {field}. Expected a valid identifier."
+            )
+
+        if isinstance(value, dict):
+            # This is a filter specification
+            if len(value) != 1:
+                raise ValueError(
+                    "Invalid filter condition. Expected a value which "
+                    "is a dictionary with a single key that corresponds to an operator "
+                    f"but got a dictionary with {len(value)} keys. The first few "
+                    f"keys are: {list(value.keys())[:3]}"
+                )
+            operator, filter_value = list(value.items())[0]
+            # Verify that that operator is an operator
+            if operator not in SUPPORTED_OPERATORS:
+                raise ValueError(
+                    f"Invalid operator: {operator}. "
+                    f"Expected one of {SUPPORTED_OPERATORS}"
+                )
+        else:  # Then we assume an equality operator
+            operator = "$eq"
+            filter_value = value
+
+        if operator in COMPARISONS_TO_NATIVE:
+            # Then we implement an equality filter
+            # native is trusted input
+            if isinstance(filter_value, str):
+                filter_value = f"'{filter_value}'"
+            native = COMPARISONS_TO_NATIVE[operator]
+            return f"({field} {native} {filter_value})"
+        elif operator == "$between":
+            # Use AND with two comparisons
+            low, high = filter_value
+
+            return f"({field} BETWEEN {low} AND {high})"
+        elif operator in {"$in", "$nin", "$like", "$ilike"}:
+            # We'll do force coercion to text
+            if operator in {"$in", "$nin"}:
+                for val in filter_value:
+                    if not isinstance(val, (str, int, float)):
+                        raise NotImplementedError(
+                            f"Unsupported type: {type(val)} for value: {val}"
+                        )
+
+                    if isinstance(val, bool):  # b/c bool is an instance of int
+                        raise NotImplementedError(
+                            f"Unsupported type: {type(val)} for value: {val}"
+                        )
+
+            if operator in {"$in"}:
+                values = str(tuple(val for val in filter_value))
+                return f"({field} IN {values})"
+            elif operator in {"$nin"}:
+                values = str(tuple(val for val in filter_value))
+                return f"({field} NOT IN {values})"
+            elif operator in {"$like"}:
+                return f"({field} LIKE '{filter_value}')"
+            elif operator in {"$ilike"}:
+                return f"({field} ILIKE '{filter_value}')"
+            else:
+                raise NotImplementedError()
+        elif operator == "$exists":
+            if not isinstance(filter_value, bool):
+                raise ValueError(
+                    "Expected a boolean value for $exists "
+                    f"operator, but got: {filter_value}"
+                )
+            else:
+                if filter_value:
+                    return f"({field} IS NOT NULL)"
+                else:
+                    return f"({field} IS NULL)"
+        else:
+            raise NotImplementedError()
+
+    def _create_filter_clause(self, filters: Any) -> str:
+        """Create LangChain filter representation to matching SQL where clauses
+        Args:
+            filters: Dictionary of filters to apply to the query.
+        Returns:
+            String containing the sql where query.
+        """
+
+        if not isinstance(filters, dict):
+            raise ValueError(
+                f"Invalid type: Expected a dictionary but got type: {type(filters)}"
+            )
+        if len(filters) == 1:
+            # The only operators allowed at the top level are $AND, $OR, and $NOT
+            # First check if an operator or a field
+            key, value = list(filters.items())[0]
+            if key.startswith("$"):
+                # Then it's an operator
+                if key.lower() not in ["$and", "$or", "$not"]:
+                    raise ValueError(
+                        f"Invalid filter condition. Expected $and, $or or $not "
+                        f"but got: {key}"
+                    )
+            else:
+                # Then it's a field
+                return self._handle_field_filter(key, filters[key])
+
+            if key.lower() == "$and" or key.lower() == "$or":
+                if not isinstance(value, list):
+                    raise ValueError(
+                        f"Expected a list, but got {type(value)} for value: {value}"
+                    )
+                op = key[1:].upper()  # Extract the operator
+                filter_clause = [self._create_filter_clause(el) for el in value]
+                if len(filter_clause) > 1:
+                    return f"({f' {op} '.join(filter_clause)})"
+                elif len(filter_clause) == 1:
+                    return filter_clause[0]
+                else:
+                    raise ValueError(
+                        "Invalid filter condition. Expected a dictionary "
+                        "but got an empty dictionary"
+                    )
+            elif key.lower() == "$not":
+                if isinstance(value, list):
+                    not_conditions = [
+                        self._create_filter_clause(item) for item in value
+                    ]
+                    not_stmts = [f"NOT {condition}" for condition in not_conditions]
+                    return f"({' AND '.join(not_stmts)})"
+                elif isinstance(value, dict):
+                    not_ = self._create_filter_clause(value)
+                    return f"(NOT {not_})"
+                else:
+                    raise ValueError(
+                        f"Invalid filter condition. Expected a dictionary "
+                        f"or a list but got: {type(value)}"
+                    )
+            else:
+                raise ValueError(
+                    f"Invalid filter condition. Expected $and, $or or $not "
+                    f"but got: {key}"
+                )
+        elif len(filters) > 1:
+            # Then all keys have to be fields (they cannot be operators)
+            for key in filters.keys():
+                if key.startswith("$"):
+                    raise ValueError(
+                        f"Invalid filter condition. Expected a field but got: {key}"
+                    )
+            # These should all be fields and combined using an $and operator
+            and_ = [self._handle_field_filter(k, v) for k, v in filters.items()]
+            if len(and_) > 1:
+                return f"({' AND '.join(and_)})"
+            elif len(and_) == 1:
+                return and_[0]
+            else:
+                raise ValueError(
+                    "Invalid filter condition. Expected a dictionary "
+                    "but got an empty dictionary"
+                )
+        else:
+            return ""
+
+    def get_by_ids(self, ids: Sequence[str]) -> list[Document]:
+        raise NotImplementedError(
+            "Sync methods are not implemented for AsyncPostgresVectorStore. Use PostgresVectorStore interface instead."
+        )
+
     def similarity_search(
         self,
         query: str,
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         raise NotImplementedError(
@@ -845,7 +1132,7 @@ class AsyncPostgresVectorStore(VectorStore):
         self,
         query: str,
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         raise NotImplementedError(
@@ -856,7 +1143,7 @@ class AsyncPostgresVectorStore(VectorStore):
         self,
         embedding: list[float],
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         raise NotImplementedError(
@@ -867,7 +1154,7 @@ class AsyncPostgresVectorStore(VectorStore):
         self,
         embedding: list[float],
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         raise NotImplementedError(
@@ -880,7 +1167,7 @@ class AsyncPostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         raise NotImplementedError(
@@ -893,7 +1180,7 @@ class AsyncPostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         raise NotImplementedError(
@@ -906,7 +1193,7 @@ class AsyncPostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         raise NotImplementedError(

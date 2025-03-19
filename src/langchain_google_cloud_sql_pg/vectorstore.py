@@ -15,7 +15,7 @@
 # TODO: Remove below import when minimum supported Python version is 3.10
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional, Sequence
 
 import numpy as np
 from langchain_core.documents import Document
@@ -551,7 +551,7 @@ class PostgresVectorStore(VectorStore):
         self,
         query: str,
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected by similarity search on query."""
@@ -563,7 +563,7 @@ class PostgresVectorStore(VectorStore):
         self,
         query: str,
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected by similarity search on query."""
@@ -586,7 +586,7 @@ class PostgresVectorStore(VectorStore):
         self,
         query: str,
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on query."""
@@ -598,7 +598,7 @@ class PostgresVectorStore(VectorStore):
         self,
         query: str,
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on query."""
@@ -610,7 +610,7 @@ class PostgresVectorStore(VectorStore):
         self,
         embedding: list[float],
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected by vector similarity search."""
@@ -622,7 +622,7 @@ class PostgresVectorStore(VectorStore):
         self,
         embedding: list[float],
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected by vector similarity search."""
@@ -634,7 +634,7 @@ class PostgresVectorStore(VectorStore):
         self,
         embedding: list[float],
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by vector similarity search."""
@@ -648,7 +648,7 @@ class PostgresVectorStore(VectorStore):
         self,
         embedding: list[float],
         k: Optional[int] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected by similarity search on vector."""
@@ -664,7 +664,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
@@ -680,7 +680,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
@@ -696,7 +696,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
@@ -712,7 +712,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance."""
@@ -728,7 +728,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected using the maximal marginal relevance."""
@@ -744,7 +744,7 @@ class PostgresVectorStore(VectorStore):
         k: Optional[int] = None,
         fetch_k: Optional[int] = None,
         lambda_mult: Optional[float] = None,
-        filter: Optional[str] = None,
+        filter: Optional[dict] | Optional[str] = None,
         **kwargs: Any,
     ) -> list[tuple[Document, float]]:
         """Return docs and distance scores selected using the maximal marginal relevance."""
@@ -813,3 +813,11 @@ class PostgresVectorStore(VectorStore):
     ) -> bool:
         """Check if index exists in the table."""
         return self._engine._run_as_sync(self.__vs.is_valid_index(index_name))
+
+    async def aget_by_ids(self, ids: Sequence[str]) -> list[Document]:
+        """Get documents by ids."""
+        return await self._engine._run_as_async(self.__vs.aget_by_ids(ids=ids))
+
+    def get_by_ids(self, ids: Sequence[str]) -> list[Document]:
+        """Get documents by ids."""
+        return self._engine._run_as_sync(self.__vs.aget_by_ids(ids=ids))
