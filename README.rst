@@ -172,7 +172,7 @@ Use ``PostgresSaver`` to save snapshots of the graph state at a given point in t
 
 See the full `Checkpoint`_ tutorial.
 
-.. _`Checkpoint`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/langgraph_checkpointer.ipynb
+.. _`Checkpoint`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/blob/main/docs/langgraph_checkpoint.ipynb
 
 Contributions
 ~~~~~~~~~~~~~
