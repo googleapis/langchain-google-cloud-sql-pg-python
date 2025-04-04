@@ -220,7 +220,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
 
         # construct predicate for metadata filter
         if filter:
-            wheres.append("encode(metadata,'escape')::jsonb @> :metadata ")
+            wheres.append("convert_from(metadata,'UTF8')::jsonb @> :metadata ")
             param_values.update({"metadata": f"{json.dumps(filter)}"})
 
         # construct predicate for `before`
