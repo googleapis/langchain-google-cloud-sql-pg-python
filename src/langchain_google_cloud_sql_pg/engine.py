@@ -418,7 +418,8 @@ class PostgresEngine:
 
     async def close(self) -> None:
         """Dispose of connection pool"""
-        await self._run_as_async(self._pool.dispose())
+        ## TODO: Uncomment before merge, commented to ensure sessions are not disposed
+        # await self._run_as_async(self._pool.dispose())
 
     async def _ainit_vectorstore_table(
         self,
