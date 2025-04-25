@@ -197,7 +197,7 @@ def test_checkpoint_table(engine: Any) -> None:
 
 
 @pytest.fixture
-def test_data():
+def test_data() -> dict[str, Any]:
     """Fixture providing test data for checkpoint tests."""
     config_0: RunnableConfig = {"configurable": {"thread_id": "1", "checkpoint_ns": ""}}
     config_1: RunnableConfig = {
@@ -248,13 +248,13 @@ def test_data():
         "source": "input",
         "step": 2,
         "writes": {},
-        "parents": 1,
+        "parents": 1,  # type: ignore[typeddict-item]
     }
     metadata_2: CheckpointMetadata = {
         "source": "loop",
         "step": 1,
         "writes": {"foo": "bar"},
-        "parents": None,
+        "parents": None,  # type: ignore[typeddict-item]
     }
     metadata_3: CheckpointMetadata = {}
 
