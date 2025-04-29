@@ -5,3 +5,4 @@ numpy==2.0.2; python_version <= "3.9"
 pgvector==0.4.0
 SQLAlchemy[asyncio]==2.0.40
 langgraph-checkpoint==2.0.24
+langgraph-prebuilt==0.1.8
