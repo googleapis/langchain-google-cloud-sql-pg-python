@@ -39,7 +39,7 @@ from langgraph.checkpoint.base import (
     empty_checkpoint,
 )
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-from langgraph.prebuilt import (
+from langgraph.prebuilt import (  # type: ignore[import-not-found]
     ToolNode,
     ValidationNode,
     create_react_agent,
