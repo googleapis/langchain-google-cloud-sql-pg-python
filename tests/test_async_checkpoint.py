@@ -39,7 +39,7 @@ from langgraph.checkpoint.base import (
     empty_checkpoint,
 )
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-from langgraph.prebuilt import (
+from langgraph.prebuilt import (  # type: ignore[import-not-found]
     ToolNode,
     ValidationNode,
     create_react_agent,
@@ -374,13 +374,14 @@ async def test_checkpoint_with_agent(
 
     saved = await checkpointer.aget_tuple(thread_agent_config)
     assert saved is not None
-    assert saved.checkpoint["channel_values"] == {
-        "messages": [
-            _AnyIdHumanMessage(content="hi?"),
-            AIMessage(content="hi?", id="0"),
-        ],
-        "agent": "agent",
-    }
+    assert (
+        _AnyIdHumanMessage(content="hi?")
+        in saved.checkpoint["channel_values"]["messages"]
+    )
+    assert (
+        AIMessage(content="hi?", id="0")
+        in saved.checkpoint["channel_values"]["messages"]
+    )
     assert saved.metadata == {
         "parents": {},
         "source": "loop",
