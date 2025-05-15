@@ -281,11 +281,11 @@ class AsyncPostgresVectorStore(VectorStore):
             )
             insert_stmt = f'INSERT INTO "{self.schema_name}"."{self.table_name}"("{self.id_column}", "{self.content_column}", "{self.embedding_column}"{metadata_col_names}'
             values = {
-                "id": id,
+                "langchain_id": id,
                 "content": content,
                 "embedding": str([float(dimension) for dimension in embedding]),
             }
-            values_stmt = "VALUES (:id, :content, :embedding"
+            values_stmt = "VALUES (:langchain_id, :content, :embedding"
 
             # Add metadata
             extra = copy.deepcopy(metadata)
