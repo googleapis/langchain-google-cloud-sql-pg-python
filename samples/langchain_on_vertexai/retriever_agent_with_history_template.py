@@ -151,7 +151,7 @@ class PostgresAgent(reasoning_engines.Queryable):
 
 # Uncomment to test locally
 # app = PostgresAgent(
-#     model="gemini-pro",
+#     model="gemini-2.0-flash-001",
 #     project=PROJECT_ID,
 #     region=REGION,
 #     instance=INSTANCE,
@@ -173,7 +173,7 @@ DISPLAY_NAME = os.getenv("DISPLAY_NAME") or "PostgresAgent"
 
 remote_app = reasoning_engines.ReasoningEngine.create(
     PostgresAgent(
-        model="gemini-pro",
+        model="gemini-2.0-flash-001",
         project=PROJECT_ID,
         region=REGION,
         instance=INSTANCE,
