@@ -45,12 +45,12 @@ langgraph = [
 test = [
     "black[jupyter]==25.1.0",
     "isort==6.0.1",
-    "mypy==1.15.0",
+    "mypy==1.16.1",
     "pytest-asyncio==0.26.0",
-    "pytest==8.3.5",
-    "pytest-cov==6.1.1",
-    "langchain-tests==0.3.19",
-    "langgraph==0.3.31"
+    "pytest==8.4.1",
+    "pytest-cov==6.2.1",
+    "langchain-tests==0.3.20",
+    "langgraph==0.5.2"
 ]
 
 [build-system]
