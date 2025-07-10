@@ -383,9 +383,7 @@ async def test_checkpoint_with_agent(
     assert saved.metadata == {
         "parents": {},
         "source": "loop",
-        "writes": {"agent": {"messages": [AIMessage(content="hi?", id="0")]}},
         "step": 1,
-        "thread_id": "123",
     }
     assert saved.pending_writes == []
 
