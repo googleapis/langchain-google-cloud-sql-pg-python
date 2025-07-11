@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.14.0...v0.14.1) (2025-07-11)
+
+
+### Bug Fixes
+
+* Add support for a metadata column named id ([#302](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/302)) ([ceffc44](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/ceffc449384288c695e5246e2553661dbb548fbf))
+
 ## [0.14.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.13.0...v0.14.0) (2025-04-29)
 
 
