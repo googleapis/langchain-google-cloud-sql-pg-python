@@ -78,7 +78,6 @@ checkpoint: Checkpoint = {
         "__start__": {"__start__": 1},
         "node": {"start:node": 2},
     },
-    "pending_sends": [],
 }
 
 
@@ -213,7 +212,6 @@ def test_data() -> dict[str, Any]:
             "__start__": {"__start__": 1},
             "node": {"start:node": 2},
         },
-        "pending_sends": [],
     }
     chkpnt_1: Checkpoint = empty_checkpoint()
     chkpnt_2: Checkpoint = create_checkpoint(chkpnt_1, {}, 1)
@@ -385,9 +383,7 @@ async def test_checkpoint_with_agent(
     assert saved.metadata == {
         "parents": {},
         "source": "loop",
-        "writes": {"agent": {"messages": [AIMessage(content="hi?", id="0")]}},
         "step": 1,
-        "thread_id": "123",
     }
     assert saved.pending_writes == []
 
