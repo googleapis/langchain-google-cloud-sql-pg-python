@@ -1,49 +1,48 @@
 {
-  "extends": [
-    "config:base", // https://docs.renovatebot.com/presets-config/#configbase
-    ":semanticCommitTypeAll(chore)", // https://docs.renovatebot.com/presets-default/#semanticcommittypeallarg0
-    ":ignoreUnstable", // https://docs.renovatebot.com/presets-default/#ignoreunstable
-    "group:allNonMajor", // https://docs.renovatebot.com/presets-group/#groupallnonmajor
-    ":separateMajorReleases", // https://docs.renovatebot.com/presets-default/#separatemajorreleases
-    ":prConcurrentLimitNone", // View complete backlog as PRs. https://docs.renovatebot.com/presets-default/#prconcurrentlimitnone
-    ":prHourlyLimitNone", // https://docs.renovatebot.com/presets-default/#prhourlylimitnone
-    ":preserveSemverRanges",
+  extends: [
+    'config:recommended',
+    ':semanticCommitTypeAll(chore)',
+    ':ignoreUnstable',
+    'group:allNonMajor',
+    ':separateMajorReleases',
+    ':prConcurrentLimitNone',
+    ':prHourlyLimitNone',
+    ':preserveSemverRanges',
   ],
-  "ignorePaths": [".kokoro/**"], // Dependabot will make security updates
-
-  // Give ecosystem time to catch up.
-  // npm allows maintainers to unpublish a release up to 3 days later.
-  // https://docs.renovatebot.com/configuration-options/#minimumreleaseage
-  "minimumReleaseAge": "3",
-
-  // Create PRs, but do not update them without manual action.
-  // Reduces spurious retesting in repositories that have many PRs at a time.
-  // https://docs.renovatebot.com/configuration-options/#rebasewhen
-  "rebaseWhen": "never",
-
-  // Organizational processes.
-  // https://docs.renovatebot.com/configuration-options/#dependencydashboardlabels
-  "dependencyDashboardLabels": [
-    "type: process",
+  ignorePaths: [
+    '.kokoro/**',
   ],
-  "packageRules": [
-
+  minimumReleaseAge: '3',
+  rebaseWhen: 'never',
+  dependencyDashboardLabels: [
+    'type: process',
+  ],
+  packageRules: [
     {
-       "groupName": "GitHub Actions",
-       "matchManagers": ["github-actions"],
-       "pinDigests": true,
-    },
-
-    // Python Specific
-    {
-      "matchPackageNames": ["pytest"],
-      "matchUpdateTypes": ["minor", "major"]
+      groupName: 'GitHub Actions',
+      matchManagers: [
+        'github-actions',
+      ],
+      pinDigests: true,
     },
     {
-      "groupName": "python-nonmajor",
-      "matchLanguages": ["python"],
-      "matchUpdateTypes": ["minor", "patch"],
+      matchPackageNames: [
+        'pytest',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'major',
+      ],
     },
-
+    {
+      groupName: 'python-nonmajor',
+      matchCategories: [
+        'python',
+      ],
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+      ],
+    },
   ],
 }
