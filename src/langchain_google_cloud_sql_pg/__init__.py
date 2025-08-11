@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from langchain_postgres import Column
+
 from . import indexes
 from .chat_message_history import PostgresChatMessageHistory
 from .checkpoint import PostgresSaver
