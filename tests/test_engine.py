@@ -236,6 +236,28 @@ class TestEngineAsync:
             await aexecute(engine, "SELECT 1")
             await engine.close()
 
+    async def test_from_connection_string(
+        self,
+        db_name,
+        user,
+        password,
+    ):
+        port = "5432"
+        url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+        engine = PostgresEngine.from_connection_string(
+            url,
+            echo=True,
+            poolclass=NullPool,
+        )
+        await aexecute(engine, "SELECT 1")
+        await engine.close()
+
+        engine = PostgresEngine.from_connection_string(
+            URL.create("postgresql+asyncpg", user, password, host, port, db_name)
+        )
+        await aexecute(engine, "SELECT 1")
+        await engine.close()
+
     async def test_from_engine_args_url(
         self,
         db_name,

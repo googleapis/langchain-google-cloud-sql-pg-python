@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from langchain_postgres import Column
 from . import indexes
 from .chat_message_history import PostgresChatMessageHistory
 from .checkpoint import PostgresSaver
-from .engine import Column, PostgresEngine
+from .engine import PostgresEngine
 from .loader import PostgresDocumentSaver, PostgresLoader
 from .vectorstore import PostgresVectorStore
 from .version import __version__
