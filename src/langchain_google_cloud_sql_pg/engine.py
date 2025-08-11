@@ -172,7 +172,7 @@ class PostgresEngine(PGEngine):
             async_creator=getconn,
             **engine_args,
         )
-        return cls(cls.__create_key, engine, loop, thread)
+        return cls(PGEngine._PGEngine__create_key, engine, loop, thread)
 
     @classmethod
     def __start_background_loop(
