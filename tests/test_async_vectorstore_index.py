@@ -25,7 +25,9 @@ from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import PostgresEngine
 from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
-from langchain_google_cloud_sql_pg.hybrid_search_config import HybridSearchConfig   # type: ignore
+from langchain_google_cloud_sql_pg.hybrid_search_config import (  # type: ignore
+    HybridSearchConfig,
+)
 from langchain_google_cloud_sql_pg.indexes import (
     DEFAULT_INDEX_NAME_SUFFIX,
     DistanceStrategy,
@@ -109,6 +111,7 @@ class TestIndex:
         yield vs
 
     async def test_aapply_vector_index(self, vs):
+        await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
         index = HNSWIndex()
         await vs.aapply_vector_index(index)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
@@ -129,7 +132,10 @@ class TestIndex:
         assert not result
 
     async def test_aapply_vector_index_ivfflat(self, vs):
-        index = IVFFlatIndex(distance_strategy=DistanceStrategy.EUCLIDEAN)
+        await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
+        index = IVFFlatIndex(
+            name=DEFAULT_INDEX_NAME, distance_strategy=DistanceStrategy.EUCLIDEAN
+        )
         await vs.aapply_vector_index(index, concurrently=True)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
         index = IVFFlatIndex(
@@ -139,7 +145,7 @@ class TestIndex:
         await vs.aapply_vector_index(index)
         assert await vs.is_valid_index("secondindex")
         await vs.adrop_vector_index("secondindex")
-        await vs.adrop_vector_index()
+        await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
 
     async def test_is_valid_index(self, vs):
         is_valid = await vs.is_valid_index("invalid_index")

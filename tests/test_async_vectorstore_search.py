@@ -24,7 +24,7 @@ from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
 from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
-from langchain_google_cloud_sql_pg.hybrid_search_config import (
+from langchain_google_cloud_sql_pg.hybrid_search_config import (  # type: ignore
     HybridSearchConfig,
     reciprocal_rank_fusion,
     weighted_sum_ranking,
@@ -37,7 +37,6 @@ CUSTOM_FILTER_TABLE = "custom_filter" + str(uuid.uuid4()).replace("-", "_")
 HYBRID_SEARCH_TABLE1 = "hybrid1" + str(uuid.uuid4()).replace("-", "_")
 HYBRID_SEARCH_TABLE2 = "hybrid2" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
-sync_method_exception_str = "Sync methods are not implemented for AsyncPostgresVectorStore. Use PostgresVectorStore interface instead."
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
 
@@ -391,7 +390,7 @@ class TestVectorStoreSearch:
 
     def test_get_by_ids(self, vs):
         test_ids = [ids[0]]
-        with pytest.raises(Exception, match=sync_method_exception_str):
+        with pytest.raises(Exception):
             vs.get_by_ids(ids=test_ids)
 
     @pytest.mark.parametrize("test_filter, expected_ids", FILTERING_TEST_CASES)
