@@ -21,12 +21,12 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
-from langchain_postgres.v2.hybrid_search_config import HybridSearchConfig
 from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import PostgresEngine
 from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
-from langchain_google_cloud_sql_pg.indexes import (
+from langchain_google_cloud_sql_pg.hybrid_search_config import HybridSearchConfig
+from langchain_google_cloud_sql_pg.indexes import (  # type: ignore
     DEFAULT_INDEX_NAME_SUFFIX,
     DistanceStrategy,
     HNSWIndex,
@@ -150,7 +150,7 @@ class TestIndex:
     ):
         # overwriting vs to get a hybrid vs
         tsv_index_name = "index_without_tsv_column_" + UUID_STR
-        vs = await AsyncAlloyDBVectorStore.create(
+        vs = await AsyncPostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
             table_name=DEFAULT_TABLE,
@@ -176,7 +176,7 @@ class TestIndex:
             VECTOR_SIZE,
             hybrid_search_config=config,
         )
-        vs = await AsyncAlloyDBVectorStore.create(
+        vs = await AsyncPostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
             table_name=DEFAULT_HYBRID_TABLE,

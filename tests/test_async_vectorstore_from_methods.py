@@ -29,9 +29,7 @@ from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorS
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
-CUSTOM_TABLE_WITH_INT_ID = "custom_int" + str(uuid.uuid4()).replace(
-    "-", "_"
-)
+CUSTOM_TABLE_WITH_INT_ID = "custom_int" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
 
