@@ -14,7 +14,6 @@
 
 
 import os
-import sys
 import uuid
 
 import pytest
@@ -37,6 +36,7 @@ from langchain_google_cloud_sql_pg.indexes import (
 
 UUID_STR = str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE = "table" + UUID_STR
+SIMPLE_TABLE = "simple" + UUID_STR
 DEFAULT_HYBRID_TABLE = "hybrid" + UUID_STR
 DEFAULT_INDEX_NAME = DEFAULT_INDEX_NAME_SUFFIX + UUID_STR
 VECTOR_SIZE = 768
@@ -95,11 +95,14 @@ class TestIndex:
         yield engine
         await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
         await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_HYBRID_TABLE}")
+        await aexecute(engine, f"DROP TABLE IF EXISTS {SIMPLE_TABLE}")
         await engine.close()
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine._ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await engine._ainit_vectorstore_table(
+            DEFAULT_TABLE, VECTOR_SIZE, overwrite_existing=True
+        )
         vs = await AsyncPostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
@@ -112,12 +115,12 @@ class TestIndex:
 
     async def test_apply_default_name_vector_index(self, engine):
         await engine._ainit_vectorstore_table(
-            DEFAULT_TABLE, VECTOR_SIZE, overwrite_existing=True
+            SIMPLE_TABLE, VECTOR_SIZE, overwrite_existing=True
         )
         vs = await AsyncPostgresVectorStore.create(
             engine,
             embedding_service=embeddings_service,
-            table_name=DEFAULT_TABLE,
+            table_name=SIMPLE_TABLE,
         )
         await vs.aadd_texts(texts, ids=ids)
         await vs.adrop_vector_index()
