@@ -110,9 +110,25 @@ class TestIndex:
         await vs.adrop_vector_index()
         yield vs
 
+    async def test_apply_default_name_vector_index(self, engine):
+        await engine._ainit_vectorstore_table(
+            DEFAULT_TABLE, VECTOR_SIZE, overwrite_existing=True
+        )
+        vs = await AsyncPostgresVectorStore.create(
+            engine,
+            embedding_service=embeddings_service,
+            table_name=DEFAULT_TABLE,
+        )
+        await vs.aadd_texts(texts, ids=ids)
+        await vs.adrop_vector_index()
+        index = HNSWIndex()
+        await vs.aapply_vector_index(index)
+        assert await vs.is_valid_index()
+        await vs.adrop_vector_index()
+
     async def test_aapply_vector_index(self, vs):
         await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
-        index = HNSWIndex()
+        index = HNSWIndex(name=DEFAULT_INDEX_NAME)
         await vs.aapply_vector_index(index)
         assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
         await vs.adrop_vector_index()
@@ -197,10 +213,3 @@ class TestIndex:
         await vs.adrop_vector_index(tsv_index_name)
         is_valid_index = await vs.is_valid_index(tsv_index_name)
         assert is_valid_index == False
-
-    async def test_apply_default_name_vector_index(self, vs):
-        await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
-        index = HNSWIndex()
-        await vs.aapply_vector_index(index)
-        assert await vs.is_valid_index()
-        await vs.adrop_vector_index()
