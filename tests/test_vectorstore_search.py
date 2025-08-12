@@ -25,11 +25,17 @@ from sqlalchemy import text
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOptions
 
-DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
-CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
-CUSTOM_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4()).replace("-", "_")
-CUSTOM_FILTER_TABLE = "test_table_custom_filter" + str(uuid.uuid4()).replace("-", "_")
-CUSTOM_FILTER_TABLE_SYNC = "test_table_custom_filter_sync" + str(uuid.uuid4()).replace(
+from langchain_postgres.v2.hybrid_search_config import (
+    HybridSearchConfig,
+    reciprocal_rank_fusion,
+    weighted_sum_ranking,
+)
+
+DEFAULT_TABLE = "default" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE = "custom" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE_SYNC = "custom_sync" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_FILTER_TABLE = "custom_filter" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_FILTER_TABLE_SYNC = "custom_filter_sync" + str(uuid.uuid4()).replace(
     "-", "_"
 )
 VECTOR_SIZE = 768
@@ -191,7 +197,7 @@ class TestVectorStoreSearch:
         results = await vs.asimilarity_search("foo", k=1)
         assert len(results) == 1
         assert results == [Document(page_content="foo", id=ids[0])]
-        results = await vs.asimilarity_search("foo", k=1, filter="content = 'bar'")
+        results = await vs.asimilarity_search("foo", k=1, filter={"content": "bar"})
         assert results == [Document(page_content="bar", id=ids[1])]
 
     async def test_asimilarity_search_score(self, vs):
@@ -252,7 +258,7 @@ class TestVectorStoreSearch:
         results = await vs.amax_marginal_relevance_search("bar")
         assert results[0] == Document(page_content="bar", id=ids[1])
         results = await vs.amax_marginal_relevance_search(
-            "bar", filter="content = 'boo'"
+            "bar", filter={"content": "boo"}
         )
         assert results[0] == Document(page_content="boo", id=ids[3])
 
@@ -297,6 +303,37 @@ class TestVectorStoreSearch:
             "meow", k=5, filter=test_filter
         )
         assert [doc.metadata["code"] for doc in docs] == expected_ids, test_filter
+
+    async def test_asimilarity_hybrid_search(self, vs):
+        results = await vs.asimilarity_search(
+            "foo", k=1, hybrid_search_config=HybridSearchConfig()
+        )
+        assert len(results) == 1
+        assert results == [Document(page_content="foo", id=ids[0])]
+
+        results = await vs.asimilarity_search(
+            "bar",
+            k=1,
+            hybrid_search_config=HybridSearchConfig(),
+        )
+        assert results[0] == Document(page_content="bar", id=ids[1])
+
+        results = await vs.asimilarity_search(
+            "foo",
+            k=1,
+            filter={"content": {"$ne": "baz"}},
+            hybrid_search_config=HybridSearchConfig(
+                fusion_function=weighted_sum_ranking,
+                fusion_function_parameters={
+                    "primary_results_weight": 0.1,
+                    "secondary_results_weight": 0.9,
+                    "fetch_top_k": 10,
+                },
+                primary_top_k=1,
+                secondary_top_k=1,
+            ),
+        )
+        assert results == [Document(page_content="foo", id=ids[0])]
 
 
 class TestVectorStoreSearchSync:
@@ -398,7 +435,7 @@ class TestVectorStoreSearchSync:
         results = vs_custom.similarity_search("foo", k=1)
         assert len(results) == 1
         assert results == [Document(page_content="foo", id=ids[0])]
-        results = vs_custom.similarity_search("foo", k=1, filter="mycontent = 'bar'")
+        results = vs_custom.similarity_search("foo", k=1, filter={"mycontent": "bar"})
         assert results == [Document(page_content="bar", id=ids[1])]
 
     def test_similarity_search_score(self, vs_custom):
@@ -420,7 +457,7 @@ class TestVectorStoreSearchSync:
         results = vs_custom.max_marginal_relevance_search("bar")
         assert results[0] == Document(page_content="bar", id=ids[1])
         results = vs_custom.max_marginal_relevance_search(
-            "bar", filter="mycontent = 'boo'"
+            "bar", filter={"mycontent": "boo"}
         )
         assert results[0] == Document(page_content="boo", id=ids[3])
 
@@ -465,3 +502,27 @@ class TestVectorStoreSearchSync:
             docs = vs_custom_filter_sync.similarity_search(
                 "meow", k=5, filter=test_filter
             )
+
+    def test_similarity_hybrid_search(self, vs_custom):
+        results = vs_custom.similarity_search(
+            "foo", k=1, hybrid_search_config=HybridSearchConfig()
+        )
+        assert len(results) == 1
+        assert results == [Document(page_content="foo", id=ids[0])]
+
+        results = vs_custom.similarity_search(
+            "bar",
+            k=1,
+            hybrid_search_config=HybridSearchConfig(),
+        )
+        assert results == [Document(page_content="bar", id=ids[1])]
+
+        results = vs_custom.similarity_search(
+            "foo",
+            k=1,
+            filter={"mycontent": {"$ne": "baz"}},
+            hybrid_search_config=HybridSearchConfig(
+                fusion_function=reciprocal_rank_fusion
+            ),
+        )
+        assert results == [Document(page_content="foo", id=ids[0])]

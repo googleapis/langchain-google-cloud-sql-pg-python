@@ -32,7 +32,7 @@ from langchain_google_cloud_sql_pg.indexes import (
 )
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
-CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
+CUSTOM_TABLE = "custom" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_INDEX_NAME = DEFAULT_TABLE + DEFAULT_INDEX_NAME_SUFFIX
 VECTOR_SIZE = 768
 
@@ -120,7 +120,7 @@ class TestIndex:
         if not vs.is_valid_index(DEFAULT_INDEX_NAME):
             index = HNSWIndex()
             vs.apply_vector_index(index)
-        vs.reindex()
+        vs.reindex(DEFAULT_INDEX_NAME)
         vs.reindex(DEFAULT_INDEX_NAME)
         assert vs.is_valid_index(DEFAULT_INDEX_NAME)
         vs.drop_vector_index(DEFAULT_INDEX_NAME)
@@ -201,7 +201,7 @@ class TestAsyncIndex:
         if not await vs.ais_valid_index(DEFAULT_INDEX_NAME):
             index = HNSWIndex()
             await vs.aapply_vector_index(index)
-        await vs.areindex()
+        await vs.areindex(DEFAULT_INDEX_NAME)
         await vs.areindex(DEFAULT_INDEX_NAME)
         assert await vs.ais_valid_index(DEFAULT_INDEX_NAME)
         await vs.adrop_vector_index(DEFAULT_INDEX_NAME)

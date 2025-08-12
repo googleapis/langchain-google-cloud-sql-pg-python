@@ -28,15 +28,18 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
+from langchain_postgres.v2.hybrid_search_config import HybridSearchConfig
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 INT_ID_CUSTOM_TABLE = "test_table_custom_int_id" + str(uuid.uuid4()).replace("-", "_")
+HYBRID_SEARCH_TABLE = "hybrid" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_TABLE_SYNC = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE_SYNC = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")
 INT_ID_CUSTOM_TABLE_SYNC = "test_table_custom_int_id" + str(uuid.uuid4()).replace(
     "-", "_"
 )
+HYBRID_SEARCH_TABLE_SYNC = "hybrid_sync" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)
@@ -120,6 +123,7 @@ class TestEngineAsync:
         await aexecute(engine, f'DROP TABLE "{CUSTOM_TABLE}"')
         await aexecute(engine, f'DROP TABLE "{DEFAULT_TABLE}"')
         await aexecute(engine, f'DROP TABLE "{INT_ID_CUSTOM_TABLE}"')
+        await aexecute(engine, f'DROP TABLE "{HYBRID_SEARCH_TABLE}"')
         await engine.close()
 
     async def test_engine_args(self, engine):
@@ -360,6 +364,31 @@ class TestEngineAsync:
         await aexecute(engine, f'DROP TABLE IF EXISTS "{table_name}"')
         await aexecute(engine, f'DROP TABLE IF EXISTS "{table_name_writes}"')
 
+    async def test_init_table_hybrid_search(self, engine):
+        await engine.ainit_vectorstore_table(
+            HYBRID_SEARCH_TABLE,
+            VECTOR_SIZE,
+            id_column="uuid",
+            content_column="my-content",
+            embedding_column="my_embedding",
+            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+            store_metadata=True,
+            hybrid_search_config=HybridSearchConfig(),
+        )
+        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{HYBRID_SEARCH_TABLE}';"
+        results = await afetch(engine, stmt)
+        expected = [
+            {"column_name": "uuid", "data_type": "uuid"},
+            {"column_name": "my_embedding", "data_type": "USER-DEFINED"},
+            {"column_name": "langchain_metadata", "data_type": "json"},
+            {"column_name": "my-content", "data_type": "text"},
+            {"column_name": "my-content_tsv", "data_type": "tsvector"},
+            {"column_name": "page", "data_type": "text"},
+            {"column_name": "source", "data_type": "text"},
+        ]
+        for row in results:
+            assert row in expected
+
 
 @pytest.mark.asyncio(scope="module")
 class TestEngineSync:
@@ -403,6 +432,7 @@ class TestEngineSync:
         await aexecute(engine, f'DROP TABLE "{CUSTOM_TABLE_SYNC}"')
         await aexecute(engine, f'DROP TABLE "{DEFAULT_TABLE_SYNC}"')
         await aexecute(engine, f'DROP TABLE "{INT_ID_CUSTOM_TABLE_SYNC}"')
+        await aexecute(engine, f'DROP TABLE "{HYBRID_SEARCH_TABLE_SYNC}"')
         await engine.close()
 
     async def test_init_table(self, engine):
@@ -547,3 +577,28 @@ class TestEngineSync:
             assert row in expected
         await aexecute(engine, f'DROP TABLE IF EXISTS "{table_name}"')
         await aexecute(engine, f'DROP TABLE IF EXISTS "{table_name_writes}"')
+
+    async def test_init_table_hybrid_search(self, engine):
+        engine.init_vectorstore_table(
+            HYBRID_SEARCH_TABLE_SYNC,
+            VECTOR_SIZE,
+            id_column="uuid",
+            content_column="my-content",
+            embedding_column="my_embedding",
+            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+            store_metadata=True,
+            hybrid_search_config=HybridSearchConfig(),
+        )
+        stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{HYBRID_SEARCH_TABLE_SYNC}';"
+        results = await afetch(engine, stmt)
+        expected = [
+            {"column_name": "uuid", "data_type": "uuid"},
+            {"column_name": "my_embedding", "data_type": "USER-DEFINED"},
+            {"column_name": "langchain_metadata", "data_type": "json"},
+            {"column_name": "my-content", "data_type": "text"},
+            {"column_name": "my-content_tsv", "data_type": "tsvector"},
+            {"column_name": "page", "data_type": "text"},
+            {"column_name": "source", "data_type": "text"},
+        ]
+        for row in results:
+            assert row in expected
