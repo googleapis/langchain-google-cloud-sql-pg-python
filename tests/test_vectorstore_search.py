@@ -23,12 +23,12 @@ from metadata_filtering_data import FILTERING_TEST_CASES, METADATAS, NEGATIVE_TE
 from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
-from langchain_google_cloud_sql_pg.hybrid_search_config import (
+from langchain_google_cloud_sql_pg.hybrid_search_config import (  # type: ignore
     HybridSearchConfig,
     reciprocal_rank_fusion,
     weighted_sum_ranking,
 )
-from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOptions  # type: ignore
+from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOptions
 
 DEFAULT_TABLE = "default" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "custom" + str(uuid.uuid4()).replace("-", "_")
