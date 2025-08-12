@@ -15,14 +15,12 @@
 # TODO: Remove below import when minimum supported Python version is 3.10
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, Optional, Sequence
+from typing import Optional
 
-import numpy as np
-from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from langchain_core.vectorstores import VectorStore
 from langchain_postgres import PGVectorStore
-from langchain_postgres.v2.hybrid_search_config import HybridSearchConfig
+
+from langchain_google_cloud_sql_pg.hybrid_search_config import HybridSearchConfig
 
 from .async_vectorstore import AsyncPostgresVectorStore
 from .engine import PostgresEngine
