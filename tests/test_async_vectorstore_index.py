@@ -146,7 +146,7 @@ class TestIndex:
         await vs.adrop_vector_index()
 
     async def test_dropindex(self, vs):
-        await vs.adrop_vector_index()
+        await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
         result = await vs.is_valid_index(DEFAULT_INDEX_NAME)
         assert not result
 
