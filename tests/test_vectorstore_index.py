@@ -31,7 +31,7 @@ from langchain_google_cloud_sql_pg.indexes import (
     IVFFlatIndex,
 )
 
-DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
+DEFAULT_TABLE = "table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "custom" + str(uuid.uuid4()).replace("-", "_")
 DEFAULT_INDEX_NAME = DEFAULT_TABLE + DEFAULT_INDEX_NAME_SUFFIX
 VECTOR_SIZE = 768
