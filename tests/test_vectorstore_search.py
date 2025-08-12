@@ -19,25 +19,22 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from langchain_postgres.v2.hybrid_search_config import (
+    HybridSearchConfig,
+    reciprocal_rank_fusion,
+    weighted_sum_ranking,
+)
 from metadata_filtering_data import FILTERING_TEST_CASES, METADATAS, NEGATIVE_TEST_CASES
 from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOptions
 
-from langchain_postgres.v2.hybrid_search_config import (
-    HybridSearchConfig,
-    reciprocal_rank_fusion,
-    weighted_sum_ranking,
-)
-
 DEFAULT_TABLE = "default" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "custom" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE_SYNC = "custom_sync" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_FILTER_TABLE = "custom_filter" + str(uuid.uuid4()).replace("-", "_")
-CUSTOM_FILTER_TABLE_SYNC = "custom_filter_sync" + str(uuid.uuid4()).replace(
-    "-", "_"
-)
+CUSTOM_FILTER_TABLE_SYNC = "custom_filter_sync" + str(uuid.uuid4()).replace("-", "_")
 VECTOR_SIZE = 768
 
 embeddings_service = DeterministicFakeEmbedding(size=VECTOR_SIZE)

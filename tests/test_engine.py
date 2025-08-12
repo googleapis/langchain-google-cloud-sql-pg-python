@@ -21,6 +21,7 @@ import pytest
 import pytest_asyncio
 from google.cloud.sql.connector import Connector, IPTypes
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from langchain_postgres.v2.hybrid_search_config import HybridSearchConfig
 from sqlalchemy import VARCHAR, text
 from sqlalchemy.engine import URL
 from sqlalchemy.engine.row import RowMapping
@@ -28,7 +29,6 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
-from langchain_postgres.v2.hybrid_search_config import HybridSearchConfig
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")

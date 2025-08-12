@@ -166,4 +166,4 @@ class PostgresVectorStore(PGVectorStore):
             hybrid_search_config=hybrid_search_config,
         )
         vs = engine._run_as_sync(coro)
-        return cls(cls._PGVectorStore__create_key, engine, vs)  #type: ignore
+        return cls(cls._PGVectorStore__create_key, engine, vs)  # type: ignore

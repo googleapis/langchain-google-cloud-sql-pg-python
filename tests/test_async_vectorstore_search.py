@@ -19,17 +19,17 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from langchain_postgres.v2.hybrid_search_config import (
+    HybridSearchConfig,
+    reciprocal_rank_fusion,
+    weighted_sum_ranking,
+)
 from metadata_filtering_data import FILTERING_TEST_CASES, METADATAS
 from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine
 from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import DistanceStrategy, HNSWQueryOptions
-from langchain_postgres.v2.hybrid_search_config import (
-    HybridSearchConfig,
-    reciprocal_rank_fusion,
-    weighted_sum_ranking,
-)
 
 DEFAULT_TABLE = "test_table" + str(uuid.uuid4()).replace("-", "_")
 CUSTOM_TABLE = "test_table_custom" + str(uuid.uuid4()).replace("-", "_")

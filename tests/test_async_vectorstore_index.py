@@ -21,11 +21,11 @@ import pytest
 import pytest_asyncio
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from langchain_postgres.v2.hybrid_search_config import HybridSearchConfig
 from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import PostgresEngine
 from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
-from langchain_postgres.v2.hybrid_search_config import HybridSearchConfig
 from langchain_google_cloud_sql_pg.indexes import (
     DEFAULT_INDEX_NAME_SUFFIX,
     DistanceStrategy,
