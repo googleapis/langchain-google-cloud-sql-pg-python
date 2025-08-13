@@ -1,0 +1,22 @@
+name: Add Default P0 to New PRs
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  add-p0-label:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Add P0 label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [priority: p0]
+            })
