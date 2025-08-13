@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.14.1...v1.0.0) (2025-08-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* Refactor PostgresVectorStore and PostgresEngine to depend on PGVectorstore and PGEngine respectively ([#316](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/316))
+
+### Code Refactoring
+
+* Refactor PostgresVectorStore and PostgresEngine to depend on PGVectorstore and PGEngine respectively ([#316](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/316)) ([7917d62](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/7917d62c3f9ea2c6ca8ab8d6284cfa2c7e535401))
+
 ## [0.14.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.14.0...v0.14.1) (2025-07-11)
 
 
