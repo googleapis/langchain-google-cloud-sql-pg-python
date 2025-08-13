@@ -13,6 +13,11 @@
 # limitations under the License.
 
 from langchain_postgres import Column
+from langchain_postgres.v2.hybrid_search_config import (
+    HybridSearchConfig,
+    reciprocal_rank_fusion,
+    weighted_sum_ranking,
+)
 
 from . import indexes
 from .chat_message_history import PostgresChatMessageHistory
@@ -31,5 +36,8 @@ __all__ = [
     "PostgresLoader",
     "PostgresDocumentSaver",
     "PostgresSaver",
+    "HybridSearchConfig",
+    "reciprocal_rank_fusion",
+    "weighted_sum_ranking",
     "__version__",
 ]
