@@ -1,6 +1,8 @@
-name: Add Default P0 to New PRs
+name: Add Default P0 Label to Issues and PRs
 
 on:
+  issues:
+    types: [opened]
   pull_request:
     types: [opened]
 
@@ -8,6 +10,7 @@ jobs:
   add-p0-label:
     runs-on: ubuntu-latest
     permissions:
+      issues: write
       pull-requests: write
     steps:
       - name: Add P0 label
