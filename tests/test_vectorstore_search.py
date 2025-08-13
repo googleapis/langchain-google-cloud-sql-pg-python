@@ -22,9 +22,11 @@ from langchain_core.embeddings import DeterministicFakeEmbedding
 from metadata_filtering_data import FILTERING_TEST_CASES, METADATAS, NEGATIVE_TEST_CASES
 from sqlalchemy import text
 
-from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
-from langchain_google_cloud_sql_pg.hybrid_search_config import (  # type: ignore
+from langchain_google_cloud_sql_pg import (  # type: ignore
+    Column,
     HybridSearchConfig,
+    PostgresEngine,
+    PostgresVectorStore,
     reciprocal_rank_fusion,
     weighted_sum_ranking,
 )

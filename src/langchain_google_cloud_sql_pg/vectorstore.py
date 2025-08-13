@@ -20,7 +20,7 @@ from typing import Optional
 from langchain_core.embeddings import Embeddings
 from langchain_postgres import PGVectorStore
 
-from langchain_google_cloud_sql_pg.hybrid_search_config import HybridSearchConfig
+from langchain_google_cloud_sql_pg import HybridSearchConfig
 
 from .async_vectorstore import AsyncPostgresVectorStore
 from .engine import PostgresEngine

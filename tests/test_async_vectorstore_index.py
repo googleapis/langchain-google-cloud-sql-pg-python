@@ -22,11 +22,11 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlalchemy import text
 
-from langchain_google_cloud_sql_pg import PostgresEngine
-from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
-from langchain_google_cloud_sql_pg.hybrid_search_config import (  # type: ignore
+from langchain_google_cloud_sql_pg import (  # type: ignore
     HybridSearchConfig,
+    PostgresEngine,
 )
+from langchain_google_cloud_sql_pg.async_vectorstore import AsyncPostgresVectorStore
 from langchain_google_cloud_sql_pg.indexes import (
     DEFAULT_INDEX_NAME_SUFFIX,
     DistanceStrategy,
