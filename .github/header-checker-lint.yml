@@ -17,7 +17,7 @@ ignoreFiles:
   - ".github/header-checker-lint.yml"
   - ".github/sync-repo-settings.yaml"
   - ".github/workflows/docs.yml"
-  - ".github/workflows/label-new-prs.yml"
+  - ".github/workflows/labeler.yml"
   - ".kokoro/**"
   - "**/requirements.txt"
   - "**/requirements*.txt"
