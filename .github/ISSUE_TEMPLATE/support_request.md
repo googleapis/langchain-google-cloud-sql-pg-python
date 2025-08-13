@@ -1,6 +1,10 @@
 ---
 name: Support request
-about: If you have a support contract with Google, please create an issue in the Google Cloud Support console.
+about: If you have a support contract with Google, please create an issue in the Google
+  Cloud Support console.
+title: ''
+labels: 'priority: p0'
+assignees: ''
 
 ---
 
