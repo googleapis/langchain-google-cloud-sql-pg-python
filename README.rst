@@ -111,13 +111,13 @@ Use a Vector Store to store embedded data and perform vector search.
             embeddings=embedding_service
         )
 
-Hybrid Search with AlloyDBVectorStore
+Hybrid Search with PostgresVectorStore
 
-With AlloyDBVectorStore you can use hybrid search for more comprehensive and relevant search results.
+With PostgresVectorStore you can use hybrid search for more comprehensive and relevant search results.
 
 .. code-block:: python
 
-  vs = AlloyDBVectorStore.create_sync(
+  vs = PostgresVectorStore.create_sync(
       engine=engine,
       table_name=TABLE_NAME,
       embedding_service=embedding,
