@@ -111,6 +111,23 @@ Use a Vector Store to store embedded data and perform vector search.
             embeddings=embedding_service
         )
 
+Hybrid Search with AlloyDBVectorStore
+
+With AlloyDBVectorStore you can use hybrid search for more comprehensive and relevant search results.
+
+.. code-block:: python
+
+  vs = AlloyDBVectorStore.create_sync(
+      engine=engine,
+      table_name=TABLE_NAME,
+      embedding_service=embedding,
+      hybrid_search_config=HybridSearchConfig(
+        fusion_function=reciprocal_rank_fusion
+      ),
+  )
+  hybrid_docs = vector_store.similarity_search("products", k=5)
+
+
 See the full `Vector Store`_ tutorial.
 
 .. _`Vector Store`: https://github.com/googleapis/langchain-google-cloud-sql-pg-python/tree/main/docs/vector_store.ipynb
