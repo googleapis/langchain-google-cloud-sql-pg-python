@@ -23,8 +23,8 @@ from sqlalchemy import text
 
 from langchain_google_cloud_sql_pg import Column, PostgresEngine, PostgresVectorStore
 
-DEFAULT_TABLE = "test_table_standard_test_suite" + str(uuid.uuid4())
-DEFAULT_TABLE_SYNC = "test_table_sync_standard_test_suite" + str(uuid.uuid4())
+DEFAULT_TABLE = "test_table" + str(uuid.uuid4())
+DEFAULT_TABLE_SYNC = "test_table_sync" + str(uuid.uuid4())
 
 
 def get_env_var(key: str, desc: str) -> str:

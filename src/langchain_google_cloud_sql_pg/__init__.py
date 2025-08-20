@@ -12,10 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from langchain_postgres import Column
+from langchain_postgres.v2.hybrid_search_config import (
+    HybridSearchConfig,
+    reciprocal_rank_fusion,
+    weighted_sum_ranking,
+)
+
 from . import indexes
 from .chat_message_history import PostgresChatMessageHistory
 from .checkpoint import PostgresSaver
-from .engine import Column, PostgresEngine
+from .engine import PostgresEngine
 from .loader import PostgresDocumentSaver, PostgresLoader
 from .vectorstore import PostgresVectorStore
 from .version import __version__
@@ -29,5 +36,8 @@ __all__ = [
     "PostgresLoader",
     "PostgresDocumentSaver",
     "PostgresSaver",
+    "HybridSearchConfig",
+    "reciprocal_rank_fusion",
+    "weighted_sum_ranking",
     "__version__",
 ]
