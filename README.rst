@@ -111,11 +111,14 @@ Use a Vector Store to store embedded data and perform vector search.
             embeddings=embedding_service
         )
 
-Hybrid Search with PostgresVectorStore
+Hybrid search
+~~~~~~~~~~~~~
 
-With PostgresVectorStore you can use hybrid search for more comprehensive and relevant search results.
+The `PostgresVectorStore` supports hybrid search (dense vectors + full text) for more comprehensive and relevant search results.
 
 .. code-block:: python
+
+  from langchain_google_cloud_sql_pg import HybridSearchConfig, reciprocal_rank_fusion
 
   vs = PostgresVectorStore.create_sync(
       engine=engine,
