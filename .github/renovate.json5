@@ -13,11 +13,19 @@
     '.kokoro/**',
   ],
   minimumReleaseAge: '3',
-  rebaseWhen: 'never',
+  rebaseWhen: 'conflicted',
   dependencyDashboardLabels: [
     'type: process',
   ],
   packageRules: [
+    {
+      matchFileNames: ["samples/index_tuning_sample/**"],
+      groupName: "samples-index_tuning_sample",
+    },
+    {
+      matchFileNames: ["samples/langchain_on_vertexai/**"],
+      groupName: "samples-langchain_on_vertexai",
+    },
     {
       groupName: 'GitHub Actions',
       matchManagers: [
@@ -35,14 +43,30 @@
       ],
     },
     {
-      groupName: 'python-nonmajor',
-      matchCategories: [
-        'python',
-      ],
-      matchUpdateTypes: [
-        'minor',
-        'patch',
-      ],
+      "description": "Disable numpy updates for python 3.10 in requirements.txt",
+      "matchPackageNames": ["numpy"],
+      "matchCurrentVersion": "<=2.2.6",
+      "enabled": false
     },
+    {
+      "description": "Disable numpy updates for python <=3.9 in requirements.txt",
+      "matchPackageNames": ["numpy"],
+      "matchCurrentVersion": "<=2.0.2",
+      "enabled": false
+    },
+    {
+      "description": "Disable numpy updates for python 3.10 in pyproject.toml",
+      "matchFileNames": ["pyproject.toml"],
+      "matchPackageNames": ["numpy"],
+      "matchCurrentValue": ">=1.24.4, <=2.2.6",
+      "enabled": false
+    },
+    {
+      "description": "Disable numpy updates for python <=3.9 in pyproject.toml",
+      "matchFileNames": ["pyproject.toml"],
+      "matchPackageNames": ["numpy"],
+      "matchCurrentValue": ">=1.24.4, <=2.0.2",
+      "enabled": false
+    }
   ],
 }
