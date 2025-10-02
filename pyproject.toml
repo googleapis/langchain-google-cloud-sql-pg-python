@@ -42,14 +42,14 @@ langgraph = [
     "langgraph-checkpoint>=2.0.9, <3.0.0"
 ]
 test = [
-    "black[jupyter]==25.1.0",
-    "isort==6.0.1",
-    "mypy==1.17.1",
+    "black[jupyter]==25.9.0",
+    "isort==6.1.0",
+    "mypy==1.18.2",
     "pytest-asyncio==0.26.0",
     "pytest==8.4.2",
     "pytest-cov==7.0.0",
-    "langchain-tests==0.3.21",
-    "langgraph==0.6.6"
+    "langchain-tests==0.3.22",
+    "langgraph==0.6.8"
 ]
 
 [build-system]
