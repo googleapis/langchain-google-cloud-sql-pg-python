@@ -67,6 +67,12 @@
       "matchPackageNames": ["numpy"],
       "matchCurrentValue": ">=1.24.4, <=2.0.2",
       "enabled": false
+    },
+    {
+      "description": "Use feat commit type for LangChain Postgres dependency updates",
+      "matchPackageNames": ["langchain-postgres"],
+      "semanticCommitType": "feat",
+      "groupName": "langchain-postgres"
     }
   ],
 }
