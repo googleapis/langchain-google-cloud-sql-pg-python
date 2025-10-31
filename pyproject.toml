@@ -14,7 +14,7 @@ dependencies = [
     "numpy>=1.24.4, <3.0.0; python_version >= '3.11'",
     "numpy>=1.24.4, <=2.2.6; python_version == '3.10'",
     "numpy>=1.24.4, <=2.0.2; python_version <= '3.9'",
-    "langchain-postgres>=0.0.15",
+    "langchain-postgres>=0.0.16",
 ]
 
 classifiers = [
