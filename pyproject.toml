@@ -14,7 +14,7 @@ dependencies = [
     "numpy>=1.24.4, <3.0.0; python_version >= '3.11'",
     "numpy>=1.24.4, <=2.2.6; python_version == '3.10'",
     "numpy>=1.24.4, <=2.0.2; python_version <= '3.9'",
-    "langchain-postgres>=0.0.15",
+    "langchain-postgres>=0.0.16",
 ]
 
 classifiers = [
@@ -39,17 +39,18 @@ Changelog = "https://github.com/googleapis/langchain-google-cloud-sql-pg-python/
 
 [project.optional-dependencies]
 langgraph = [
-    "langgraph-checkpoint>=2.0.9, <3.0.0"
+    "langgraph-checkpoint>=3.0.0, <3.1.0"
 ]
 test = [
     "black[jupyter]==25.9.0",
-    "isort==6.1.0",
+    "isort==6.1.0; python_version == '3.9'",
+    "isort==7.0.0; python_version >= '3.10'",
     "mypy==1.18.2",
     "pytest-asyncio==0.26.0",
     "pytest==8.4.2",
     "pytest-cov==7.0.0",
     "langchain-tests==0.3.22",
-    "langgraph==0.6.8"
+    "langgraph==0.6.10"
 ]
 
 [build-system]
