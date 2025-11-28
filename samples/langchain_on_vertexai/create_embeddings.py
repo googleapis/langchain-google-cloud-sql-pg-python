@@ -33,7 +33,7 @@ from sqlalchemy import text
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 
 
-async def create_databases(connector: Connector):
+async def create_databases():
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
         REGION,
@@ -41,7 +41,6 @@ async def create_databases(connector: Connector):
         database="postgres",
         user=USER,
         password=PASSWORD,
-        connector=connector,
     )
     async with engine._pool.connect() as conn:
         await conn.execute(text("COMMIT"))
@@ -50,7 +49,7 @@ async def create_databases(connector: Connector):
     await engine.close()
 
 
-async def create_vectorstore(connector: Connector):
+async def create_vectorstore():
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
         REGION,
@@ -58,7 +57,6 @@ async def create_vectorstore(connector: Connector):
         DATABASE,
         user=USER,
         password=PASSWORD,
-        connector=connector,
     )
 
     await engine.ainit_vectorstore_table(
@@ -108,8 +106,9 @@ async def create_vectorstore(connector: Connector):
 
 async def main():
     async with Connector() as connector:
-        await create_databases(connector)
-        await create_vectorstore(connector)
+        PostgresEngine._connector = connector
+        await create_databases()
+        await create_vectorstore()
 
 
 if __name__ == "__main__":
