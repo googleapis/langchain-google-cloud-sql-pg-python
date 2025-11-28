@@ -106,7 +106,9 @@ async def create_vectorstore():
 async def main():
     PostgresEngine._connector = None
     await create_databases()
+    PostgresEngine._connector = None
     await create_vectorstore()
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
