@@ -33,6 +33,8 @@ from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 
 
 async def create_databases():
+    PostgresEngine._connector = None
+
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
         REGION,
@@ -49,6 +51,8 @@ async def create_databases():
 
 
 async def create_vectorstore():
+    PostgresEngine._connector = None
+
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
         REGION,
@@ -108,4 +112,16 @@ async def main():
     await create_vectorstore()
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(main())
+    finally:
+        try:
+            tasks = asyncio.all_tasks(loop)
+            for task in tasks:
+                task.cancel()
+            loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+        finally:
+            loop.close()
