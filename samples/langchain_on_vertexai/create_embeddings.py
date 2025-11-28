@@ -104,6 +104,7 @@ async def create_vectorstore():
 
 
 async def main():
+    PostgresEngine._connector = None
     await create_databases()
     await create_vectorstore()
 
