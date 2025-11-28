@@ -25,6 +25,7 @@ from config import (
     USER,
 )
 from google.cloud import resourcemanager_v3  # type: ignore
+from google.cloud.sql.connector import Connector
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_google_vertexai import VertexAIEmbeddings
 from sqlalchemy import text
@@ -32,7 +33,7 @@ from sqlalchemy import text
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 
 
-async def create_databases():
+async def create_databases(connector: Connector):
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
         REGION,
@@ -40,6 +41,7 @@ async def create_databases():
         database="postgres",
         user=USER,
         password=PASSWORD,
+        connector=connector,
     )
     async with engine._pool.connect() as conn:
         await conn.execute(text("COMMIT"))
@@ -48,7 +50,7 @@ async def create_databases():
     await engine.close()
 
 
-async def create_vectorstore():
+async def create_vectorstore(connector: Connector):
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
         REGION,
@@ -56,6 +58,7 @@ async def create_vectorstore():
         DATABASE,
         user=USER,
         password=PASSWORD,
+        connector=connector,
     )
 
     await engine.ainit_vectorstore_table(
@@ -104,10 +107,9 @@ async def create_vectorstore():
 
 
 async def main():
-    PostgresEngine._connector = None
-    await create_databases()
-    PostgresEngine._connector = None
-    await create_vectorstore()
+    async with Connector() as connector:
+        await create_databases(connector)
+        await create_vectorstore(connector)
 
 
 if __name__ == "__main__":
