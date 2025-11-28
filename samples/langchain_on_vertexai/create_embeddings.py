@@ -25,7 +25,6 @@ from config import (
     USER,
 )
 from google.cloud import resourcemanager_v3  # type: ignore
-from google.cloud.sql.connector import Connector
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_google_vertexai import VertexAIEmbeddings
 from sqlalchemy import text
@@ -34,6 +33,8 @@ from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 
 
 async def create_databases():
+    PostgresEngine._connector = None
+
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
         REGION,
@@ -50,6 +51,8 @@ async def create_databases():
 
 
 async def create_vectorstore():
+    PostgresEngine._connector = None
+
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
         REGION,
@@ -105,11 +108,20 @@ async def create_vectorstore():
 
 
 async def main():
-    async with Connector() as connector:
-        PostgresEngine._connector = connector
-        await create_databases()
-        await create_vectorstore()
+    await create_databases()
+    await create_vectorstore()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(main())
+    finally:
+        try:
+            tasks = asyncio.all_tasks(loop)
+            for task in tasks:
+                task.cancel()
+            loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+        finally:
+            loop.close()
