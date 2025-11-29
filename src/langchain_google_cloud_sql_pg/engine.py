@@ -166,16 +166,24 @@ class PostgresEngine(PGEngine):
 
         # anonymous function to be used for SQLAlchemy 'creator' argument
         async def getconn() -> asyncpg.Connection:
-            conn = await connector.connect_async(  # type: ignore
-                f"{project_id}:{region}:{instance}",
-                "asyncpg",
-                user=db_user,
-                password=password,
-                db=database,
-                enable_iam_auth=enable_iam_auth,
-                ip_type=ip_type,
-            )
-            return conn
+            async def _connect() -> asyncpg.Connection:
+                return await connector.connect_async(  # type: ignore
+                    f"{project_id}:{region}:{instance}",
+                    "asyncpg",
+                    user=db_user,
+                    password=password,
+                    db=database,
+                    enable_iam_auth=enable_iam_auth,
+                    ip_type=ip_type,
+                )
+
+            # Jump to the background loop to execute connector logic.
+            if loop and asyncio.get_running_loop() != loop:
+                return await asyncio.wrap_future(
+                    asyncio.run_coroutine_threadsafe(_connect(), loop)
+                )
+
+            return await _connect()
 
         engine = create_async_engine(
             "postgresql+asyncpg://",
