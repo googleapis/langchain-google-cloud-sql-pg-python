@@ -650,5 +650,5 @@ class PostgresEngine(PGEngine):
     async def close(self) -> None:
         """Close the engine and the connector."""
         if self._connector:
-            await self._run_as_async(self._connector.close())
+            await self._run_as_async(self._connector.close())  # type: ignore
         await super().close()
