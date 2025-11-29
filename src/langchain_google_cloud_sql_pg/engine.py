@@ -82,7 +82,18 @@ async def _get_iam_principal_email(
 class PostgresEngine(PGEngine):
     """A class for managing connections to a Cloud SQL for Postgres database."""
 
-    _connector: Optional[Connector] = None
+    def __init__(
+        self,
+        key: object,
+        pool: AsyncEngine,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        thread: Optional[Thread] = None,
+        connector: Optional[Connector] = None,
+    ):
+        """Initialize PostgresEngine."""
+        # Initialize the parent PGEngine
+        super().__init__(key, pool, loop=loop, thread=thread)
+        self._connector = connector
 
     @classmethod
     async def _create(
@@ -130,13 +141,12 @@ class PostgresEngine(PGEngine):
                 "both should be specified to use basic user/password "
                 "authentication or neither for IAM DB authentication."
             )
-        if cls._connector is None:
-            cls._connector = Connector(
-                loop=loop,
-                user_agent=USER_AGENT,
-                quota_project=quota_project,
-                refresh_strategy=RefreshStrategy.LAZY,
-            )
+        connector = Connector(
+            loop=loop,
+            user_agent=USER_AGENT,
+            quota_project=quota_project,
+            refresh_strategy=RefreshStrategy.LAZY,
+        )
 
         # if user and password are given, use basic auth
         if user and password:
@@ -156,7 +166,7 @@ class PostgresEngine(PGEngine):
 
         # anonymous function to be used for SQLAlchemy 'creator' argument
         async def getconn() -> asyncpg.Connection:
-            conn = await cls._connector.connect_async(  # type: ignore
+            conn = await connector.connect_async(  # type: ignore
                 f"{project_id}:{region}:{instance}",
                 "asyncpg",
                 user=db_user,
@@ -172,7 +182,7 @@ class PostgresEngine(PGEngine):
             async_creator=getconn,
             **engine_args,
         )
-        return cls(PGEngine._PGEngine__create_key, engine, loop, thread)  # type: ignore
+        return cls(PGEngine._PGEngine__create_key, engine, loop, thread, connector=connector)  # type: ignore
 
     @classmethod
     def __start_background_loop(
@@ -190,7 +200,7 @@ class PostgresEngine(PGEngine):
     ) -> Future:
         # Running a loop in a background thread allows us to support
         # async methods from non-async environments
-        if cls._default_loop is None:
+        if cls._default_loop is None or cls._default_loop.is_closed():
             cls._default_loop = asyncio.new_event_loop()
             cls._default_thread = Thread(
                 target=cls._default_loop.run_forever, daemon=True
@@ -636,3 +646,9 @@ class PostgresEngine(PGEngine):
             )
 
         return metadata.tables[f"{schema_name}.{table_name}"]
+
+    async def close(self) -> None:
+        """Close the engine and the connector."""
+        if self._connector:
+            await self._run_as_async(self._connector.close())
+        await super().close()
