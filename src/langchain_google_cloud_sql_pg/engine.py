@@ -192,6 +192,20 @@ class PostgresEngine(PGEngine):
         )
         return cls(PGEngine._PGEngine__create_key, engine, loop, thread, connector=connector)  # type: ignore
 
+    async def _run_as_async(self, coro: Awaitable[T]) -> T:
+        """Run an async coroutine asynchronously."""
+        if not self._loop:
+            return await coro
+        try:
+            if asyncio.get_running_loop() == self._loop:
+                return await coro
+        except RuntimeError:
+            pass
+
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, self._loop)
+        )
+
     @classmethod
     def __start_background_loop(
         cls,
