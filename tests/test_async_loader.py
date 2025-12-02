@@ -70,11 +70,13 @@ class TestLoaderAsync:
 
     async def _collect_async_items(self, engine, docs_generator):
         """Collects items from an async generator, running on background loop."""
+
         async def _consume():
             docs = []
             async for doc in docs_generator:
                 docs.append(doc)
             return docs
+
         return await run_on_background(engine, _consume())
 
     async def _cleanup_table(self, engine):
@@ -86,7 +88,7 @@ class TestLoaderAsync:
                 engine,
                 AsyncPostgresLoader.create(
                     engine=engine,
-                )
+                ),
             )
         with pytest.raises(ValueError):
 
@@ -100,7 +102,7 @@ class TestLoaderAsync:
                     table_name=table_name,
                     format="text",
                     formatter=fake_formatter,
-                )
+                ),
             )
         with pytest.raises(ValueError):
             await run_on_background(
@@ -109,7 +111,7 @@ class TestLoaderAsync:
                     engine=engine,
                     table_name=table_name,
                     format="fake_format",
-                )
+                ),
             )
 
     async def test_load_from_query_default(self, engine):
@@ -138,7 +140,7 @@ class TestLoaderAsync:
             AsyncPostgresLoader.create(
                 engine=engine,
                 table_name=table_name,
-            )
+            ),
         )
 
         documents = await self._collect_async_items(engine, loader.alazy_load())
@@ -192,7 +194,7 @@ class TestLoaderAsync:
                     "organic",
                 ],
                 metadata_columns=["fruit_id"],
-            )
+            ),
         )
 
         documents = await self._collect_async_items(engine, loader.alazy_load())
@@ -244,7 +246,7 @@ class TestLoaderAsync:
                     "quantity_in_stock",
                     "price_per_unit",
                 ],
-            )
+            ),
         )
 
         documents = await self._collect_async_items(engine, loader.alazy_load())
@@ -271,7 +273,7 @@ class TestLoaderAsync:
                     "price_per_unit",
                 ],
                 format="JSON",
-            )
+            ),
         )
 
         documents = await self._collect_async_items(engine, loader.alazy_load())
@@ -319,7 +321,7 @@ class TestLoaderAsync:
                 engine=engine,
                 query=f'SELECT * FROM "{table_name}";',
                 metadata_columns=["fruit_name", "organic"],
-            )
+            ),
         )
 
         documents = await self._collect_async_items(engine, loader.alazy_load())
@@ -362,7 +364,7 @@ class TestLoaderAsync:
                     "fruit_name",
                     "langchain_metadata",
                 ],
-            )
+            ),
         )
 
         documents = await self._collect_async_items(engine, loader.alazy_load())
@@ -409,7 +411,7 @@ class TestLoaderAsync:
                 metadata_columns=[
                     "variety",
                 ],
-            )
+            ),
         )
 
         documents = await self._collect_async_items(engine, loader.alazy_load())
@@ -464,7 +466,7 @@ class TestLoaderAsync:
                     "price_per_unit",
                 ],
                 formatter=my_formatter,
-            )
+            ),
         )
 
         documents = await self._collect_async_items(engine, loader.alazy_load())
@@ -514,7 +516,7 @@ class TestLoaderAsync:
                     "price_per_unit",
                 ],
                 format="YAML",
-            )
+            ),
         )
 
         documents = await self._collect_async_items(engine, loader.alazy_load())
@@ -535,10 +537,7 @@ class TestLoaderAsync:
     async def test_save_doc_with_default_metadata(self, engine):
 
         await self._cleanup_table(engine)
-        await run_on_background(
-            engine,
-            engine._ainit_document_table(table_name)
-        )
+        await run_on_background(engine, engine._ainit_document_table(table_name))
         test_docs = [
             Document(
                 page_content="Apple Granny Smith 150 0.99 1",
@@ -555,27 +554,18 @@ class TestLoaderAsync:
         ]
         saver = await run_on_background(
             engine,
-            AsyncPostgresDocumentSaver.create(
-                engine=engine, table_name=table_name
-            )
+            AsyncPostgresDocumentSaver.create(engine=engine, table_name=table_name),
         )
         loader = await run_on_background(
-            engine,
-            AsyncPostgresLoader.create(engine=engine, table_name=table_name)
+            engine, AsyncPostgresLoader.create(engine=engine, table_name=table_name)
         )
 
-        await run_on_background(
-            engine,
-            saver.aadd_documents(test_docs)
-        )
+        await run_on_background(engine, saver.aadd_documents(test_docs))
         docs = await self._collect_async_items(engine, loader.alazy_load())
 
         assert docs == test_docs
 
-        schema = await run_on_background(
-            engine,
-            engine._aload_table_schema(table_name)
-        )
+        schema = await run_on_background(engine, engine._aload_table_schema(table_name))
         assert schema.columns.keys() == [
             "page_content",
             "langchain_metadata",
@@ -594,7 +584,7 @@ class TestLoaderAsync:
                     Column("organic", "BOOLEAN"),
                 ],
                 store_metadata=store_metadata,
-            )
+            ),
         )
         test_docs = [
             Document(
@@ -608,9 +598,7 @@ class TestLoaderAsync:
         ]
         saver = await run_on_background(
             engine,
-            AsyncPostgresDocumentSaver.create(
-                engine=engine, table_name=table_name
-            )
+            AsyncPostgresDocumentSaver.create(engine=engine, table_name=table_name),
         )
         loader = await run_on_background(
             engine,
@@ -621,16 +609,13 @@ class TestLoaderAsync:
                     "fruit_name",
                     "organic",
                 ],
-            )
+            ),
         )
 
         await run_on_background(engine, saver.aadd_documents(test_docs))
         docs = await self._collect_async_items(engine, loader.alazy_load())
 
-        schema = await run_on_background(
-            engine,
-            engine._aload_table_schema(table_name)
-        )
+        schema = await run_on_background(engine, engine._aload_table_schema(table_name))
 
         if store_metadata:
             docs == test_docs
@@ -657,8 +642,7 @@ class TestLoaderAsync:
     async def test_save_doc_without_metadata(self, engine):
         table_name = "test-table" + str(uuid.uuid4())
         await run_on_background(
-            engine,
-            engine._ainit_document_table(table_name, store_metadata=False)
+            engine, engine._ainit_document_table(table_name, store_metadata=False)
         )
         test_docs = [
             Document(
@@ -672,9 +656,7 @@ class TestLoaderAsync:
         ]
         saver = await run_on_background(
             engine,
-            AsyncPostgresDocumentSaver.create(
-                engine=engine, table_name=table_name
-            )
+            AsyncPostgresDocumentSaver.create(engine=engine, table_name=table_name),
         )
         await run_on_background(engine, saver.aadd_documents(test_docs))
 
@@ -683,7 +665,7 @@ class TestLoaderAsync:
             AsyncPostgresLoader.create(
                 engine=engine,
                 table_name=table_name,
-            )
+            ),
         )
 
         docs = await self._collect_async_items(engine, loader.alazy_load())
@@ -694,10 +676,7 @@ class TestLoaderAsync:
                 metadata={},
             ),
         ]
-        schema = await run_on_background(
-            engine,
-            engine._aload_table_schema(table_name)
-        )
+        schema = await run_on_background(engine, engine._aload_table_schema(table_name))
         assert schema.columns.keys() == [
             "page_content",
         ]
@@ -705,10 +684,7 @@ class TestLoaderAsync:
 
     async def test_delete_doc_with_default_metadata(self, engine):
         table_name = "test-table" + str(uuid.uuid4())
-        await run_on_background(
-            engine,
-            engine._ainit_document_table(table_name)
-        )
+        await run_on_background(engine, engine._ainit_document_table(table_name))
 
         test_docs = [
             Document(
@@ -722,13 +698,10 @@ class TestLoaderAsync:
         ]
         saver = await run_on_background(
             engine,
-            AsyncPostgresDocumentSaver.create(
-                engine=engine, table_name=table_name
-            )
+            AsyncPostgresDocumentSaver.create(engine=engine, table_name=table_name),
         )
         loader = await run_on_background(
-            engine,
-            AsyncPostgresLoader.create(engine=engine, table_name=table_name)
+            engine, AsyncPostgresLoader.create(engine=engine, table_name=table_name)
         )
 
         await run_on_background(engine, saver.aadd_documents(test_docs))
@@ -759,7 +732,7 @@ class TestLoaderAsync:
                     ),
                 ],
                 store_metadata=True,
-            )
+            ),
         )
 
         test_docs = [
@@ -790,14 +763,11 @@ class TestLoaderAsync:
         ]
         saver = await run_on_background(
             engine,
-            AsyncPostgresDocumentSaver.create(
-                engine=engine, table_name=table_name
-            )
+            AsyncPostgresDocumentSaver.create(engine=engine, table_name=table_name),
         )
         query = f"SELECT * FROM \"{table_name}\" WHERE fruit_name='Apple';"
         loader = await run_on_background(
-            engine,
-            AsyncPostgresLoader.create(engine=engine, query=query)
+            engine, AsyncPostgresLoader.create(engine=engine, query=query)
         )
 
         await run_on_background(engine, saver.aadd_documents(test_docs))
@@ -824,7 +794,7 @@ class TestLoaderAsync:
                 ],
                 content_column=content_column,
                 metadata_json_column=metadata_json_column,
-            )
+            ),
         )
         test_docs = [
             Document(
@@ -851,7 +821,7 @@ class TestLoaderAsync:
                 table_name=table_name,
                 content_column=content_column,
                 metadata_json_column=metadata_json_column,
-            )
+            ),
         )
         loader = await run_on_background(
             engine,
@@ -860,7 +830,7 @@ class TestLoaderAsync:
                 table_name=table_name,
                 content_columns=[content_column],
                 metadata_json_column=metadata_json_column,
-            )
+            ),
         )
 
         await run_on_background(engine, saver.aadd_documents(test_docs))
