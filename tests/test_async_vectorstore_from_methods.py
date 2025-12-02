@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
-from typing import Sequence
+from typing import Any, Coroutine, Sequence
 
 import pytest
 import pytest_asyncio
@@ -51,18 +52,33 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
+# Helper to bridge the Main Test Loop and the Engine Background Loop
+async def run_on_background(engine: PostgresEngine, coro: Coroutine) -> Any:
+    """Runs a coroutine on the engine's background loop."""
+    if engine._loop:
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, engine._loop)
+        )
+    return await coro
+
+
 async def aexecute(engine: PostgresEngine, query: str) -> None:
-    async with engine._pool.connect() as conn:
-        await conn.execute(text(query))
-        await conn.commit()
+    async def _impl():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    await run_on_background(engine, _impl())
 
 
 async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
-    async with engine._pool.connect() as conn:
-        result = await conn.execute(text(query))
-        result_map = result.mappings()
-        result_fetch = result_map.fetchall()
-    return result_fetch
+    async def _impl():
+        async with engine._pool.connect() as conn:
+            result = await conn.execute(text(query))
+            result_map = result.mappings()
+            return result_map.fetchall()
+
+    return await run_on_background(engine, _impl())
 
 
 @pytest.mark.asyncio
@@ -91,24 +107,34 @@ class TestVectorStoreFromMethods:
             region=db_region,
             database=db_name,
         )
-        await engine._ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
-        await engine._ainit_vectorstore_table(
-            CUSTOM_TABLE,
-            VECTOR_SIZE,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
-            store_metadata=False,
+        await run_on_background(
+            engine, engine._ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         )
-        await engine._ainit_vectorstore_table(
-            CUSTOM_TABLE_WITH_INT_ID,
-            VECTOR_SIZE,
-            id_column=Column(name="integer_id", data_type="INTEGER", nullable="False"),
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
-            store_metadata=False,
+        await run_on_background(
+            engine,
+            engine._ainit_vectorstore_table(
+                CUSTOM_TABLE,
+                VECTOR_SIZE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+                store_metadata=False,
+            ),
+        )
+        await run_on_background(
+            engine,
+            engine._ainit_vectorstore_table(
+                CUSTOM_TABLE_WITH_INT_ID,
+                VECTOR_SIZE,
+                id_column=Column(
+                    name="integer_id", data_type="INTEGER", nullable="False"
+                ),
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+                store_metadata=False,
+            ),
         )
         yield engine
         await aexecute(engine, f"DROP TABLE IF EXISTS {DEFAULT_TABLE}")
@@ -118,13 +144,16 @@ class TestVectorStoreFromMethods:
 
     async def test_afrom_texts(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await AsyncPostgresVectorStore.afrom_texts(
-            texts,
-            embeddings_service,
+        await run_on_background(
             engine,
-            DEFAULT_TABLE,
-            metadatas=metadatas,
-            ids=ids,
+            AsyncPostgresVectorStore.afrom_texts(
+                texts,
+                embeddings_service,
+                engine,
+                DEFAULT_TABLE,
+                metadatas=metadatas,
+                ids=ids,
+            ),
         )
         results = await afetch(engine, f"SELECT * FROM {DEFAULT_TABLE}")
         assert len(results) == 3
@@ -132,12 +161,15 @@ class TestVectorStoreFromMethods:
 
     async def test_afrom_docs(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await AsyncPostgresVectorStore.afrom_documents(
-            docs,
-            embeddings_service,
+        await run_on_background(
             engine,
-            DEFAULT_TABLE,
-            ids=ids,
+            AsyncPostgresVectorStore.afrom_documents(
+                docs,
+                embeddings_service,
+                engine,
+                DEFAULT_TABLE,
+                ids=ids,
+            ),
         )
         results = await afetch(engine, f"SELECT * FROM {DEFAULT_TABLE}")
         assert len(results) == 3
@@ -145,16 +177,19 @@ class TestVectorStoreFromMethods:
 
     async def test_afrom_texts_custom(self, engine):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await AsyncPostgresVectorStore.afrom_texts(
-            texts,
-            embeddings_service,
+        await run_on_background(
             engine,
-            CUSTOM_TABLE,
-            ids=ids,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=["page", "source"],
+            AsyncPostgresVectorStore.afrom_texts(
+                texts,
+                embeddings_service,
+                engine,
+                CUSTOM_TABLE,
+                ids=ids,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=["page", "source"],
+            ),
         )
         results = await afetch(engine, f"SELECT * FROM {CUSTOM_TABLE}")
         assert len(results) == 3
@@ -172,16 +207,19 @@ class TestVectorStoreFromMethods:
             )
             for i in range(len(texts))
         ]
-        await AsyncPostgresVectorStore.afrom_documents(
-            docs,
-            embeddings_service,
+        await run_on_background(
             engine,
-            CUSTOM_TABLE,
-            ids=ids,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=["page", "source"],
+            AsyncPostgresVectorStore.afrom_documents(
+                docs,
+                embeddings_service,
+                engine,
+                CUSTOM_TABLE,
+                ids=ids,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=["page", "source"],
+            ),
         )
 
         results = await afetch(engine, f"SELECT * FROM {CUSTOM_TABLE}")
@@ -201,16 +239,19 @@ class TestVectorStoreFromMethods:
             )
             for i in range(len(texts))
         ]
-        await AsyncPostgresVectorStore.afrom_documents(
-            docs,
-            embeddings_service,
+        await run_on_background(
             engine,
-            CUSTOM_TABLE_WITH_INT_ID,
-            ids=ids,
-            id_column="integer_id",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=["page", "source"],
+            AsyncPostgresVectorStore.afrom_documents(
+                docs,
+                embeddings_service,
+                engine,
+                CUSTOM_TABLE_WITH_INT_ID,
+                ids=ids,
+                id_column="integer_id",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=["page", "source"],
+            ),
         )
 
         results = await afetch(engine, f"SELECT * FROM {CUSTOM_TABLE_WITH_INT_ID}")
