@@ -49,23 +49,10 @@
       "enabled": false
     },
     {
-      "description": "Disable numpy updates for python <=3.9 in requirements.txt",
-      "matchPackageNames": ["numpy"],
-      "matchCurrentVersion": "<=2.0.2",
-      "enabled": false
-    },
-    {
       "description": "Disable numpy updates for python 3.10 in pyproject.toml",
       "matchFileNames": ["pyproject.toml"],
       "matchPackageNames": ["numpy"],
       "matchCurrentValue": ">=1.24.4, <=2.2.6",
-      "enabled": false
-    },
-    {
-      "description": "Disable numpy updates for python <=3.9 in pyproject.toml",
-      "matchFileNames": ["pyproject.toml"],
-      "matchPackageNames": ["numpy"],
-      "matchCurrentValue": ">=1.24.4, <=2.0.2",
       "enabled": false
     },
     {
@@ -74,12 +61,5 @@
       "semanticCommitType": "feat",
       "groupName": "langchain-postgres"
     },
-    {
-      "description": "Disable isort updates for python <=3.9 in pyproject.toml",
-      "matchFileNames": ["pyproject.toml"],
-      "matchPackageNames": ["isort"],
-      "matchCurrentValue": "==6.1.0",
-      "enabled": false
-    }
   ],
 }
