@@ -846,5 +846,5 @@ class TestVectorStoreSearch:
         # Expect results based purely on FTS search for "orange fruit"
         assert len(result_ids_with_tsv_column) == 1
         assert len(result_ids_without_tsv_column) == 1
-        assert result_ids_with_tsv_column[0] == "hs_doc_apple_tech"
-        assert result_ids_without_tsv_column[0] == "hs_doc_apple_tech"
+        assert result_ids_with_tsv_column[0] == "hs_doc_apple_fruit"
+        assert result_ids_without_tsv_column[0] == "hs_doc_apple_fruit"
