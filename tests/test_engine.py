@@ -240,7 +240,7 @@ class TestEngineAsync:
         user,
         password,
     ):
-        async with Connector() as connector:
+        async with Connector(loop=asyncio.get_running_loop()) as connector:
 
             async def getconn() -> asyncpg.Connection:
                 conn = await connector.connect_async(  # type: ignore
@@ -260,8 +260,6 @@ class TestEngineAsync:
             )
 
             engine = PostgresEngine.from_engine(engine_async)
-            # aexecute handles loop checking. Since this engine has no _loop (None),
-            # it runs on current loop which matches connector. Safe.
             await aexecute(engine, "SELECT 1")
             await engine.close()
 
