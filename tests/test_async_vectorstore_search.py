@@ -78,9 +78,11 @@ def get_env_var(key: str, desc: str) -> str:
 # Helper to bridge the Main Test Loop and the Engine Background Loop
 async def run_on_background(engine: PostgresEngine, coro: Coroutine) -> Any:
     """Runs a coroutine on the engine's background loop."""
-    return await asyncio.wrap_future(
-        asyncio.run_coroutine_threadsafe(coro, engine._loop)
-    )
+    if engine._loop:
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, engine._loop)
+        )
+    return await coro
 
 
 async def aexecute(
