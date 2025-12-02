@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import re
 import uuid
-from typing import Any, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Coroutine, List, Literal, Optional, Sequence, Tuple, Union
 
 import pytest
 import pytest_asyncio
@@ -107,18 +108,31 @@ def _AnyIdToolMessage(**kwargs: Any) -> ToolMessage:
     return message
 
 
+# Helper to bridge the Main Test Loop and the Engine Background Loop
+async def run_on_background(engine: PostgresEngine, coro: Coroutine) -> Any:
+    """Runs a coroutine on the engine's background loop."""
+    return await asyncio.wrap_future(
+        asyncio.run_coroutine_threadsafe(coro, engine._loop)
+    )
+
+
 async def aexecute(engine: PostgresEngine, query: str) -> None:
-    async with engine._pool.connect() as conn:
-        await conn.execute(text(query))
-        await conn.commit()
+    async def _impl():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    await run_on_background(engine, _impl())
 
 
 async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
-    async with engine._pool.connect() as conn:
-        result = await conn.execute(text(query))
-        result_map = result.mappings()
-        result_fetch = result_map.fetchall()
-    return result_fetch
+    async def _impl():
+        async with engine._pool.connect() as conn:
+            result = await conn.execute(text(query))
+            result_map = result.mappings()
+            return result_map.fetchall()
+
+    return await run_on_background(engine, _impl())
 
 
 @pytest_asyncio.fixture
@@ -139,10 +153,15 @@ async def async_engine():
 
 @pytest_asyncio.fixture
 async def checkpointer(async_engine):
-    await async_engine._ainit_checkpoint_table(table_name=table_name)
-    checkpointer = await AsyncPostgresSaver.create(
+    await run_on_background(
+        async_engine, async_engine._ainit_checkpoint_table(table_name=table_name)
+    )
+    checkpointer = await run_on_background(
         async_engine,
-        table_name,  # serde=JsonPlusSerializer
+        AsyncPostgresSaver.create(
+            async_engine,
+            table_name,  # serde=JsonPlusSerializer
+        ),
     )
     yield checkpointer
 
@@ -160,7 +179,9 @@ async def test_checkpoint_async(
         }
     }
     # Verify if updated configuration after storing the checkpoint is correct
-    next_config = await checkpointer.aput(write_config, checkpoint, {}, {})
+    next_config = await run_on_background(
+        async_engine, checkpointer.aput(write_config, checkpoint, {}, {})
+    )
     assert dict(next_config) == test_config
 
     # Verify if the checkpoint is stored correctly in the database
@@ -258,7 +279,9 @@ async def test_checkpoint_aput_writes(
         ("test_channel1", {}),
         ("test_channel2", {}),
     ]
-    await checkpointer.aput_writes(config, writes, task_id="1")
+    await run_on_background(
+        async_engine, checkpointer.aput_writes(config, writes, task_id="1")
+    )
 
     results = await afetch(async_engine, f'SELECT * FROM "{table_name_writes}"')
     assert len(results) == 2
@@ -277,9 +300,19 @@ async def test_checkpoint_alist(
     checkpoints = test_data["checkpoints"]
     metadata = test_data["metadata"]
 
-    await checkpointer.aput(configs[1], checkpoints[1], metadata[0], {})
-    await checkpointer.aput(configs[2], checkpoints[2], metadata[1], {})
-    await checkpointer.aput(configs[3], checkpoints[3], metadata[2], {})
+    await run_on_background(
+        async_engine, checkpointer.aput(configs[1], checkpoints[1], metadata[0], {})
+    )
+    await run_on_background(
+        async_engine, checkpointer.aput(configs[2], checkpoints[2], metadata[1], {})
+    )
+    await run_on_background(
+        async_engine, checkpointer.aput(configs[3], checkpoints[3], metadata[2], {})
+    )
+
+    # Helper to consume async iterator on background thread
+    async def consume_alist(config, filter):
+        return [c async for c in checkpointer.alist(config, filter=filter)]
 
     # call method / assertions
     query_1 = {"source": "input"}  # search by 1 key
@@ -290,26 +323,35 @@ async def test_checkpoint_alist(
     query_3: dict[str, Any] = {}  # search by no keys, return all checkpoints
     query_4 = {"source": "update", "step": 1}  # no match
 
-    search_results_1 = [c async for c in checkpointer.alist(None, filter=query_1)]
+    search_results_1 = await run_on_background(
+        async_engine, consume_alist(None, filter=query_1)
+    )
     assert len(search_results_1) == 1
     print(metadata[0])
     print(search_results_1[0].metadata)
     assert search_results_1[0].metadata == metadata[0]
 
-    search_results_2 = [c async for c in checkpointer.alist(None, filter=query_2)]
+    search_results_2 = await run_on_background(
+        async_engine, consume_alist(None, filter=query_2)
+    )
     assert len(search_results_2) == 1
     assert search_results_2[0].metadata == metadata[1]
 
-    search_results_3 = [c async for c in checkpointer.alist(None, filter=query_3)]
+    search_results_3 = await run_on_background(
+        async_engine, consume_alist(None, filter=query_3)
+    )
     assert len(search_results_3) == 3
 
-    search_results_4 = [c async for c in checkpointer.alist(None, filter=query_4)]
+    search_results_4 = await run_on_background(
+        async_engine, consume_alist(None, filter=query_4)
+    )
     assert len(search_results_4) == 0
 
     # search by config (defaults to checkpoints across all namespaces)
-    search_results_5 = [
-        c async for c in checkpointer.alist({"configurable": {"thread_id": "thread-2"}})
-    ]
+    search_results_5 = await run_on_background(
+        async_engine,
+        consume_alist({"configurable": {"thread_id": "thread-2"}}, filter=None),
+    )
     assert len(search_results_5) == 2
     assert {
         search_results_5[0].config["configurable"]["checkpoint_ns"],
@@ -353,6 +395,7 @@ class FakeToolCallingModel(BaseChatModel):
 
 @pytest.mark.asyncio
 async def test_checkpoint_with_agent(
+    async_engine: PostgresEngine,
     checkpointer: AsyncPostgresSaver,
 ) -> None:
     # from the tests in https://github.com/langchain-ai/langgraph/blob/909190cede6a80bb94a2d4cfe7dedc49ef0d4127/libs/langgraph/tests/test_prebuilt.py
@@ -360,8 +403,9 @@ async def test_checkpoint_with_agent(
 
     agent = create_react_agent(model, [], checkpointer=checkpointer)
     inputs = [HumanMessage("hi?")]
-    response = await agent.ainvoke(
-        {"messages": inputs}, config=thread_agent_config, debug=True
+    response = await run_on_background(
+        async_engine,
+        agent.ainvoke({"messages": inputs}, config=thread_agent_config, debug=True),
     )
     expected_response = {"messages": inputs + [AIMessage(content="hi?", id="0")]}
     assert response == expected_response
@@ -372,7 +416,9 @@ async def test_checkpoint_with_agent(
         message.id = AnyStr()
         return message
 
-    saved = await checkpointer.aget_tuple(thread_agent_config)
+    saved = await run_on_background(
+        async_engine, checkpointer.aget_tuple(thread_agent_config)
+    )
     assert saved is not None
     assert (
         _AnyIdHumanMessage(content="hi?")
@@ -392,6 +438,7 @@ async def test_checkpoint_with_agent(
 
 @pytest.mark.asyncio
 async def test_checkpoint_aget_tuple(
+    async_engine: PostgresEngine,
     checkpointer: AsyncPostgresSaver,
     test_data: dict[str, Any],
 ) -> None:
@@ -399,30 +446,48 @@ async def test_checkpoint_aget_tuple(
     checkpoints = test_data["checkpoints"]
     metadata = test_data["metadata"]
 
-    new_config = await checkpointer.aput(configs[1], checkpoints[1], metadata[0], {})
+    new_config = await run_on_background(
+        async_engine, checkpointer.aput(configs[1], checkpoints[1], metadata[0], {})
+    )
 
     # Matching checkpoint
-    search_results_1 = await checkpointer.aget_tuple(new_config)
+    search_results_1 = await run_on_background(
+        async_engine, checkpointer.aget_tuple(new_config)
+    )
     assert search_results_1.metadata == metadata[0]  # type: ignore
 
     # No matching checkpoint
-    assert await checkpointer.aget_tuple(configs[0]) is None
+    assert (
+        await run_on_background(async_engine, checkpointer.aget_tuple(configs[0]))
+        is None
+    )
 
 
 @pytest.mark.asyncio
 async def test_metadata(
+    async_engine: PostgresEngine,
     checkpointer: AsyncPostgresSaver,
     test_data: dict[str, Any],
 ) -> None:
-    config = await checkpointer.aput(
-        test_data["configs"][0],
-        test_data["checkpoints"][0],
-        {"my_key": "abc"},  # type: ignore
-        {},
+    # Wrap aput
+    config = await run_on_background(
+        async_engine,
+        checkpointer.aput(
+            test_data["configs"][0],
+            test_data["checkpoints"][0],
+            {"my_key": "abc"},  # type: ignore
+            {},
+        ),
     )
-    assert (await checkpointer.aget_tuple(config)).metadata["my_key"] == "abc"  # type: ignore
-    assert [c async for c in checkpointer.alist(None, filter={"my_key": "abc"})][
-        0
-    ].metadata[
-        "my_key"  # type: ignore
-    ] == "abc"  # type: ignore
+    tuple_result = await run_on_background(
+        async_engine, checkpointer.aget_tuple(config)
+    )
+    assert tuple_result.metadata["my_key"] == "abc"  # type: ignore
+
+    async def consume_alist(config, filter):
+        return [c async for c in checkpointer.alist(config, filter=filter)]
+
+    alist_results = await run_on_background(
+        async_engine, consume_alist(None, filter={"my_key": "abc"})
+    )
+    assert alist_results[0].metadata["my_key"] == "abc"  # type: ignore

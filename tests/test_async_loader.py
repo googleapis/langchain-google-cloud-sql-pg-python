@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import json
 import os
 import uuid
@@ -35,9 +36,12 @@ table_name = "test-table" + str(uuid.uuid4())
 
 
 async def aexecute(engine: PostgresEngine, query: str) -> None:
-    async with engine._pool.connect() as conn:
-        await conn.execute(text(query))
-        await conn.commit()
+    async def _action():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(_action(), engine._loop))
 
 
 @pytest.mark.asyncio(scope="class")

@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
-from typing import Sequence
+from typing import Any, Coroutine, Sequence
 
 import asyncpg  # type: ignore
 import pytest
@@ -52,27 +53,36 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
+# Helper to bridge the Main Test Loop and the Engine Background Loop
+async def run_on_background(engine: PostgresEngine, coro: Coroutine) -> Any:
+    """Runs a coroutine on the engine's background loop (if it exists)."""
+    if engine._loop:
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, engine._loop)
+        )
+    return await coro
+
+
 async def aexecute(
     engine: PostgresEngine,
     query: str,
 ) -> None:
-    async def run(engine, query):
+    async def _impl():
         async with engine._pool.connect() as conn:
             await conn.execute(text(query))
             await conn.commit()
 
-    await engine._run_as_async(run(engine, query))
+    await run_on_background(engine, _impl())
 
 
 async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
-    async def run(engine, query):
+    async def _impl():
         async with engine._pool.connect() as conn:
             result = await conn.execute(text(query))
             result_map = result.mappings()
-            result_fetch = result_map.fetchall()
-        return result_fetch
+            return result_map.fetchall()
 
-    return await engine._run_as_async(run(engine, query))
+    return await run_on_background(engine, _impl())
 
 
 @pytest.mark.asyncio(scope="module")
@@ -126,10 +136,14 @@ class TestEngineAsync:
         await engine.close()
 
     async def test_engine_args(self, engine):
+        # Accessing engine._pool.pool.status() is synchronous and safe on main loop objects
+        # assuming SQLAlchemy pool status doesn't strictly require loop context
         assert "Pool size: 3" in engine._pool.pool.status()
 
     async def test_init_table(self, engine):
-        await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        await run_on_background(
+            engine, engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        )
         id = str(uuid.uuid4())
         content = "coffee"
         embedding = await embeddings_service.aembed_query(content)
@@ -139,14 +153,17 @@ class TestEngineAsync:
         await aexecute(engine, stmt)
 
     async def test_init_table_custom(self, engine):
-        await engine.ainit_vectorstore_table(
-            CUSTOM_TABLE,
-            VECTOR_SIZE,
-            id_column="uuid",
-            content_column="my-content",
-            embedding_column="my_embedding",
-            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
-            store_metadata=True,
+        await run_on_background(
+            engine,
+            engine.ainit_vectorstore_table(
+                CUSTOM_TABLE,
+                VECTOR_SIZE,
+                id_column="uuid",
+                content_column="my-content",
+                embedding_column="my_embedding",
+                metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+                store_metadata=True,
+            ),
         )
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{CUSTOM_TABLE}';"
         results = await afetch(engine, stmt)
@@ -162,14 +179,19 @@ class TestEngineAsync:
             assert row in expected
 
     async def test_init_table_with_int_id(self, engine):
-        await engine.ainit_vectorstore_table(
-            INT_ID_CUSTOM_TABLE,
-            VECTOR_SIZE,
-            id_column=Column(name="integer_id", data_type="INTEGER", nullable="False"),
-            content_column="my-content",
-            embedding_column="my_embedding",
-            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
-            store_metadata=True,
+        await run_on_background(
+            engine,
+            engine.ainit_vectorstore_table(
+                INT_ID_CUSTOM_TABLE,
+                VECTOR_SIZE,
+                id_column=Column(
+                    name="integer_id", data_type="INTEGER", nullable="False"
+                ),
+                content_column="my-content",
+                embedding_column="my_embedding",
+                metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+                store_metadata=True,
+            ),
         )
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{INT_ID_CUSTOM_TABLE}';"
         results = await afetch(engine, stmt)
@@ -193,7 +215,10 @@ class TestEngineAsync:
         user,
         password,
     ):
-        PostgresEngine._connector = None
+        # Note: PostgresEngine._connector is no longer a class attribute in fixed engine.py
+        # But for test cleanup safety regarding the OLD code structure, we can ignore this.
+        # PostgresEngine._connector = None
+
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
             instance=db_instance,
@@ -204,7 +229,6 @@ class TestEngineAsync:
         )
         assert engine
         await aexecute(engine, "SELECT 1")
-        PostgresEngine._connector = None
         await engine.close()
 
     async def test_from_engine(
@@ -230,12 +254,14 @@ class TestEngineAsync:
                 )
                 return conn
 
-            engine = create_async_engine(
+            engine_async = create_async_engine(
                 "postgresql+asyncpg://",
                 async_creator=getconn,
             )
 
-            engine = PostgresEngine.from_engine(engine)
+            engine = PostgresEngine.from_engine(engine_async)
+            # aexecute handles loop checking. Since this engine has no _loop (None),
+            # it runs on current loop which matches connector. Safe.
             await aexecute(engine, "SELECT 1")
             await engine.close()
 
@@ -331,7 +357,11 @@ class TestEngineAsync:
     async def test_ainit_checkpoint_writes_table(self, engine):
         table_name = f"checkpoint{uuid.uuid4()}"
         table_name_writes = f"{table_name}_writes"
-        await engine.ainit_checkpoint_table(table_name=table_name)
+
+        await run_on_background(
+            engine, engine.ainit_checkpoint_table(table_name=table_name)
+        )
+
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name_writes}';"
         results = await afetch(engine, stmt)
         expected = [
@@ -354,9 +384,9 @@ class TestEngineAsync:
             {"column_name": "checkpoint_ns", "data_type": "text"},
             {"column_name": "checkpoint_id", "data_type": "text"},
             {"column_name": "parent_checkpoint_id", "data_type": "text"},
+            {"column_name": "type", "data_type": "text"},
             {"column_name": "checkpoint", "data_type": "bytea"},
             {"column_name": "metadata", "data_type": "bytea"},
-            {"column_name": "type", "data_type": "text"},
         ]
         for row in results:
             assert row in expected
@@ -364,15 +394,18 @@ class TestEngineAsync:
         await aexecute(engine, f'DROP TABLE IF EXISTS "{table_name_writes}"')
 
     async def test_init_table_hybrid_search(self, engine):
-        await engine.ainit_vectorstore_table(
-            HYBRID_SEARCH_TABLE,
-            VECTOR_SIZE,
-            id_column="uuid",
-            content_column="my-content",
-            embedding_column="my_embedding",
-            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
-            store_metadata=True,
-            hybrid_search_config=HybridSearchConfig(),
+        await run_on_background(
+            engine,
+            engine.ainit_vectorstore_table(
+                HYBRID_SEARCH_TABLE,
+                VECTOR_SIZE,
+                id_column="uuid",
+                content_column="my-content",
+                embedding_column="my_embedding",
+                metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+                store_metadata=True,
+                hybrid_search_config=HybridSearchConfig(),
+            ),
         )
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{HYBRID_SEARCH_TABLE}';"
         results = await afetch(engine, stmt)
@@ -435,11 +468,12 @@ class TestEngineSync:
         await engine.close()
 
     async def test_init_table(self, engine):
+        # Sync method uses _run_as_sync internally -> safe to call on Main Loop
         engine.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
+
         id = str(uuid.uuid4())
         content = "coffee"
         embedding = await embeddings_service.aembed_query(content)
-        # Note: DeterministicFakeEmbedding generates a numpy array, converting to list a list of float values
         embedding_string = [float(dimension) for dimension in embedding]
         stmt = f"INSERT INTO {DEFAULT_TABLE_SYNC} (langchain_id, content, embedding) VALUES ('{id}', '{content}','{embedding_string}');"
         await aexecute(engine, stmt)
@@ -499,7 +533,6 @@ class TestEngineSync:
         user,
         password,
     ):
-        PostgresEngine._connector = None
         engine = PostgresEngine.from_instance(
             project_id=db_project,
             instance=db_instance,
@@ -511,7 +544,6 @@ class TestEngineSync:
         )
         assert engine
         await aexecute(engine, "SELECT 1")
-        PostgresEngine._connector = None
         await engine.close()
 
     async def test_engine_constructor_key(
@@ -520,7 +552,7 @@ class TestEngineSync:
     ):
         key = object()
         with pytest.raises(Exception):
-            PostgresEngine(key, engine)
+            PostgresEngine(key, engine, None, None)
 
     async def test_iam_account_override(
         self,
@@ -545,7 +577,9 @@ class TestEngineSync:
     async def test_init_checkpoints_table(self, engine):
         table_name = f"checkpoint{uuid.uuid4()}"
         table_name_writes = f"{table_name}_writes"
+
         engine.init_checkpoint_table(table_name=table_name)
+
         stmt = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table_name}';"
         results = await afetch(engine, stmt)
         expected = [

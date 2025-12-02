@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
-from typing import Sequence
+from typing import Any, Coroutine, Sequence
 
 import pytest
 import pytest_asyncio
@@ -50,18 +51,33 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
+# Helper to bridge the Main Test Loop and the Engine Background Loop
+async def run_on_background(engine: PostgresEngine, coro: Coroutine) -> Any:
+    """Runs a coroutine on the engine's background loop."""
+    return await asyncio.wrap_future(
+        asyncio.run_coroutine_threadsafe(coro, engine._loop)
+    )
+
+
 async def aexecute(engine: PostgresEngine, query: str) -> None:
-    async with engine._pool.connect() as conn:
-        await conn.execute(text(query))
-        await conn.commit()
+    async def _impl():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    # Run on background loop
+    await run_on_background(engine, _impl())
 
 
 async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
-    async with engine._pool.connect() as conn:
-        result = await conn.execute(text(query))
-        result_map = result.mappings()
-        result_fetch = result_map.fetchall()
-    return result_fetch
+    async def _impl():
+        async with engine._pool.connect() as conn:
+            result = await conn.execute(text(query))
+            result_map = result.mappings()
+            return result_map.fetchall()
+
+    # Run on background loop
+    return await run_on_background(engine, _impl())
 
 
 @pytest.mark.asyncio(scope="class")
@@ -98,34 +114,50 @@ class TestVectorStore:
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine._ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
-        vs = await AsyncPostgresVectorStore.create(
+        # Wrap private init method
+        await run_on_background(
+            engine, engine._ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
+        )
+        # Wrap creation of the async vectorstore
+        vs = await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=DEFAULT_TABLE,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=DEFAULT_TABLE,
+            ),
         )
         yield vs
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
-        await engine._ainit_vectorstore_table(
-            CUSTOM_TABLE,
-            VECTOR_SIZE,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
-            metadata_json_column="mymeta",
-        )
-        vs = await AsyncPostgresVectorStore.create(
+        # Wrap private init method
+        await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=CUSTOM_TABLE,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=["page", "source"],
-            metadata_json_column="mymeta",
+            engine._ainit_vectorstore_table(
+                CUSTOM_TABLE,
+                VECTOR_SIZE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=[Column("page", "TEXT"), Column("source", "TEXT")],
+                metadata_json_column="mymeta",
+            ),
+        )
+
+        # Wrap creation of the async vectorstore
+        vs = await run_on_background(
+            engine,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=["page", "source"],
+                metadata_json_column="mymeta",
+            ),
         )
         yield vs
 
@@ -144,32 +176,44 @@ class TestVectorStore:
 
     async def test_post_init(self, engine):
         with pytest.raises(ValueError):
-            await AsyncPostgresVectorStore.create(
+            await run_on_background(
                 engine,
-                embedding_service=embeddings_service,
-                table_name=CUSTOM_TABLE,
-                id_column="myid",
-                content_column="noname",
-                embedding_column="myembedding",
-                metadata_columns=["page", "source"],
-                metadata_json_column="mymeta",
+                AsyncPostgresVectorStore.create(
+                    engine,
+                    embedding_service=embeddings_service,
+                    table_name=CUSTOM_TABLE,
+                    id_column="myid",
+                    content_column="noname",
+                    embedding_column="myembedding",
+                    metadata_columns=["page", "source"],
+                    metadata_json_column="mymeta",
+                ),
             )
 
     async def test_id_metadata_column(self, engine):
         table_name = "id_metadata" + str(uuid.uuid4())
-        await engine._ainit_vectorstore_table(
-            table_name,
-            VECTOR_SIZE,
-            metadata_columns=[Column("id", "TEXT")],
-        )
-        custom_vs = await AsyncPostgresVectorStore.create(
+        await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=table_name,
-            metadata_columns=["id"],
+            engine._ainit_vectorstore_table(
+                table_name,
+                VECTOR_SIZE,
+                metadata_columns=[Column("id", "TEXT")],
+            ),
+        )
+        custom_vs = await run_on_background(
+            engine,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=table_name,
+                metadata_columns=["id"],
+            ),
         )
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await custom_vs.aadd_texts(texts, id_column_as_metadata, ids)
+        # Wrap aadd_texts
+        await run_on_background(
+            engine, custom_vs.aadd_texts(texts, id_column_as_metadata, ids)
+        )
 
         results = await afetch(engine, f'SELECT * FROM "{table_name}"')
         assert len(results) == 3
@@ -180,12 +224,14 @@ class TestVectorStore:
 
     async def test_aadd_texts(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs.aadd_texts(texts, ids=ids)
+        # Wrap aadd_texts
+        await run_on_background(engine, vs.aadd_texts(texts, ids=ids))
         results = await afetch(engine, f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
 
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs.aadd_texts(texts, metadatas, ids)
+        # Wrap aadd_texts
+        await run_on_background(engine, vs.aadd_texts(texts, metadatas, ids))
         results = await afetch(engine, f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 6
         await aexecute(engine, f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
@@ -193,42 +239,43 @@ class TestVectorStore:
     async def test_aadd_texts_edge_cases(self, engine, vs):
         texts = ["Taylor's", '"Swift"', "best-friend"]
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs.aadd_texts(texts, ids=ids)
+        # Wrap aadd_texts
+        await run_on_background(engine, vs.aadd_texts(texts, ids=ids))
         results = await afetch(engine, f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
         await aexecute(engine, f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
 
     async def test_aadd_docs(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs.aadd_documents(docs, ids=ids)
+        # Wrap aadd_documents
+        await run_on_background(engine, vs.aadd_documents(docs, ids=ids))
         results = await afetch(engine, f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
         await aexecute(engine, f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
 
     async def test_aadd_docs_no_ids(self, engine, vs):
-        await vs.aadd_documents(docs)
+        # Wrap aadd_documents
+        await run_on_background(engine, vs.aadd_documents(docs))
         results = await afetch(engine, f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
         await aexecute(engine, f'TRUNCATE TABLE "{DEFAULT_TABLE}"')
 
     async def test_adelete(self, engine, vs):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs.aadd_texts(texts, ids=ids)
+        await run_on_background(engine, vs.aadd_texts(texts, ids=ids))
         results = await afetch(engine, f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 3
-        # delete an ID
-        await vs.adelete([ids[0]])
+        await run_on_background(engine, vs.adelete([ids[0]]))
         results = await afetch(engine, f'SELECT * FROM "{DEFAULT_TABLE}"')
         assert len(results) == 2
-        # delete with no ids
-        result = await vs.adelete()
+        result = await run_on_background(engine, vs.adelete())
         assert result == False
 
     ##### Custom Vector Store  #####
 
     async def test_aadd_texts_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs_custom.aadd_texts(texts, ids=ids)
+        await run_on_background(engine, vs_custom.aadd_texts(texts, ids=ids))
         results = await afetch(engine, f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 3
         assert results[0]["mycontent"] == "foo"
@@ -237,7 +284,7 @@ class TestVectorStore:
         assert results[0]["source"] is None
 
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs_custom.aadd_texts(texts, metadatas, ids)
+        await run_on_background(engine, vs_custom.aadd_texts(texts, metadatas, ids))
         results = await afetch(engine, f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 6
         await aexecute(engine, f'TRUNCATE TABLE "{CUSTOM_TABLE}"')
@@ -251,7 +298,7 @@ class TestVectorStore:
             )
             for i in range(len(texts))
         ]
-        await vs_custom.aadd_documents(docs, ids=ids)
+        await run_on_background(engine, vs_custom.aadd_documents(docs, ids=ids))
 
         results = await afetch(engine, f'SELECT * FROM "{CUSTOM_TABLE}"')
         assert len(results) == 3
@@ -263,13 +310,12 @@ class TestVectorStore:
 
     async def test_adelete_custom(self, engine, vs_custom):
         ids = [str(uuid.uuid4()) for i in range(len(texts))]
-        await vs_custom.aadd_texts(texts, ids=ids)
+        await run_on_background(engine, vs_custom.aadd_texts(texts, ids=ids))
         results = await afetch(engine, f'SELECT * FROM "{CUSTOM_TABLE}"')
         content = [result["mycontent"] for result in results]
         assert len(results) == 3
         assert "foo" in content
-        # delete an ID
-        await vs_custom.adelete([ids[0]])
+        await run_on_background(engine, vs_custom.adelete([ids[0]]))
         results = await afetch(engine, f'SELECT * FROM "{CUSTOM_TABLE}"')
         content = [result["mycontent"] for result in results]
         assert len(results) == 2
@@ -277,90 +323,111 @@ class TestVectorStore:
 
     async def test_ignore_metadata_columns(self, engine):
         column_to_ignore = "source"
-        vs = await AsyncPostgresVectorStore.create(
+        vs = await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=CUSTOM_TABLE,
-            ignore_metadata_columns=[column_to_ignore],
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_json_column="mymeta",
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                ignore_metadata_columns=[column_to_ignore],
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_json_column="mymeta",
+            ),
         )
         assert column_to_ignore not in vs.metadata_columns
 
     async def test_create_vectorstore_with_invalid_parameters_1(self, engine):
         with pytest.raises(ValueError):
-            await AsyncPostgresVectorStore.create(
+            await run_on_background(
                 engine,
-                embedding_service=embeddings_service,
-                table_name=CUSTOM_TABLE,
-                id_column="myid",
-                content_column="mycontent",
-                embedding_column="myembedding",
-                metadata_columns=["random_column"],  # invalid metadata column
+                AsyncPostgresVectorStore.create(
+                    engine,
+                    embedding_service=embeddings_service,
+                    table_name=CUSTOM_TABLE,
+                    id_column="myid",
+                    content_column="mycontent",
+                    embedding_column="myembedding",
+                    metadata_columns=["random_column"],  # invalid metadata column
+                ),
             )
 
     async def test_create_vectorstore_with_invalid_parameters_2(self, engine):
         with pytest.raises(ValueError):
-            await AsyncPostgresVectorStore.create(
+            await run_on_background(
                 engine,
-                embedding_service=embeddings_service,
-                table_name=CUSTOM_TABLE,
-                id_column="myid",
-                content_column="langchain_id",  # invalid content column type
-                embedding_column="myembedding",
-                metadata_columns=["random_column"],
+                AsyncPostgresVectorStore.create(
+                    engine,
+                    embedding_service=embeddings_service,
+                    table_name=CUSTOM_TABLE,
+                    id_column="myid",
+                    content_column="langchain_id",  # invalid content column type
+                    embedding_column="myembedding",
+                    metadata_columns=["random_column"],
+                ),
             )
 
     async def test_create_vectorstore_with_invalid_parameters_3(self, engine):
         with pytest.raises(ValueError):
-            await AsyncPostgresVectorStore.create(
+            await run_on_background(
                 engine,
-                embedding_service=embeddings_service,
-                table_name=CUSTOM_TABLE,
-                id_column="myid",
-                content_column="mycontent",
-                embedding_column="random_column",  # invalid embedding column
-                metadata_columns=["random_column"],
+                AsyncPostgresVectorStore.create(
+                    engine,
+                    embedding_service=embeddings_service,
+                    table_name=CUSTOM_TABLE,
+                    id_column="myid",
+                    content_column="mycontent",
+                    embedding_column="random_column",  # invalid embedding column
+                    metadata_columns=["random_column"],
+                ),
             )
 
     async def test_create_vectorstore_with_invalid_parameters_4(self, engine):
         with pytest.raises(ValueError):
-            await AsyncPostgresVectorStore.create(
+            await run_on_background(
                 engine,
-                embedding_service=embeddings_service,
-                table_name=CUSTOM_TABLE,
-                id_column="myid",
-                content_column="mycontent",
-                embedding_column="langchain_id",  # invalid embedding column data type
-                metadata_columns=["random_column"],
+                AsyncPostgresVectorStore.create(
+                    engine,
+                    embedding_service=embeddings_service,
+                    table_name=CUSTOM_TABLE,
+                    id_column="myid",
+                    content_column="mycontent",
+                    embedding_column="langchain_id",  # invalid embedding column data type
+                    metadata_columns=["random_column"],
+                ),
             )
 
     async def test_create_vectorstore_with_invalid_parameters_5(self, engine):
         with pytest.raises(ValueError):
-            await AsyncPostgresVectorStore.create(
+            await run_on_background(
                 engine,
-                embedding_service=embeddings_service,
-                table_name=CUSTOM_TABLE,
-                id_column="myid",
-                content_column="mycontent",
-                embedding_column="langchain_id",
-                metadata_columns=["random_column"],
-                ignore_metadata_columns=[
-                    "one",
-                    "two",
-                ],  # invalid use of metadata_columns and ignore columns
+                AsyncPostgresVectorStore.create(
+                    engine,
+                    embedding_service=embeddings_service,
+                    table_name=CUSTOM_TABLE,
+                    id_column="myid",
+                    content_column="mycontent",
+                    embedding_column="langchain_id",
+                    metadata_columns=["random_column"],
+                    ignore_metadata_columns=[
+                        "one",
+                        "two",
+                    ],  # invalid use of metadata_columns and ignore columns
+                ),
             )
 
     async def test_create_vectorstore_with_init(self, engine):
         with pytest.raises(Exception):
-            await AsyncPostgresVectorStore(
-                engine._pool,
-                embedding_service=embeddings_service,
-                table_name=CUSTOM_TABLE,
-                id_column="myid",
-                content_column="mycontent",
-                embedding_column="myembedding",
-                metadata_columns=["random_column"],  # invalid metadata column
+            await run_on_background(
+                engine,
+                AsyncPostgresVectorStore(
+                    engine._pool,
+                    embedding_service=embeddings_service,
+                    table_name=CUSTOM_TABLE,
+                    id_column="myid",
+                    content_column="mycontent",
+                    embedding_column="myembedding",
+                    metadata_columns=["random_column"],  # invalid metadata column
+                ),
             )

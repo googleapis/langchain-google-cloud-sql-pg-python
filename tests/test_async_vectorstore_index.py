@@ -13,8 +13,10 @@
 # limitations under the License.
 
 
+import asyncio
 import os
 import uuid
+from typing import Any, Coroutine
 
 import pytest
 import pytest_asyncio
@@ -60,10 +62,21 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
+# Helper to bridge the Main Test Loop and the Engine Background Loop
+async def run_on_background(engine: PostgresEngine, coro: Coroutine) -> Any:
+    """Runs a coroutine on the engine's background loop."""
+    return await asyncio.wrap_future(
+        asyncio.run_coroutine_threadsafe(coro, engine._loop)
+    )
+
+
 async def aexecute(engine: PostgresEngine, query: str) -> None:
-    async with engine._pool.connect() as conn:
-        await conn.execute(text(query))
-        await conn.commit()
+    async def _impl():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    await run_on_background(engine, _impl())
 
 
 @pytest.mark.asyncio(scope="class")
@@ -100,74 +113,90 @@ class TestIndex:
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine._ainit_vectorstore_table(
-            DEFAULT_TABLE, VECTOR_SIZE, overwrite_existing=True
-        )
-        vs = await AsyncPostgresVectorStore.create(
+        await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=DEFAULT_TABLE,
+            engine._ainit_vectorstore_table(
+                DEFAULT_TABLE, VECTOR_SIZE, overwrite_existing=True
+            ),
+        )
+        vs = await run_on_background(
+            engine,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=DEFAULT_TABLE,
+            ),
         )
 
-        await vs.aadd_texts(texts, ids=ids)
-        await vs.adrop_vector_index()
+        await run_on_background(engine, vs.aadd_texts(texts, ids=ids))
+        await run_on_background(engine, vs.adrop_vector_index())
         yield vs
 
     async def test_apply_default_name_vector_index(self, engine):
-        await engine._ainit_vectorstore_table(
-            SIMPLE_TABLE, VECTOR_SIZE, overwrite_existing=True
-        )
-        vs = await AsyncPostgresVectorStore.create(
+        await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=SIMPLE_TABLE,
+            engine._ainit_vectorstore_table(
+                SIMPLE_TABLE, VECTOR_SIZE, overwrite_existing=True
+            ),
         )
-        await vs.aadd_texts(texts, ids=ids)
-        await vs.adrop_vector_index()
+
+        vs = await run_on_background(
+            engine,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=SIMPLE_TABLE,
+            ),
+        )
+        await run_on_background(engine, vs.aadd_texts(texts, ids=ids))
+        await run_on_background(engine, vs.adrop_vector_index())
+
         index = HNSWIndex()
-        await vs.aapply_vector_index(index)
-        assert await vs.is_valid_index()
-        await vs.adrop_vector_index()
+        await run_on_background(engine, vs.aapply_vector_index(index))
+        assert await run_on_background(engine, vs.is_valid_index())
+        await run_on_background(engine, vs.adrop_vector_index())
 
-    async def test_aapply_vector_index(self, vs):
-        await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
+    async def test_aapply_vector_index(self, engine, vs):
+        await run_on_background(engine, vs.adrop_vector_index(DEFAULT_INDEX_NAME))
         index = HNSWIndex(name=DEFAULT_INDEX_NAME)
-        await vs.aapply_vector_index(index)
-        assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
-        await vs.adrop_vector_index()
+        await run_on_background(engine, vs.aapply_vector_index(index))
+        assert await run_on_background(engine, vs.is_valid_index(DEFAULT_INDEX_NAME))
+        await run_on_background(engine, vs.adrop_vector_index())
 
-    async def test_areindex(self, vs):
-        if not await vs.is_valid_index(DEFAULT_INDEX_NAME):
+    async def test_areindex(self, engine, vs):
+        if not await run_on_background(engine, vs.is_valid_index(DEFAULT_INDEX_NAME)):
             index = HNSWIndex()
-            await vs.aapply_vector_index(index)
-        await vs.areindex(DEFAULT_INDEX_NAME)
-        await vs.areindex(DEFAULT_INDEX_NAME)
-        assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
-        await vs.adrop_vector_index()
+            await run_on_background(engine, vs.aapply_vector_index(index))
+        await run_on_background(engine, vs.areindex(DEFAULT_INDEX_NAME))
+        await run_on_background(engine, vs.areindex(DEFAULT_INDEX_NAME))
+        assert await run_on_background(engine, vs.is_valid_index(DEFAULT_INDEX_NAME))
+        await run_on_background(engine, vs.adrop_vector_index())
 
-    async def test_dropindex(self, vs):
-        await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
-        result = await vs.is_valid_index(DEFAULT_INDEX_NAME)
+    async def test_dropindex(self, engine, vs):
+        await run_on_background(engine, vs.adrop_vector_index(DEFAULT_INDEX_NAME))
+        result = await run_on_background(engine, vs.is_valid_index(DEFAULT_INDEX_NAME))
         assert not result
 
-    async def test_aapply_vector_index_ivfflat(self, vs):
-        await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
+    async def test_aapply_vector_index_ivfflat(self, engine, vs):
+        await run_on_background(engine, vs.adrop_vector_index(DEFAULT_INDEX_NAME))
         index = IVFFlatIndex(
             name=DEFAULT_INDEX_NAME, distance_strategy=DistanceStrategy.EUCLIDEAN
         )
-        await vs.aapply_vector_index(index, concurrently=True)
-        assert await vs.is_valid_index(DEFAULT_INDEX_NAME)
+        await run_on_background(
+            engine, vs.aapply_vector_index(index, concurrently=True)
+        )
+        assert await run_on_background(engine, vs.is_valid_index(DEFAULT_INDEX_NAME))
         index = IVFFlatIndex(
             name="secondindex",
             distance_strategy=DistanceStrategy.INNER_PRODUCT,
         )
-        await vs.aapply_vector_index(index)
-        assert await vs.is_valid_index("secondindex")
-        await vs.adrop_vector_index("secondindex")
-        await vs.adrop_vector_index(DEFAULT_INDEX_NAME)
+        await run_on_background(engine, vs.aapply_vector_index(index))
+        assert await run_on_background(engine, vs.is_valid_index("secondindex"))
+        await run_on_background(engine, vs.adrop_vector_index("secondindex"))
+        await run_on_background(engine, vs.adrop_vector_index(DEFAULT_INDEX_NAME))
 
-    async def test_is_valid_index(self, vs):
-        is_valid = await vs.is_valid_index("invalid_index")
+    async def test_is_valid_index(self, engine, vs):
+        is_valid = await run_on_background(engine, vs.is_valid_index("invalid_index"))
         assert is_valid == False
 
     async def test_aapply_hybrid_search_index_table_without_tsv_column(
@@ -175,18 +204,25 @@ class TestIndex:
     ):
         # overwriting vs to get a hybrid vs
         tsv_index_name = "index_without_tsv_column_" + UUID_STR
-        vs = await AsyncPostgresVectorStore.create(
+        vs = await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=DEFAULT_TABLE,
-            hybrid_search_config=HybridSearchConfig(index_name=tsv_index_name),
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=DEFAULT_TABLE,
+                hybrid_search_config=HybridSearchConfig(index_name=tsv_index_name),
+            ),
         )
-        is_valid_index = await vs.is_valid_index(tsv_index_name)
+        is_valid_index = await run_on_background(
+            engine, vs.is_valid_index(tsv_index_name)
+        )
         assert is_valid_index == False
-        await vs.aapply_hybrid_search_index()
-        assert await vs.is_valid_index(tsv_index_name)
-        await vs.adrop_vector_index(tsv_index_name)
-        is_valid_index = await vs.is_valid_index(tsv_index_name)
+        await run_on_background(engine, vs.aapply_hybrid_search_index())
+        assert await run_on_background(engine, vs.is_valid_index(tsv_index_name))
+        await run_on_background(engine, vs.adrop_vector_index(tsv_index_name))
+        is_valid_index = await run_on_background(
+            engine, vs.is_valid_index(tsv_index_name)
+        )
         assert is_valid_index == False
 
     async def test_aapply_hybrid_search_index_table_with_tsv_column(self, engine):
@@ -196,23 +232,34 @@ class TestIndex:
             tsv_lang="pg_catalog.english",
             index_name=tsv_index_name,
         )
-        await engine._ainit_vectorstore_table(
-            DEFAULT_HYBRID_TABLE,
-            VECTOR_SIZE,
-            hybrid_search_config=config,
-        )
-        vs = await AsyncPostgresVectorStore.create(
+        await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=DEFAULT_HYBRID_TABLE,
-            hybrid_search_config=config,
+            engine._ainit_vectorstore_table(
+                DEFAULT_HYBRID_TABLE,
+                VECTOR_SIZE,
+                hybrid_search_config=config,
+            ),
         )
-        is_valid_index = await vs.is_valid_index(tsv_index_name)
+        vs = await run_on_background(
+            engine,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=DEFAULT_HYBRID_TABLE,
+                hybrid_search_config=config,
+            ),
+        )
+
+        is_valid_index = await run_on_background(
+            engine, vs.is_valid_index(tsv_index_name)
+        )
         assert is_valid_index == False
-        await vs.aapply_hybrid_search_index()
-        assert await vs.is_valid_index(tsv_index_name)
-        await vs.areindex(tsv_index_name)
-        assert await vs.is_valid_index(tsv_index_name)
-        await vs.adrop_vector_index(tsv_index_name)
-        is_valid_index = await vs.is_valid_index(tsv_index_name)
+        await run_on_background(engine, vs.aapply_hybrid_search_index())
+        assert await run_on_background(engine, vs.is_valid_index(tsv_index_name))
+        await run_on_background(engine, vs.areindex(tsv_index_name))
+        assert await run_on_background(engine, vs.is_valid_index(tsv_index_name))
+        await run_on_background(engine, vs.adrop_vector_index(tsv_index_name))
+        is_valid_index = await run_on_background(
+            engine, vs.is_valid_index(tsv_index_name)
+        )
         assert is_valid_index == False
