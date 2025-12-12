@@ -62,7 +62,7 @@ substitutions:
   _DATABASE_PORT: "5432"
   _DATABASE_ID: test-database
   _REGION: us-central1
-  _VERSION: "3.9"
+  _VERSION: "3.10"
   _IP_ADDRESS: "127.0.0.1"
 
 options:
