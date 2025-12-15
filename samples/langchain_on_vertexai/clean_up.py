@@ -32,8 +32,8 @@ from langchain_google_cloud_sql_pg import PostgresEngine
 TEST_NAME = os.getenv("DISPLAY_NAME")
 
 
-async def delete_tables():
-    engine = await PostgresEngine.afrom_instance(
+def delete_tables():
+    engine = PostgresEngine.from_instance(
         PROJECT_ID,
         REGION,
         INSTANCE,
@@ -42,12 +42,14 @@ async def delete_tables():
         password=PASSWORD,
     )
 
-    async with engine._pool.connect() as conn:
-        await conn.execute(text("COMMIT"))
-        await conn.execute(text(f"DROP TABLE IF EXISTS {TABLE_NAME}"))
-        await conn.execute(text(f"DROP TABLE IF EXISTS {CHAT_TABLE_NAME}"))
-    await engine.close()
-    await engine._connector.close_async()
+    async def _cleanup_logic():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text("COMMIT"))
+            await conn.execute(text(f"DROP TABLE IF EXISTS {TABLE_NAME}"))
+            await conn.execute(text(f"DROP TABLE IF EXISTS {CHAT_TABLE_NAME}"))
+
+    engine._run_as_sync(_cleanup_logic())
+    engine._run_as_sync(engine.close())
 
 
 def delete_engines():
@@ -56,9 +58,10 @@ def delete_engines():
         app.delete()
 
 
-async def main():
-    await delete_tables()
+def main():
+    delete_tables()
     delete_engines()
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    main()
