@@ -25,7 +25,6 @@ from config import (
     USER,
 )
 from google.cloud import resourcemanager_v3  # type: ignore
-from google.cloud.sql.connector import Connector, RefreshStrategy
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_google_vertexai import VertexAIEmbeddings
 from sqlalchemy import text
