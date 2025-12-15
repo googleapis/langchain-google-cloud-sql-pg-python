@@ -48,7 +48,7 @@ test = [
     "pytest==8.4.2",
     "pytest-cov==7.0.0",
     "langchain-tests==0.3.22",
-    "langgraph==0.6.11"
+    "langgraph==0.6.10"
 ]
 
 [build-system]
