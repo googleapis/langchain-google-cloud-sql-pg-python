@@ -47,7 +47,7 @@ def create_databases():
             await conn.execute(text(f'DROP DATABASE IF EXISTS "{DATABASE}"'))
             await conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
     engine._run_as_sync(_create_logic())
-    await engine.close()
+    engine.close()
 
 
 def create_vectorstore():
@@ -106,8 +106,8 @@ def create_vectorstore():
 
 
 async def main():
-    await create_databases()
-    await create_vectorstore()
+    create_databases()
+    create_vectorstore()
 
 if __name__ == "__main__":
     main()
