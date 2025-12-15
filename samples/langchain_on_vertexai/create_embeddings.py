@@ -13,6 +13,7 @@
 # limitations under the License.
 import asyncio
 import uuid
+from typing import Any, Coroutine
 
 from config import (
     CHAT_TABLE_NAME,
