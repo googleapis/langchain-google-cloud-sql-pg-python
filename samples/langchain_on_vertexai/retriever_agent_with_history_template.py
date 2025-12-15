@@ -91,7 +91,7 @@ class PostgresAgent(reasoning_engines.Queryable):
             engine,
             table_name=self.table,
             embedding_service=VertexAIEmbeddings(
-                model_name="textembedding-gecko@latest", project=self.project
+                model_name="text-embedding-005", project=self.project
             ),
         )
         retriever = vector_store.as_retriever()
