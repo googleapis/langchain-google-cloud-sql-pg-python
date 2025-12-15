@@ -276,7 +276,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
 
         async with self.pool.connect() as conn:
             type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
-            serialized_metadata = json.dumps(metadata)
+            _, serialized_metadata = self.jsonplus_serde.dumps_typed(metadata)
             await conn.execute(
                 text(query),
                 {
