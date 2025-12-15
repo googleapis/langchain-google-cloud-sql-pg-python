@@ -25,6 +25,7 @@ from config import (
     USER,
 )
 from google.cloud import resourcemanager_v3  # type: ignore
+from google.cloud.sql.connector import Connector, RefreshStrategy
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_google_vertexai import VertexAIEmbeddings
 from sqlalchemy import text
@@ -32,8 +33,8 @@ from sqlalchemy import text
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 
 
-async def create_databases():
-    engine = await PostgresEngine.afrom_instance(
+def create_databases():
+    engine = PostgresEngine.from_instance(
         PROJECT_ID,
         REGION,
         INSTANCE,
@@ -41,15 +42,17 @@ async def create_databases():
         user=USER,
         password=PASSWORD,
     )
-    async with engine._pool.connect() as conn:
-        await conn.execute(text("COMMIT"))
-        await conn.execute(text(f'DROP DATABASE IF EXISTS "{DATABASE}"'))
-        await conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
+    async def _create_logic():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text("COMMIT"))
+            await conn.execute(text(f'DROP DATABASE IF EXISTS "{DATABASE}"'))
+            await conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
+    engine._run_as_sync(_create_logic())
     await engine.close()
 
 
-async def create_vectorstore():
-    engine = await PostgresEngine.afrom_instance(
+def create_vectorstore():
+    engine = PostgresEngine.from_instance(
         PROJECT_ID,
         REGION,
         INSTANCE,
@@ -58,11 +61,11 @@ async def create_vectorstore():
         password=PASSWORD,
     )
 
-    await engine.ainit_vectorstore_table(
+    engine.init_vectorstore_table(
         table_name=TABLE_NAME, vector_size=768, overwrite_existing=True
     )
 
-    await engine.ainit_chat_history_table(table_name=CHAT_TABLE_NAME)
+    engine.init_chat_history_table(table_name=CHAT_TABLE_NAME)
 
     rm = resourcemanager_v3.ProjectsClient()
     res = rm.get_project(
@@ -76,7 +79,7 @@ async def create_vectorstore():
             await conn.execute(text(f'GRANT SELECT ON {TABLE_NAME} TO "{IAM_USER}";'))
             await conn.commit()
 
-    await engine._run_as_async(grant_select(engine))
+    engine._run_as_sync(grant_select(engine))
 
     metadata = [
         "show_id",
@@ -91,7 +94,7 @@ async def create_vectorstore():
     loader = CSVLoader(file_path="./movies.csv", metadata_columns=metadata)
     docs = loader.load()
 
-    vector_store = await PostgresVectorStore.create(
+    vector_store = PostgresVectorStore.create_sync(
         engine,
         table_name=TABLE_NAME,
         embedding_service=VertexAIEmbeddings(
@@ -100,12 +103,12 @@ async def create_vectorstore():
     )
 
     ids = [str(uuid.uuid4()) for i in range(len(docs))]
-    await vector_store.aadd_documents(docs, ids=ids)
+    vector_store.add_documents(docs, ids=ids)
 
 
 async def main():
     await create_databases()
     await create_vectorstore()
 
-
-asyncio.run(main())
+if __name__ == "__main__":
+    main()
