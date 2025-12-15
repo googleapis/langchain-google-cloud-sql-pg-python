@@ -65,7 +65,7 @@ def similarity_search(query: str) -> list[Document]:
         engine,
         table_name=TABLE_NAME,
         embedding_service=VertexAIEmbeddings(
-            model_name="textembedding-gecko@latest", project=PROJECT_ID
+            model_name="text-embedding-005", project=PROJECT_ID
         ),
     )
     retriever = vector_store.as_retriever()

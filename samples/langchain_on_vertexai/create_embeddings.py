@@ -13,6 +13,7 @@
 # limitations under the License.
 import asyncio
 import uuid
+from typing import Any, Coroutine
 
 from config import (
     CHAT_TABLE_NAME,
@@ -32,6 +33,15 @@ from sqlalchemy import text
 from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
 
 
+async def run_on_background(engine: PostgresEngine, coro: Coroutine) -> Any:
+    """Runs a coroutine on the engine's background loop."""
+    if engine._default_loop:
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, engine._default_loop)
+        )
+    return await coro
+
+
 async def create_databases():
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
@@ -41,10 +51,14 @@ async def create_databases():
         user=USER,
         password=PASSWORD,
     )
-    async with engine._pool.connect() as conn:
-        await conn.execute(text("COMMIT"))
-        await conn.execute(text(f'DROP DATABASE IF EXISTS "{DATABASE}"'))
-        await conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
+
+    async def _logic():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text("COMMIT"))
+            await conn.execute(text(f'DROP DATABASE IF EXISTS "{DATABASE}"'))
+            await conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
+
+    await run_on_background(engine, _logic())
     await engine.close()
 
 
@@ -95,7 +109,7 @@ async def create_vectorstore():
         engine,
         table_name=TABLE_NAME,
         embedding_service=VertexAIEmbeddings(
-            model_name="textembedding-gecko@latest", project=PROJECT_ID
+            model_name="text-embedding-005", project=PROJECT_ID
         ),
     )
 
