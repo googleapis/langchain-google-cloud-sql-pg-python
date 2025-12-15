@@ -47,7 +47,6 @@ def create_databases():
             await conn.execute(text(f'DROP DATABASE IF EXISTS "{DATABASE}"'))
             await conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
     engine._run_as_sync(_create_logic())
-    engine.close()
 
 
 def create_vectorstore():
@@ -97,7 +96,7 @@ def create_vectorstore():
         engine,
         table_name=TABLE_NAME,
         embedding_service=VertexAIEmbeddings(
-            model_name="textembedding-gecko@latest", project=PROJECT_ID
+            model_name="text-embedding-004", project=PROJECT_ID
         ),
     )
 
