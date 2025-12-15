@@ -276,7 +276,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
 
         async with self.pool.connect() as conn:
             type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
-            _, serialized_metadata = self.jsonplus_serde.dumps_typed(metadata)
+            serialized_metadata = json.dumps(metadata)
             await conn.execute(
                 text(query),
                 {
@@ -409,7 +409,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                         (value["type"], value["checkpoint"])
                     ),
                     metadata=(
-                        self.jsonplus_serde.loads_typed(("json", value["metadata"]))  # type: ignore
+                        json.loads(value["metadata"])  # type: ignore
                         if value["metadata"] is not None
                         else {}
                     ),
@@ -494,7 +494,7 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
                 },
                 checkpoint=self.serde.loads_typed((value["type"], value["checkpoint"])),
                 metadata=(
-                    self.jsonplus_serde.loads_typed(("json", value["metadata"]))  # type: ignore
+                    json.loads(value["metadata"])  # type: ignore
                     if value["metadata"] is not None
                     else {}
                 ),
