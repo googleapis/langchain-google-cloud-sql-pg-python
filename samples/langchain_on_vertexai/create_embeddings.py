@@ -105,7 +105,7 @@ def create_vectorstore():
     vector_store.add_documents(docs, ids=ids)
 
 
-async def main():
+def main():
     create_databases()
     create_vectorstore()
 
