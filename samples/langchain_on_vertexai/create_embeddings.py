@@ -41,11 +41,13 @@ def create_databases():
         user=USER,
         password=PASSWORD,
     )
+
     async def _create_logic():
         async with engine._pool.connect() as conn:
             await conn.execute(text("COMMIT"))
             await conn.execute(text(f'DROP DATABASE IF EXISTS "{DATABASE}"'))
             await conn.execute(text(f'CREATE DATABASE "{DATABASE}"'))
+
     engine._run_as_sync(_create_logic())
 
 
@@ -107,6 +109,7 @@ def create_vectorstore():
 def main():
     create_databases()
     create_vectorstore()
+
 
 if __name__ == "__main__":
     main()
