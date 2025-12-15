@@ -60,7 +60,6 @@ async def delete_tables():
 
     await run_on_background(engine, _logic())
     await engine.close()
-    await engine._connector.close_async()
 
 
 def delete_engines():
