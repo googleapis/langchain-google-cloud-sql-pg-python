@@ -104,4 +104,4 @@ remote_app = reasoning_engines.ReasoningEngine.create(
     extra_packages=["config.py"],
 )  # type: ignore[arg-type]
 
-print(remote_app.query(input="movies about engineers"))
+print(remote_app.query(input="movies about engineers"))  # type: ignore[attr-defined]
