@@ -132,7 +132,7 @@ class PostgresAgent(reasoning_engines.Queryable):
             history_messages_key="chat_history",
         )
 
-    def query(self, input: str, session_id: str, **kwargs: Any) -> str:
+    def query(self, input: str, session_id: str, **kwargs: Any) -> str:  # type: ignore[override]
         """Query the application.
 
         Args:
