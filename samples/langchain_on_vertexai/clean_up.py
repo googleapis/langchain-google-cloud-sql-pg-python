@@ -13,6 +13,7 @@
 # limitations under the License.
 import asyncio
 import os
+from typing import Any, Coroutine
 
 from config import (
     CHAT_TABLE_NAME,
@@ -32,6 +33,15 @@ from langchain_google_cloud_sql_pg import PostgresEngine
 TEST_NAME = os.getenv("DISPLAY_NAME")
 
 
+async def run_on_background(engine: PostgresEngine, coro: Coroutine) -> Any:
+    """Runs a coroutine on the engine's background loop."""
+    if engine._default_loop:
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, engine._default_loop)
+        )
+    return await coro
+
+
 async def delete_tables():
     engine = await PostgresEngine.afrom_instance(
         PROJECT_ID,
@@ -42,12 +52,14 @@ async def delete_tables():
         password=PASSWORD,
     )
 
-    async with engine._pool.connect() as conn:
-        await conn.execute(text("COMMIT"))
-        await conn.execute(text(f"DROP TABLE IF EXISTS {TABLE_NAME}"))
-        await conn.execute(text(f"DROP TABLE IF EXISTS {CHAT_TABLE_NAME}"))
+    async def _logic():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text("COMMIT"))
+            await conn.execute(text(f"DROP TABLE IF EXISTS {TABLE_NAME}"))
+            await conn.execute(text(f"DROP TABLE IF EXISTS {CHAT_TABLE_NAME}"))
+
+    await run_on_background(engine, _logic())
     await engine.close()
-    await engine._connector.close_async()
 
 
 def delete_engines():
