@@ -106,7 +106,7 @@ class PostgresRetriever(reasoning_engines.Queryable):
         # an LLM to generate a response
         self.chain = create_retrieval_chain(retriever, combine_docs_chain)
 
-    def query(self, input: str, **kwargs: Any) -> str:
+    def query(self, input: str, **kwargs: Any) -> str:  # type: ignore[override]
         """Query the application.
 
         Args:
