@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from typing import Optional
+from typing import Any, Optional
 
 import vertexai  # type: ignore
 from config import (
@@ -132,7 +132,7 @@ class PostgresAgent(reasoning_engines.Queryable):
             history_messages_key="chat_history",
         )
 
-    def query(self, input: str, session_id: str) -> str:
+    def query(self, input: str, session_id: str, **kwargs: Any) -> str:  # type: ignore[override]
         """Query the application.
 
         Args:
@@ -192,4 +192,4 @@ remote_app = reasoning_engines.ReasoningEngine.create(
     extra_packages=["config.py"],
 )
 
-print(remote_app.query(input="movies about engineers", session_id="abc123"))
+print(remote_app.query(input="movies about engineers", session_id="abc123"))  # type: ignore
