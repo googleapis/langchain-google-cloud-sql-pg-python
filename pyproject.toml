@@ -38,7 +38,7 @@ Changelog = "https://github.com/googleapis/langchain-google-cloud-sql-pg-python/
 
 [project.optional-dependencies]
 langgraph = [
-    "langgraph-checkpoint>=3.0.0, <3.1.0"
+    "langgraph-checkpoint>=4.0.0, <4.1.0"
 ]
 test = [
     "black[jupyter]==25.12.0",
