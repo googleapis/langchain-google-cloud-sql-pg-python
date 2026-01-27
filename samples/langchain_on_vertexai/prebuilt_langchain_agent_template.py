@@ -91,9 +91,9 @@ vertexai.init(project=PROJECT_ID, location="us-central1", staging_bucket=STAGING
 DISPLAY_NAME = os.getenv("DISPLAY_NAME") or "PrebuiltAgent"
 
 remote_app = reasoning_engines.ReasoningEngine.create(
-    reasoning_engines.LangchainAgent(
+    reasoning_engines.LangchainAgent(  # type: ignore[arg-type]
         model="gemini-2.0-flash-001",
-        tools=[similarity_search],
+        tools=[similarity_search],  # type: ignore[list-item]
         model_kwargs={
             "temperature": 0.1,
         },
@@ -104,4 +104,4 @@ remote_app = reasoning_engines.ReasoningEngine.create(
     extra_packages=["config.py"],
 )
 
-print(remote_app.query(input="movies about engineers"))
+print(remote_app.query(input="movies about engineers"))  # type: ignore[attr-defined]
