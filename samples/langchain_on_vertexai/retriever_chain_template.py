@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from typing import Optional
+from typing import Any, Optional
 
 import vertexai  # type: ignore
 from config import (
@@ -97,7 +97,7 @@ class PostgresRetriever(reasoning_engines.Queryable):
             engine,
             table_name=self.table,
             embedding_service=VertexAIEmbeddings(
-                model_name="textembedding-gecko@latest", project=self.project
+                model_name="text-embedding-005", project=self.project
             ),
         )
         retriever = vector_store.as_retriever()
@@ -106,7 +106,7 @@ class PostgresRetriever(reasoning_engines.Queryable):
         # an LLM to generate a response
         self.chain = create_retrieval_chain(retriever, combine_docs_chain)
 
-    def query(self, input: str) -> str:
+    def query(self, input: str, **kwargs: Any) -> str:  # type: ignore[override]
         """Query the application.
 
         Args:
@@ -161,4 +161,4 @@ remote_app = reasoning_engines.ReasoningEngine.create(
     extra_packages=["config.py"],
 )
 
-print(remote_app.query(input="movies about engineers"))
+print(remote_app.query(input="movies about engineers"))  # type: ignore
