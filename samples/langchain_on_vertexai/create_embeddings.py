@@ -114,7 +114,12 @@ async def create_vectorstore():
     )
 
     ids = [str(uuid.uuid4()) for i in range(len(docs))]
-    await vector_store.aadd_documents(docs, ids=ids)
+    batch_size = 100
+    for i in range(0, len(docs), batch_size):
+        batch_docs = docs[i : i + batch_size]
+        batch_ids = ids[i : i + batch_size]
+        print(f"Adding batch {i // batch_size + 1} ({len(batch_docs)} documents)...")
+        await vector_store.aadd_documents(batch_docs, ids=batch_ids)
 
 
 async def main():
