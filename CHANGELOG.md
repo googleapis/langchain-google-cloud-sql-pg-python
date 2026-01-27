@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.15.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.14.1...v0.15.0) (2026-01-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* Refactor PostgresVectorStore and PostgresEngine to depend on PGVectorstore and PGEngine respectively ([#316](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/316))
+
+### Features
+
+* **deps:** Update langchain-postgres to v0.0.16 ([#366](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/366)) ([e773505](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/e773505453683dad5681e6155831b710cbc7fcc1))
+* Disable support for python 3.9 and enable support for python3.13 ([#378](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/378)) ([b97060e](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/b97060e1fd69f1902c370c90218b1e61b72050b8))
+* Update Langgraph dependency to v1   ([#379](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/379)) ([7a841b3](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/7a841b357c998bce7c6aede0e2e5fed8fa48f198))
+
+
+### Documentation
+
+* Add Hybrid Search documentation ([#329](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/329)) ([14098ca](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/14098ca7a6cf7116e6edbcb7a5c6c3ccbce76b4a))
+
+
+### Code Refactoring
+
+* Refactor PostgresVectorStore and PostgresEngine to depend on PGVectorstore and PGEngine respectively ([#316](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/316)) ([7917d62](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/7917d62c3f9ea2c6ca8ab8d6284cfa2c7e535401))
+
 ## [0.14.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.14.0...v0.14.1) (2025-07-11)
 
 

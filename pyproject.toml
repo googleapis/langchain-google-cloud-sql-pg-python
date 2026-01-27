@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "LangChain integrations for Google Cloud SQL for PostgreSQL"
 readme = "README.rst"
 license = {file = "LICENSE"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     {name = "Google LLC", email = "googleapis-packages@google.com"}
 ]
@@ -13,8 +13,7 @@ dependencies = [
     "cloud-sql-python-connector[asyncpg] >= 1.10.0, <2.0.0",
     "numpy>=1.24.4, <3.0.0; python_version >= '3.11'",
     "numpy>=1.24.4, <=2.2.6; python_version == '3.10'",
-    "numpy>=1.24.4, <=2.0.2; python_version <= '3.9'",
-    "langchain-postgres>=0.0.15",
+    "langchain-postgres>=0.0.16",
 ]
 
 classifiers = [
@@ -22,10 +21,10 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 [tool.setuptools.dynamic]
@@ -39,18 +38,17 @@ Changelog = "https://github.com/googleapis/langchain-google-cloud-sql-pg-python/
 
 [project.optional-dependencies]
 langgraph = [
-    "langgraph-checkpoint>=2.0.9, <3.0.0"
+    "langgraph-checkpoint>=3.0.0, <3.1.0"
 ]
 test = [
-    "black[jupyter]==25.9.0",
-    "isort==6.1.0; python_version == '3.9'",
-    "isort==7.0.0; python_version >= '3.10'",
-    "mypy==1.18.2",
+    "black[jupyter]==26.1.0",
+    "isort==7.0.0",
+    "mypy==1.19.1",
     "pytest-asyncio==0.26.0",
     "pytest==8.4.2",
     "pytest-cov==7.0.0",
-    "langchain-tests==0.3.22",
-    "langgraph==0.6.10"
+    "langchain-tests==1.1.0",
+    "langgraph==1.0.4"
 ]
 
 [build-system]
@@ -64,7 +62,7 @@ target-version = ['py39']
 profile = "black"
 
 [tool.mypy]
-python_version = 3.9
+python_version = "3.10"
 warn_unused_configs = true
 disallow_incomplete_defs = true
 

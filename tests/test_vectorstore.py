@@ -364,7 +364,7 @@ class TestVectorStore:
         user,
         password,
     ):
-        async with Connector() as connector:
+        async with Connector(loop=asyncio.get_running_loop()) as connector:
 
             async def getconn():
                 conn = await connector.connect_async(  # type: ignore

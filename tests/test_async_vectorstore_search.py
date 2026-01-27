@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import uuid
+from typing import Any, Coroutine
 
 import pytest
 import pytest_asyncio
@@ -73,13 +75,26 @@ def get_env_var(key: str, desc: str) -> str:
     return v
 
 
+# Helper to bridge the Main Test Loop and the Engine Background Loop
+async def run_on_background(engine: PostgresEngine, coro: Coroutine) -> Any:
+    """Runs a coroutine on the engine's background loop."""
+    if engine._loop:
+        return await asyncio.wrap_future(
+            asyncio.run_coroutine_threadsafe(coro, engine._loop)
+        )
+    return await coro
+
+
 async def aexecute(
     engine: PostgresEngine,
     query: str,
 ) -> None:
-    async with engine._pool.connect() as conn:
-        await conn.execute(text(query))
-        await conn.commit()
+    async def _impl():
+        async with engine._pool.connect() as conn:
+            await conn.execute(text(query))
+            await conn.commit()
+
+    await run_on_background(engine, _impl())
 
 
 @pytest.mark.asyncio(scope="class")
@@ -118,78 +133,98 @@ class TestVectorStoreSearch:
 
     @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
-        await engine._ainit_vectorstore_table(
-            DEFAULT_TABLE, VECTOR_SIZE, store_metadata=False
-        )
-        vs = await AsyncPostgresVectorStore.create(
+        await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=DEFAULT_TABLE,
+            engine._ainit_vectorstore_table(
+                DEFAULT_TABLE, VECTOR_SIZE, store_metadata=False
+            ),
         )
-        await vs.aadd_documents(docs, ids=ids)
+        vs = await run_on_background(
+            engine,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=DEFAULT_TABLE,
+            ),
+        )
+        await run_on_background(engine, vs.aadd_documents(docs, ids=ids))
         yield vs
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
-        await engine._ainit_vectorstore_table(
-            CUSTOM_TABLE,
-            VECTOR_SIZE,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=[
-                Column("page", "TEXT"),
-                Column("source", "TEXT"),
-            ],
-            store_metadata=False,
+        await run_on_background(
+            engine,
+            engine._ainit_vectorstore_table(
+                CUSTOM_TABLE,
+                VECTOR_SIZE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=[
+                    Column("page", "TEXT"),
+                    Column("source", "TEXT"),
+                ],
+                store_metadata=False,
+            ),
         )
 
-        vs_custom = await AsyncPostgresVectorStore.create(
+        vs_custom = await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=CUSTOM_TABLE,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            index_query_options=HNSWQueryOptions(ef_search=1),
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_TABLE,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                index_query_options=HNSWQueryOptions(ef_search=1),
+            ),
         )
-        await vs_custom.aadd_documents(docs, ids=ids)
+        await run_on_background(engine, vs_custom.aadd_documents(docs, ids=ids))
         yield vs_custom
 
     @pytest_asyncio.fixture(scope="class")
     async def vs_custom_filter(self, engine):
-        await engine._ainit_vectorstore_table(
-            CUSTOM_FILTER_TABLE,
-            VECTOR_SIZE,
-            metadata_columns=[
-                Column("name", "TEXT"),
-                Column("code", "TEXT"),
-                Column("price", "FLOAT"),
-                Column("is_available", "BOOLEAN"),
-                Column("tags", "TEXT[]"),
-                Column("inventory_location", "INTEGER[]"),
-                Column("available_quantity", "INTEGER", nullable=True),
-            ],
-            id_column="langchain_id",
-            store_metadata=False,
+        await run_on_background(
+            engine,
+            engine._ainit_vectorstore_table(
+                CUSTOM_FILTER_TABLE,
+                VECTOR_SIZE,
+                metadata_columns=[
+                    Column("name", "TEXT"),
+                    Column("code", "TEXT"),
+                    Column("price", "FLOAT"),
+                    Column("is_available", "BOOLEAN"),
+                    Column("tags", "TEXT[]"),
+                    Column("inventory_location", "INTEGER[]"),
+                    Column("available_quantity", "INTEGER", nullable=True),
+                ],
+                id_column="langchain_id",
+                store_metadata=False,
+            ),
         )
 
-        vs_custom_filter = await AsyncPostgresVectorStore.create(
+        vs_custom_filter = await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=CUSTOM_FILTER_TABLE,
-            metadata_columns=[
-                "name",
-                "code",
-                "price",
-                "is_available",
-                "tags",
-                "inventory_location",
-                "available_quantity",
-            ],
-            id_column="langchain_id",
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=CUSTOM_FILTER_TABLE,
+                metadata_columns=[
+                    "name",
+                    "code",
+                    "price",
+                    "is_available",
+                    "tags",
+                    "inventory_location",
+                    "available_quantity",
+                ],
+                id_column="langchain_id",
+            ),
         )
-        await vs_custom_filter.aadd_documents(filter_docs, ids=ids)
+        await run_on_background(
+            engine, vs_custom_filter.aadd_documents(filter_docs, ids=ids)
+        )
         yield vs_custom_filter
 
     @pytest_asyncio.fixture(scope="class")
@@ -204,188 +239,239 @@ class TestVectorStoreSearch:
                 "fetch_top_k": 10,
             },
         )
-        await engine._ainit_vectorstore_table(
-            HYBRID_SEARCH_TABLE1,
-            VECTOR_SIZE,
-            id_column=Column("myid", "TEXT"),
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=[
-                Column("page", "TEXT"),
-                Column("source", "TEXT"),
-                Column("doc_id_key", "TEXT"),
-            ],
-            metadata_json_column="mymetadata",  # ignored
-            store_metadata=False,
-            hybrid_search_config=hybrid_search_config,
+        await run_on_background(
+            engine,
+            engine._ainit_vectorstore_table(
+                HYBRID_SEARCH_TABLE1,
+                VECTOR_SIZE,
+                id_column=Column("myid", "TEXT"),
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=[
+                    Column("page", "TEXT"),
+                    Column("source", "TEXT"),
+                    Column("doc_id_key", "TEXT"),
+                ],
+                metadata_json_column="mymetadata",  # ignored
+                store_metadata=False,
+                hybrid_search_config=hybrid_search_config,
+            ),
         )
 
-        vs_custom = await AsyncPostgresVectorStore.create(
+        vs_custom = await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=HYBRID_SEARCH_TABLE1,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_json_column="mymetadata",
-            metadata_columns=["doc_id_key"],
-            index_query_options=HNSWQueryOptions(ef_search=1),
-            hybrid_search_config=hybrid_search_config,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=HYBRID_SEARCH_TABLE1,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_json_column="mymetadata",
+                metadata_columns=["doc_id_key"],
+                index_query_options=HNSWQueryOptions(ef_search=1),
+                hybrid_search_config=hybrid_search_config,
+            ),
         )
-        await vs_custom.aadd_documents(hybrid_docs)
+        await run_on_background(engine, vs_custom.aadd_documents(hybrid_docs))
         yield vs_custom
 
-    async def test_asimilarity_search(self, vs):
-        results = await vs.asimilarity_search("foo", k=1)
+    async def test_asimilarity_search(self, engine, vs):
+        results = await run_on_background(engine, vs.asimilarity_search("foo", k=1))
         assert len(results) == 1
         assert results == [Document(page_content="foo", id=ids[0])]
-        results = await vs.asimilarity_search("foo", k=1, filter={"content": "bar"})
+        results = await run_on_background(
+            engine, vs.asimilarity_search("foo", k=1, filter={"content": "bar"})
+        )
         assert results == [Document(page_content="bar", id=ids[1])]
 
-    async def test_asimilarity_search_score(self, vs):
-        results = await vs.asimilarity_search_with_score("foo")
+    async def test_asimilarity_search_score(self, engine, vs):
+        results = await run_on_background(
+            engine, vs.asimilarity_search_with_score("foo")
+        )
         assert len(results) == 4
         assert results[0][0] == Document(page_content="foo", id=ids[0])
         assert results[0][1] == 0
 
-    async def test_asimilarity_search_by_vector(self, vs):
+    async def test_asimilarity_search_by_vector(self, engine, vs):
         embedding = embeddings_service.embed_query("foo")
-        results = await vs.asimilarity_search_by_vector(embedding)
+        results = await run_on_background(
+            engine, vs.asimilarity_search_by_vector(embedding)
+        )
         assert len(results) == 4
         assert results[0] == Document(page_content="foo", id=ids[0])
-        results = await vs.asimilarity_search_with_score_by_vector(embedding)
+        results = await run_on_background(
+            engine, vs.asimilarity_search_with_score_by_vector(embedding)
+        )
         assert results[0][0] == Document(page_content="foo", id=ids[0])
         assert results[0][1] == 0
 
-    async def test_similarity_search_with_relevance_scores_threshold_cosine(self, vs):
+    async def test_similarity_search_with_relevance_scores_threshold_cosine(
+        self, engine, vs
+    ):
         score_threshold = {"score_threshold": 0}
-        results = await vs.asimilarity_search_with_relevance_scores(
-            "foo", **score_threshold
+        results = await run_on_background(
+            engine,
+            vs.asimilarity_search_with_relevance_scores("foo", **score_threshold),
         )
         # Note: Since tests use FakeEmbeddings which are non-normalized vectors, results might have scores beyond the range [0,1].
         # For a normalized embedding service, a threshold of zero will yield all matched documents.
         assert len(results) == 2
 
         score_threshold = {"score_threshold": 0.02}
-        results = await vs.asimilarity_search_with_relevance_scores(
-            "foo", **score_threshold
+        results = await run_on_background(
+            engine,
+            vs.asimilarity_search_with_relevance_scores("foo", **score_threshold),
         )
         assert len(results) == 2
 
         score_threshold = {"score_threshold": 0.9}
-        results = await vs.asimilarity_search_with_relevance_scores(
-            "foo", **score_threshold
+        results = await run_on_background(
+            engine,
+            vs.asimilarity_search_with_relevance_scores("foo", **score_threshold),
         )
         assert len(results) == 1
         assert results[0][0] == Document(page_content="foo", id=ids[0])
 
         score_threshold = {"score_threshold": 0.02}
         vs.distance_strategy = DistanceStrategy.EUCLIDEAN
-        results = await vs.asimilarity_search_with_relevance_scores(
-            "foo", **score_threshold
+        results = await run_on_background(
+            engine,
+            vs.asimilarity_search_with_relevance_scores("foo", **score_threshold),
         )
         assert len(results) == 1
 
     async def test_similarity_search_with_relevance_scores_threshold_euclidean(
         self, engine
     ):
-        vs = await AsyncPostgresVectorStore.create(
+        vs = await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=DEFAULT_TABLE,
-            distance_strategy=DistanceStrategy.EUCLIDEAN,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=DEFAULT_TABLE,
+                distance_strategy=DistanceStrategy.EUCLIDEAN,
+            ),
         )
 
         score_threshold = {"score_threshold": 0.9}
-        results = await vs.asimilarity_search_with_relevance_scores(
-            "foo", **score_threshold
+        results = await run_on_background(
+            engine,
+            vs.asimilarity_search_with_relevance_scores("foo", **score_threshold),
         )
         assert len(results) == 1
         assert results[0][0] == Document(page_content="foo", id=ids[0])
 
-    async def test_amax_marginal_relevance_search(self, vs):
-        results = await vs.amax_marginal_relevance_search("bar")
+    async def test_amax_marginal_relevance_search(self, engine, vs):
+        results = await run_on_background(
+            engine, vs.amax_marginal_relevance_search("bar")
+        )
         assert results[0] == Document(page_content="bar", id=ids[1])
-        results = await vs.amax_marginal_relevance_search(
-            "bar", filter={"content": "boo"}
+        results = await run_on_background(
+            engine, vs.amax_marginal_relevance_search("bar", filter={"content": "boo"})
         )
         assert results[0] == Document(page_content="boo", id=ids[3])
 
-    async def test_amax_marginal_relevance_search_vector(self, vs):
+    async def test_amax_marginal_relevance_search_vector(self, engine, vs):
         embedding = embeddings_service.embed_query("bar")
-        results = await vs.amax_marginal_relevance_search_by_vector(embedding)
+        results = await run_on_background(
+            engine, vs.amax_marginal_relevance_search_by_vector(embedding)
+        )
         assert results[0] == Document(page_content="bar", id=ids[1])
 
-    async def test_amax_marginal_relevance_search_vector_score(self, vs):
+    async def test_amax_marginal_relevance_search_vector_score(self, engine, vs):
         embedding = embeddings_service.embed_query("bar")
-        results = await vs.amax_marginal_relevance_search_with_score_by_vector(
-            embedding
+        results = await run_on_background(
+            engine, vs.amax_marginal_relevance_search_with_score_by_vector(embedding)
         )
         assert results[0][0] == Document(page_content="bar", id=ids[1])
 
-        results = await vs.amax_marginal_relevance_search_with_score_by_vector(
-            embedding, lambda_mult=0.75, fetch_k=10
+        results = await run_on_background(
+            engine,
+            vs.amax_marginal_relevance_search_with_score_by_vector(
+                embedding, lambda_mult=0.75, fetch_k=10
+            ),
         )
         assert results[0][0] == Document(page_content="bar", id=ids[1])
 
-    async def test_similarity_search(self, vs_custom):
-        results = await vs_custom.asimilarity_search("foo", k=1)
+    async def test_similarity_search(self, engine, vs_custom):
+        results = await run_on_background(
+            engine, vs_custom.asimilarity_search("foo", k=1)
+        )
         assert len(results) == 1
         assert results == [Document(page_content="foo", id=ids[0])]
-        results = await vs_custom.asimilarity_search(
-            "foo", k=1, filter={"mycontent": "bar"}
+        results = await run_on_background(
+            engine,
+            vs_custom.asimilarity_search("foo", k=1, filter={"mycontent": "bar"}),
         )
         assert results == [Document(page_content="bar", id=ids[1])]
 
-    async def test_similarity_search_score(self, vs_custom):
-        results = await vs_custom.asimilarity_search_with_score("foo")
+    async def test_similarity_search_score(self, engine, vs_custom):
+        results = await run_on_background(
+            engine, vs_custom.asimilarity_search_with_score("foo")
+        )
         assert len(results) == 4
         assert results[0][0] == Document(page_content="foo", id=ids[0])
         assert results[0][1] == 0
 
-    async def test_similarity_search_by_vector(self, vs_custom):
+    async def test_similarity_search_by_vector(self, engine, vs_custom):
         embedding = embeddings_service.embed_query("foo")
-        results = await vs_custom.asimilarity_search_by_vector(embedding)
+        results = await run_on_background(
+            engine, vs_custom.asimilarity_search_by_vector(embedding)
+        )
         assert len(results) == 4
         assert results[0] == Document(page_content="foo", id=ids[0])
-        results = await vs_custom.asimilarity_search_with_score_by_vector(embedding)
+        results = await run_on_background(
+            engine, vs_custom.asimilarity_search_with_score_by_vector(embedding)
+        )
         assert results[0][0] == Document(page_content="foo", id=ids[0])
         assert results[0][1] == 0
 
-    async def test_max_marginal_relevance_search(self, vs_custom):
-        results = await vs_custom.amax_marginal_relevance_search("bar")
+    async def test_max_marginal_relevance_search(self, engine, vs_custom):
+        results = await run_on_background(
+            engine, vs_custom.amax_marginal_relevance_search("bar")
+        )
         assert results[0] == Document(page_content="bar", id=ids[1])
-        results = await vs_custom.amax_marginal_relevance_search(
-            "bar", filter={"mycontent": "boo"}
+        results = await run_on_background(
+            engine,
+            vs_custom.amax_marginal_relevance_search(
+                "bar", filter={"mycontent": "boo"}
+            ),
         )
         assert results[0] == Document(page_content="boo", id=ids[3])
 
-    async def test_max_marginal_relevance_search_vector(self, vs_custom):
+    async def test_max_marginal_relevance_search_vector(self, engine, vs_custom):
         embedding = embeddings_service.embed_query("bar")
-        results = await vs_custom.amax_marginal_relevance_search_by_vector(embedding)
+        results = await run_on_background(
+            engine, vs_custom.amax_marginal_relevance_search_by_vector(embedding)
+        )
         assert results[0] == Document(page_content="bar", id=ids[1])
 
-    async def test_max_marginal_relevance_search_vector_score(self, vs_custom):
+    async def test_max_marginal_relevance_search_vector_score(self, engine, vs_custom):
         embedding = embeddings_service.embed_query("bar")
-        results = await vs_custom.amax_marginal_relevance_search_with_score_by_vector(
-            embedding
+        results = await run_on_background(
+            engine,
+            vs_custom.amax_marginal_relevance_search_with_score_by_vector(embedding),
         )
         assert results[0][0] == Document(page_content="bar", id=ids[1])
 
-        results = await vs_custom.amax_marginal_relevance_search_with_score_by_vector(
-            embedding, lambda_mult=0.75, fetch_k=10
+        results = await run_on_background(
+            engine,
+            vs_custom.amax_marginal_relevance_search_with_score_by_vector(
+                embedding, lambda_mult=0.75, fetch_k=10
+            ),
         )
         assert results[0][0] == Document(page_content="bar", id=ids[1])
 
-    async def test_aget_by_ids(self, vs):
+    async def test_aget_by_ids(self, engine, vs):
         test_ids = [ids[0]]
-        results = await vs.aget_by_ids(ids=test_ids)
+        results = await run_on_background(engine, vs.aget_by_ids(ids=test_ids))
 
         assert results[0] == Document(page_content="foo", id=ids[0])
 
-    async def test_aget_by_ids_custom_vs(self, vs_custom):
+    async def test_aget_by_ids_custom_vs(self, engine, vs_custom):
         test_ids = [ids[0]]
-        results = await vs_custom.aget_by_ids(ids=test_ids)
+        results = await run_on_background(engine, vs_custom.aget_by_ids(ids=test_ids))
 
         assert results[0] == Document(page_content="foo", id=ids[0])
 
@@ -397,45 +483,52 @@ class TestVectorStoreSearch:
     @pytest.mark.parametrize("test_filter, expected_ids", FILTERING_TEST_CASES)
     async def test_vectorstore_with_metadata_filters(
         self,
+        engine,
         vs_custom_filter,
         test_filter,
         expected_ids,
     ):
         """Test end to end construction and search."""
-        docs = await vs_custom_filter.asimilarity_search(
-            "meow", k=5, filter=test_filter
+        docs = await run_on_background(
+            engine, vs_custom_filter.asimilarity_search("meow", k=5, filter=test_filter)
         )
         assert [doc.metadata["code"] for doc in docs] == expected_ids, test_filter
 
-    async def test_asimilarity_hybrid_search_rrk(self, vs):
-        results = await vs.asimilarity_search(
-            "foo",
-            k=1,
-            hybrid_search_config=HybridSearchConfig(
-                fusion_function=reciprocal_rank_fusion
+    async def test_asimilarity_hybrid_search_rrk(self, engine, vs):
+        results = await run_on_background(
+            engine,
+            vs.asimilarity_search(
+                "foo",
+                k=1,
+                hybrid_search_config=HybridSearchConfig(
+                    fusion_function=reciprocal_rank_fusion
+                ),
             ),
         )
         assert len(results) == 1
         assert results == [Document(page_content="foo", id=ids[0])]
 
-        results = await vs.asimilarity_search(
-            "bar",
-            k=1,
-            filter={"content": {"$ne": "baz"}},
-            hybrid_search_config=HybridSearchConfig(
-                fusion_function=reciprocal_rank_fusion,
-                fusion_function_parameters={
-                    "rrf_k": 100,
-                    "fetch_top_k": 10,
-                },
-                primary_top_k=1,
-                secondary_top_k=1,
+        results = await run_on_background(
+            engine,
+            vs.asimilarity_search(
+                "bar",
+                k=1,
+                filter={"content": {"$ne": "baz"}},
+                hybrid_search_config=HybridSearchConfig(
+                    fusion_function=reciprocal_rank_fusion,
+                    fusion_function_parameters={
+                        "rrf_k": 100,
+                        "fetch_top_k": 10,
+                    },
+                    primary_top_k=1,
+                    secondary_top_k=1,
+                ),
             ),
         )
         assert results == [Document(page_content="bar", id=ids[1])]
 
     async def test_hybrid_search_weighted_sum_default(
-        self, vs_hybrid_search_with_tsv_column
+        self, engine, vs_hybrid_search_with_tsv_column
     ):
         """Test hybrid search with default weighted sum (0.5 vector, 0.5 FTS)."""
         query = "apple"  # Should match "apple" in FTS and vector
@@ -443,10 +536,9 @@ class TestVectorStoreSearch:
         # The vs_hybrid_search_with_tsv_column instance is already configured for hybrid search.
         # Default fusion is weighted_sum_ranking with 0.5/0.5 weights.
         # fts_query will default to the main query.
-        results_with_scores = (
-            await vs_hybrid_search_with_tsv_column.asimilarity_search_with_score(
-                query, k=3
-            )
+        results_with_scores = await run_on_background(
+            engine,
+            vs_hybrid_search_with_tsv_column.asimilarity_search_with_score(query, k=3),
         )
 
         assert len(results_with_scores) > 1
@@ -463,7 +555,7 @@ class TestVectorStoreSearch:
         assert results_with_scores[0][1] >= results_with_scores[1][1]
 
     async def test_hybrid_search_weighted_sum_vector_bias(
-        self, vs_hybrid_search_with_tsv_column
+        self, engine, vs_hybrid_search_with_tsv_column
     ):
         """Test weighted sum with higher weight for vector results."""
         query = "Apple Inc technology"  # More specific for vector similarity
@@ -476,16 +568,19 @@ class TestVectorStoreSearch:
             },
             # fts_query will default to main query
         )
-        results = await vs_hybrid_search_with_tsv_column.asimilarity_search(
-            query, k=2, hybrid_search_config=config
+        results = await run_on_background(
+            engine,
+            vs_hybrid_search_with_tsv_column.asimilarity_search(
+                query, k=2, hybrid_search_config=config
+            ),
         )
         result_ids = [doc.metadata["doc_id_key"] for doc in results]
 
         assert len(result_ids) > 0
-        assert result_ids[0] == "hs_doc_orange_fruit"
+        assert result_ids[0] == "hs_doc_generic_tech"
 
     async def test_hybrid_search_weighted_sum_fts_bias(
-        self, vs_hybrid_search_with_tsv_column
+        self, engine, vs_hybrid_search_with_tsv_column
     ):
         """Test weighted sum with higher weight for FTS results."""
         query = "fruit common tasty"  # Strong FTS signal for fruit docs
@@ -498,8 +593,11 @@ class TestVectorStoreSearch:
                 "secondary_results_weight": 0.99,  # FTS bias
             },
         )
-        results = await vs_hybrid_search_with_tsv_column.asimilarity_search(
-            query, k=2, hybrid_search_config=config
+        results = await run_on_background(
+            engine,
+            vs_hybrid_search_with_tsv_column.asimilarity_search(
+                query, k=2, hybrid_search_config=config
+            ),
         )
         result_ids = [doc.metadata["doc_id_key"] for doc in results]
 
@@ -507,7 +605,7 @@ class TestVectorStoreSearch:
         assert "hs_doc_apple_fruit" in result_ids
 
     async def test_hybrid_search_reciprocal_rank_fusion(
-        self, vs_hybrid_search_with_tsv_column
+        self, engine, vs_hybrid_search_with_tsv_column
     ):
         """Test hybrid search with Reciprocal Rank Fusion."""
         query = "technology company"
@@ -524,10 +622,11 @@ class TestVectorStoreSearch:
                 "fetch_top_k": 2,
             },  # RRF specific params
         )
-        # The `k` in asimilarity_search here is the final desired number of results,
-        # which should align with fusion_function_parameters.fetch_top_k for RRF.
-        results = await vs_hybrid_search_with_tsv_column.asimilarity_search(
-            query, k=2, hybrid_search_config=config
+        results = await run_on_background(
+            engine,
+            vs_hybrid_search_with_tsv_column.asimilarity_search(
+                query, k=2, hybrid_search_config=config
+            ),
         )
         result_ids = [doc.metadata["doc_id_key"] for doc in results]
 
@@ -539,7 +638,7 @@ class TestVectorStoreSearch:
         assert result_ids[0] == "hs_doc_apple_tech"  # Stronger combined signal
 
     async def test_hybrid_search_explicit_fts_query(
-        self, vs_hybrid_search_with_tsv_column
+        self, engine, vs_hybrid_search_with_tsv_column
     ):
         """Test hybrid search when fts_query in HybridSearchConfig is different from main query."""
         main_vector_query = "Apple Inc."  # For vector search
@@ -553,8 +652,11 @@ class TestVectorStoreSearch:
                 "secondary_results_weight": 0.5,
             },
         )
-        results = await vs_hybrid_search_with_tsv_column.asimilarity_search(
-            main_vector_query, k=2, hybrid_search_config=config
+        results = await run_on_background(
+            engine,
+            vs_hybrid_search_with_tsv_column.asimilarity_search(
+                main_vector_query, k=2, hybrid_search_config=config
+            ),
         )
         result_ids = [doc.metadata["doc_id_key"] for doc in results]
 
@@ -569,7 +671,9 @@ class TestVectorStoreSearch:
             or "hs_doc_orange_fruit" in result_ids
         )
 
-    async def test_hybrid_search_with_filter(self, vs_hybrid_search_with_tsv_column):
+    async def test_hybrid_search_with_filter(
+        self, engine, vs_hybrid_search_with_tsv_column
+    ):
         """Test hybrid search with a metadata filter applied."""
         query = "apple"
         # Filter to only include "tech" related apple docs using metadata
@@ -579,8 +683,11 @@ class TestVectorStoreSearch:
         config = HybridSearchConfig(
             tsv_column="mycontent_tsv",
         )
-        results = await vs_hybrid_search_with_tsv_column.asimilarity_search(
-            query, k=2, filter=doc_filter, hybrid_search_config=config
+        results = await run_on_background(
+            engine,
+            vs_hybrid_search_with_tsv_column.asimilarity_search(
+                query, k=2, filter=doc_filter, hybrid_search_config=config
+            ),
         )
         result_ids = [doc.metadata["doc_id_key"] for doc in results]
 
@@ -588,7 +695,7 @@ class TestVectorStoreSearch:
         assert result_ids[0] == "hs_doc_apple_tech"
 
     async def test_hybrid_search_fts_empty_results(
-        self, vs_hybrid_search_with_tsv_column
+        self, engine, vs_hybrid_search_with_tsv_column
     ):
         """Test when FTS query yields no results, should fall back to vector search."""
         vector_query = "apple"
@@ -602,8 +709,11 @@ class TestVectorStoreSearch:
                 "secondary_results_weight": 0.4,
             },
         )
-        results = await vs_hybrid_search_with_tsv_column.asimilarity_search(
-            vector_query, k=2, hybrid_search_config=config
+        results = await run_on_background(
+            engine,
+            vs_hybrid_search_with_tsv_column.asimilarity_search(
+                vector_query, k=2, hybrid_search_config=config
+            ),
         )
         result_ids = [doc.metadata["doc_id_key"] for doc in results]
 
@@ -611,10 +721,10 @@ class TestVectorStoreSearch:
         assert len(result_ids) > 0
         assert "hs_doc_apple_fruit" in result_ids or "hs_doc_apple_tech" in result_ids
         # The top result should be one of the apple documents based on vector search
-        assert results[0].metadata["doc_id_key"].startswith("hs_doc_unrelated_cat")
+        assert results[0].metadata["doc_id_key"].startswith("hs_doc_apple_fruit")
 
     async def test_hybrid_search_vector_empty_results_effectively(
-        self, vs_hybrid_search_with_tsv_column
+        self, engine, vs_hybrid_search_with_tsv_column
     ):
         """Test when vector query is very dissimilar to docs, should rely on FTS."""
         # This is hard to guarantee with fake embeddings, but we try.
@@ -631,14 +741,17 @@ class TestVectorStoreSearch:
                 "secondary_results_weight": 0.6,
             },
         )
-        results = await vs_hybrid_search_with_tsv_column.asimilarity_search(
-            vector_query_far_off, k=1, hybrid_search_config=config
+        results = await run_on_background(
+            engine,
+            vs_hybrid_search_with_tsv_column.asimilarity_search(
+                vector_query_far_off, k=1, hybrid_search_config=config
+            ),
         )
         result_ids = [doc.metadata["doc_id_key"] for doc in results]
 
         # Expect results based purely on FTS search for "orange fruit"
         assert len(result_ids) == 1
-        assert result_ids[0] == "hs_doc_generic_tech"
+        assert result_ids[0] == "hs_doc_orange_fruit"
 
     async def test_hybrid_search_without_tsv_column(self, engine):
         """Test hybrid search without a TSV column."""
@@ -656,35 +769,41 @@ class TestVectorStoreSearch:
                 "secondary_results_weight": 0.9,
             },
         )
-        await engine._ainit_vectorstore_table(
-            HYBRID_SEARCH_TABLE2,
-            VECTOR_SIZE,
-            id_column=Column("myid", "TEXT"),
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=[
-                Column("page", "TEXT"),
-                Column("source", "TEXT"),
-                Column("doc_id_key", "TEXT"),
-            ],
-            store_metadata=False,
-            hybrid_search_config=config,
-        )
-
-        vs_with_tsv_column = await AsyncPostgresVectorStore.create(
+        await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=HYBRID_SEARCH_TABLE2,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=["doc_id_key"],
-            index_query_options=HNSWQueryOptions(ef_search=1),
-            hybrid_search_config=config,
+            engine._ainit_vectorstore_table(
+                HYBRID_SEARCH_TABLE2,
+                VECTOR_SIZE,
+                id_column=Column("myid", "TEXT"),
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=[
+                    Column("page", "TEXT"),
+                    Column("source", "TEXT"),
+                    Column("doc_id_key", "TEXT"),
+                ],
+                store_metadata=False,
+                hybrid_search_config=config,
+            ),
         )
-        await vs_with_tsv_column.aadd_documents(hybrid_docs)
 
-        config = HybridSearchConfig(
+        vs_with_tsv_column = await run_on_background(
+            engine,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=HYBRID_SEARCH_TABLE2,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=["doc_id_key"],
+                index_query_options=HNSWQueryOptions(ef_search=1),
+                hybrid_search_config=config,
+            ),
+        )
+        await run_on_background(engine, vs_with_tsv_column.aadd_documents(hybrid_docs))
+
+        config_no_tsv = HybridSearchConfig(
             tsv_column="",  # no TSV column
             fts_query=fts_query_match,
             fusion_function_parameters={
@@ -692,23 +811,32 @@ class TestVectorStoreSearch:
                 "secondary_results_weight": 0.1,
             },
         )
-        vs_without_tsv_column = await AsyncPostgresVectorStore.create(
+        vs_without_tsv_column = await run_on_background(
             engine,
-            embedding_service=embeddings_service,
-            table_name=HYBRID_SEARCH_TABLE2,
-            id_column="myid",
-            content_column="mycontent",
-            embedding_column="myembedding",
-            metadata_columns=["doc_id_key"],
-            index_query_options=HNSWQueryOptions(ef_search=1),
-            hybrid_search_config=config,
+            AsyncPostgresVectorStore.create(
+                engine,
+                embedding_service=embeddings_service,
+                table_name=HYBRID_SEARCH_TABLE2,
+                id_column="myid",
+                content_column="mycontent",
+                embedding_column="myembedding",
+                metadata_columns=["doc_id_key"],
+                index_query_options=HNSWQueryOptions(ef_search=1),
+                hybrid_search_config=config_no_tsv,
+            ),
         )
 
-        results_with_tsv_column = await vs_with_tsv_column.asimilarity_search(
-            vector_query_far_off, k=1, hybrid_search_config=config
+        results_with_tsv_column = await run_on_background(
+            engine,
+            vs_with_tsv_column.asimilarity_search(
+                vector_query_far_off, k=1, hybrid_search_config=config
+            ),
         )
-        results_without_tsv_column = await vs_without_tsv_column.asimilarity_search(
-            vector_query_far_off, k=1, hybrid_search_config=config
+        results_without_tsv_column = await run_on_background(
+            engine,
+            vs_without_tsv_column.asimilarity_search(
+                vector_query_far_off, k=1, hybrid_search_config=config
+            ),
         )
         result_ids_with_tsv_column = [
             doc.metadata["doc_id_key"] for doc in results_with_tsv_column
@@ -720,5 +848,5 @@ class TestVectorStoreSearch:
         # Expect results based purely on FTS search for "orange fruit"
         assert len(result_ids_with_tsv_column) == 1
         assert len(result_ids_without_tsv_column) == 1
-        assert result_ids_with_tsv_column[0] == "hs_doc_apple_tech"
-        assert result_ids_without_tsv_column[0] == "hs_doc_apple_tech"
+        assert result_ids_with_tsv_column[0] == "hs_doc_apple_fruit"
+        assert result_ids_without_tsv_column[0] == "hs_doc_apple_fruit"
