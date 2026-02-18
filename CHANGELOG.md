@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.15.0...v0.16.0) (2026-02-18)
+
+
+### Features
+
+* **deps:** Update dependency langchain-postgres to v0.0.17 ([#405](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/405)) ([844c250](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/844c25082f9a9c3a2724b8e7234acb8872df47f6))
+
 ## [0.15.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.14.1...v0.15.0) (2026-01-08)
 
 
