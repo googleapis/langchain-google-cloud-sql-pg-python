@@ -9,5 +9,5 @@
     "repo": "googleapis/langchain-google-cloud-sql-pg-python",
     "distribution_name": "langchain-google-cloud-sql-pg",
     "requires_billing": true,
-    "codeowner_team": "@googleapis/senseai-eco"
+    "codeowner_team": "@googleapis/senseai-eco-team"
 }
