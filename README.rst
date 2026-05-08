@@ -104,7 +104,7 @@ Use a Vector Store to store embedded data and perform vector search.
             table_name="my-table",
             vector_size=768,  # Vector size for `VertexAIEmbeddings()`
         )
-        embeddings_service = VertexAIEmbeddings(model_name="textembedding-gecko@003")
+        embeddings_service = VertexAIEmbeddings(model="textembedding-gecko@003")
         vectorstore = PostgresVectorStore.create_sync(
             engine,
             table_name="my-table",
@@ -232,7 +232,7 @@ Update sync methods to `await` async methods
    vectorstore = await PostgresVectorStore.create(
       engine,
       table_name="my-table",
-      embedding_service=VertexAIEmbeddings(model_name="textembedding-gecko@003")
+      embedding_service=VertexAIEmbeddings(model="textembedding-gecko@003")
    )
 
 Run the code: notebooks

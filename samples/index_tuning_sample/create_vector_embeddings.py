@@ -91,7 +91,7 @@ async def create_vector_store_table(documents):
         overwrite_existing=True,  # Enabling this will recreate the table if exists.
     )
     embedding = VertexAIEmbeddings(
-        model_name="textembedding-gecko@latest", project=PROJECT_ID
+        model="textembedding-gecko@latest", project=PROJECT_ID
     )
 
     # Initialize Cloud SQL vector store
