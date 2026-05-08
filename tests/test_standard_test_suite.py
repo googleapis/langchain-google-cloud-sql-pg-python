@@ -73,7 +73,7 @@ class TestStandardSuiteSync(VectorStoreIntegrationTests):
     def password(self) -> str:
         return get_env_var("DB_PASSWORD", "database password for Cloud SQL")
 
-    @pytest_asyncio.fixture(loop_loop_scope="function")
+    @pytest_asyncio.fixture(loop_scope="function")
     async def sync_engine(self, db_project, db_region, db_instance, db_name):
         sync_engine = PostgresEngine.from_instance(
             project_id=db_project,
@@ -129,7 +129,7 @@ class TestStandardSuiteAsync(VectorStoreIntegrationTests):
     def password(self) -> str:
         return get_env_var("DB_PASSWORD", "database password for Cloud SQL")
 
-    @pytest_asyncio.fixture(loop_loop_scope="function")
+    @pytest_asyncio.fixture(loop_scope="function")
     async def async_engine(self, db_project, db_region, db_instance, db_name):
         async_engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -141,7 +141,7 @@ class TestStandardSuiteAsync(VectorStoreIntegrationTests):
         await aexecute(async_engine, f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
         await async_engine.close()
 
-    @pytest_asyncio.fixture(loop_loop_scope="function")
+    @pytest_asyncio.fixture(loop_scope="function")
     async def vectorstore(self, async_engine):
         """Get an empty vectorstore for unit tests."""
         await async_engine.ainit_vectorstore_table(
