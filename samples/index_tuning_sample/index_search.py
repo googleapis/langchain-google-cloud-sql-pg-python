@@ -46,7 +46,9 @@ query_5 = (
 queries = [query_1, query_2, query_3, query_4, query_5]
 
 
-embedding = VertexAIEmbeddings(model="textembedding-gecko@latest", project=PROJECT_ID)
+embedding = VertexAIEmbeddings(
+    model_name="textembedding-gecko@latest", project=PROJECT_ID
+)
 
 
 async def get_vector_store():

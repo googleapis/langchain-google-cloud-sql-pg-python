@@ -82,7 +82,7 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return await run_on_background(engine, _impl())
 
 
-@pytest.mark.asyncio(loop_scope="class")
+@pytest.mark.asyncio(scope="class")
 class TestVectorStore:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -100,7 +100,7 @@ class TestVectorStore:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "database name on cloud sql instance")
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -114,7 +114,7 @@ class TestVectorStore:
         await aexecute(engine, f'DROP TABLE IF EXISTS "{CUSTOM_TABLE}"')
         await engine.close()
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         # Wrap private init method
         await run_on_background(
@@ -131,7 +131,7 @@ class TestVectorStore:
         )
         yield vs
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
         # Wrap private init method
         await run_on_background(

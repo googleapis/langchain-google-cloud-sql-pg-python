@@ -25,10 +25,8 @@ from config import (
     TABLE_NAME,
     USER,
 )
-from langchain.chains.combine_documents import (  # type: ignore
-    create_stuff_documents_chain,
-)
-from langchain.chains.retrieval import create_retrieval_chain  # type: ignore
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains.retrieval import create_retrieval_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_vertexai import VertexAI, VertexAIEmbeddings
 from vertexai.preview import reasoning_engines  # type: ignore
@@ -99,7 +97,7 @@ class PostgresRetriever(reasoning_engines.Queryable):
             engine,
             table_name=self.table,
             embedding_service=VertexAIEmbeddings(
-                model="text-embedding-005", project=self.project
+                model_name="text-embedding-005", project=self.project
             ),
         )
         retriever = vector_store.as_retriever()

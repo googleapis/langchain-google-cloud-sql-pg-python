@@ -55,10 +55,10 @@ async def aexecute(engine: PostgresEngine, query: str) -> None:
     await run_on_background(engine, _action())
 
 
-@pytest.mark.asyncio(loop_scope="class")
+@pytest.mark.asyncio(scope="class")
 class TestLoaderAsync:
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def engine(self):
         engine = await PostgresEngine.afrom_instance(
             project_id=project_id,

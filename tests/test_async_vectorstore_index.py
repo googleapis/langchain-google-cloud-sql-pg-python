@@ -81,7 +81,7 @@ async def aexecute(engine: PostgresEngine, query: str) -> None:
     await run_on_background(engine, _impl())
 
 
-@pytest.mark.asyncio(loop_scope="class")
+@pytest.mark.asyncio(scope="class")
 class TestIndex:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -99,7 +99,7 @@ class TestIndex:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -113,7 +113,7 @@ class TestIndex:
         await aexecute(engine, f"DROP TABLE IF EXISTS {SIMPLE_TABLE}")
         await engine.close()
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await run_on_background(
             engine,

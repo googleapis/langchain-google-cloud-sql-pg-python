@@ -72,7 +72,7 @@ async def aexecute(
     await engine._run_as_async(run(engine, query))
 
 
-@pytest.mark.asyncio(loop_scope="class")
+@pytest.mark.asyncio(scope="class")
 class TestVectorStoreSearch:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -90,7 +90,7 @@ class TestVectorStoreSearch:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -103,7 +103,7 @@ class TestVectorStoreSearch:
         await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_FILTER_TABLE}")
         await engine.close()
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await engine.ainit_vectorstore_table(
             DEFAULT_TABLE, VECTOR_SIZE, store_metadata=False
@@ -116,7 +116,7 @@ class TestVectorStoreSearch:
         await vs.aadd_documents(docs, ids=ids)
         yield vs
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def engine_sync(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,
@@ -128,7 +128,7 @@ class TestVectorStoreSearch:
         await aexecute(engine, f"DROP TABLE IF EXISTS {CUSTOM_TABLE}")
         await engine.close()
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine_sync):
         engine_sync.init_vectorstore_table(
             CUSTOM_TABLE,
@@ -155,7 +155,7 @@ class TestVectorStoreSearch:
         vs_custom.add_documents(docs, ids=ids)
         yield vs_custom
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs_custom_filter(self, engine):
         await engine.ainit_vectorstore_table(
             CUSTOM_FILTER_TABLE,
@@ -352,7 +352,7 @@ class TestVectorStoreSearchSync:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def engine_sync(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,

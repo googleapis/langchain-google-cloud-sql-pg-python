@@ -85,7 +85,7 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return await run_on_background(engine, _impl())
 
 
-@pytest.mark.asyncio(loop_scope="module")
+@pytest.mark.asyncio(scope="module")
 class TestEngineAsync:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -115,7 +115,7 @@ class TestEngineAsync:
     def iam_account(self) -> str:
         return get_env_var("IAM_ACCOUNT", "Cloud SQL IAM account email")
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -420,7 +420,7 @@ class TestEngineAsync:
             assert row in expected
 
 
-@pytest.mark.asyncio(loop_scope="module")
+@pytest.mark.asyncio(scope="module")
 class TestEngineSync:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -450,7 +450,7 @@ class TestEngineSync:
     def iam_account(self) -> str:
         return get_env_var("IAM_ACCOUNT", "Cloud SQL IAM account email")
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,

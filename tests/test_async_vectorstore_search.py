@@ -97,7 +97,7 @@ async def aexecute(
     await run_on_background(engine, _impl())
 
 
-@pytest.mark.asyncio(loop_scope="class")
+@pytest.mark.asyncio(scope="class")
 class TestVectorStoreSearch:
     @pytest.fixture(scope="module")
     def db_project(self) -> str:
@@ -115,7 +115,7 @@ class TestVectorStoreSearch:
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -131,7 +131,7 @@ class TestVectorStoreSearch:
         await aexecute(engine, f"DROP TABLE IF EXISTS {HYBRID_SEARCH_TABLE2}")
         await engine.close()
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs(self, engine):
         await run_on_background(
             engine,
@@ -150,7 +150,7 @@ class TestVectorStoreSearch:
         await run_on_background(engine, vs.aadd_documents(docs, ids=ids))
         yield vs
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs_custom(self, engine):
         await run_on_background(
             engine,
@@ -183,7 +183,7 @@ class TestVectorStoreSearch:
         await run_on_background(engine, vs_custom.aadd_documents(docs, ids=ids))
         yield vs_custom
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs_custom_filter(self, engine):
         await run_on_background(
             engine,
@@ -227,7 +227,7 @@ class TestVectorStoreSearch:
         )
         yield vs_custom_filter
 
-    @pytest_asyncio.fixture(loop_scope="class")
+    @pytest_asyncio.fixture(scope="class")
     async def vs_hybrid_search_with_tsv_column(self, engine):
         hybrid_search_config = HybridSearchConfig(
             tsv_column="mycontent_tsv",

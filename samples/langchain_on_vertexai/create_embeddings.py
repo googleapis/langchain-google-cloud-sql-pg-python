@@ -109,7 +109,7 @@ async def create_vectorstore():
         engine,
         table_name=TABLE_NAME,
         embedding_service=VertexAIEmbeddings(
-            model="text-embedding-005", project=PROJECT_ID
+            model_name="text-embedding-005", project=PROJECT_ID
         ),
     )
 

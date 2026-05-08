@@ -26,9 +26,9 @@ from config import (
     TABLE_NAME,
     USER,
 )
-from langchain import hub  # type: ignore
-from langchain.agents import AgentExecutor, create_react_agent  # type: ignore
-from langchain.tools.retriever import create_retriever_tool  # type: ignore
+from langchain import hub
+from langchain.agents import AgentExecutor, create_react_agent
+from langchain.tools.retriever import create_retriever_tool
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_google_vertexai import ChatVertexAI, VertexAIEmbeddings
 from vertexai.preview import reasoning_engines  # type: ignore
@@ -91,7 +91,7 @@ class PostgresAgent(reasoning_engines.Queryable):
             engine,
             table_name=self.table,
             embedding_service=VertexAIEmbeddings(
-                model="text-embedding-005", project=self.project
+                model_name="text-embedding-005", project=self.project
             ),
         )
         retriever = vector_store.as_retriever()
