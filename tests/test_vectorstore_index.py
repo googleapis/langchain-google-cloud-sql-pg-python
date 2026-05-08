@@ -69,19 +69,19 @@ async def aexecute(
 
 @pytest.mark.asyncio(loop_scope="class")
 class TestIndex:
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_region(self) -> str:
         return get_env_var("REGION", "region for cloud sql instance")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_instance(self) -> str:
         return get_env_var("INSTANCE_ID", "instance for cloud sql")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
@@ -150,19 +150,19 @@ class TestIndex:
 
 @pytest.mark.asyncio(loop_scope="class")
 class TestAsyncIndex:
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_region(self) -> str:
         return get_env_var("REGION", "region for cloud sql instance")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_instance(self) -> str:
         return get_env_var("INSTANCE_ID", "instance for cloud sql")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 

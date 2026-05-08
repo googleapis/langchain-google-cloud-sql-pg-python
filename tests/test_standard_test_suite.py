@@ -49,27 +49,27 @@ async def aexecute(
 @pytest.mark.filterwarnings("ignore")
 @pytest.mark.asyncio
 class TestStandardSuiteSync(VectorStoreIntegrationTests):
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_region(self) -> str:
         return get_env_var("REGION", "region for Cloud SQL instance")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_instance(self) -> str:
         return get_env_var("INSTANCE_ID", "instance for Cloud SQL")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "database name on Cloud SQL instance")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def user(self) -> str:
         return get_env_var("DB_USER", "database user for Cloud SQL")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def password(self) -> str:
         return get_env_var("DB_PASSWORD", "database password for Cloud SQL")
 
@@ -85,7 +85,7 @@ class TestStandardSuiteSync(VectorStoreIntegrationTests):
         await aexecute(sync_engine, f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"')
         await sync_engine.close()
 
-    @pytest.fixture(loop_scope="function")
+    @pytest.fixture(scope="function")
     def vectorstore(self, sync_engine):
         """Get an empty vectorstore for unit tests."""
         sync_engine.init_vectorstore_table(
@@ -105,27 +105,27 @@ class TestStandardSuiteSync(VectorStoreIntegrationTests):
 @pytest.mark.filterwarnings("ignore")
 @pytest.mark.asyncio
 class TestStandardSuiteAsync(VectorStoreIntegrationTests):
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_region(self) -> str:
         return get_env_var("REGION", "region for Cloud SQL instance")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_instance(self) -> str:
         return get_env_var("INSTANCE_ID", "instance for Cloud SQL")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "database name on Cloud SQL instance")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def user(self) -> str:
         return get_env_var("DB_USER", "database user for Cloud SQL")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def password(self) -> str:
         return get_env_var("DB_PASSWORD", "database password for Cloud SQL")
 

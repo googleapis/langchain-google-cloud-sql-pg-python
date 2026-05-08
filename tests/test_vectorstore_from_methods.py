@@ -79,19 +79,19 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
 
 @pytest.mark.asyncio
 class TestVectorStoreFromMethods:
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_region(self) -> str:
         return get_env_var("REGION", "region for cloud sql instance")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_instance(self) -> str:
         return get_env_var("INSTANCE_ID", "instance for cloud sql")
 
-    @pytest.fixture(loop_scope="module")
+    @pytest.fixture(scope="module")
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "database name on cloud sql instance")
 
