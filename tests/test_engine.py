@@ -85,37 +85,37 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return await run_on_background(engine, _impl())
 
 
-@pytest.mark.asyncio(scope="module")
+@pytest.mark.asyncio(loop_scope="module")
 class TestEngineAsync:
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_region(self) -> str:
         return get_env_var("REGION", "region for cloud sql instance")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_instance(self) -> str:
         return get_env_var("INSTANCE_ID", "instance for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def user(self) -> str:
         return get_env_var("DB_USER", "database user for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def password(self) -> str:
         return get_env_var("DB_PASSWORD", "database password for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def iam_account(self) -> str:
         return get_env_var("IAM_ACCOUNT", "Cloud SQL IAM account email")
 
-    @pytest_asyncio.fixture(scope="class")
+    @pytest_asyncio.fixture(loop_scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -420,37 +420,37 @@ class TestEngineAsync:
             assert row in expected
 
 
-@pytest.mark.asyncio(scope="module")
+@pytest.mark.asyncio(loop_scope="module")
 class TestEngineSync:
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_region(self) -> str:
         return get_env_var("REGION", "region for cloud sql instance")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_instance(self) -> str:
         return get_env_var("INSTANCE_ID", "instance for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "instance for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def user(self) -> str:
         return get_env_var("DB_USER", "database user for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def password(self) -> str:
         return get_env_var("DB_PASSWORD", "database password for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def iam_account(self) -> str:
         return get_env_var("IAM_ACCOUNT", "Cloud SQL IAM account email")
 
-    @pytest_asyncio.fixture(scope="class")
+    @pytest_asyncio.fixture(loop_scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = PostgresEngine.from_instance(
             project_id=db_project,

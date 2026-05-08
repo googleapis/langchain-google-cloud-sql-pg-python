@@ -76,33 +76,33 @@ async def afetch(engine: PostgresEngine, query: str) -> Sequence[RowMapping]:
     return await engine._run_as_async(run(engine, query))
 
 
-@pytest.mark.asyncio(scope="class")
+@pytest.mark.asyncio(loop_scope="class")
 class TestVectorStore:
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_project(self) -> str:
         return get_env_var("PROJECT_ID", "project id for google cloud")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_region(self) -> str:
         return get_env_var("REGION", "region for cloud sql instance")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_instance(self) -> str:
         return get_env_var("INSTANCE_ID", "instance for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def db_name(self) -> str:
         return get_env_var("DATABASE_ID", "database name on cloud sql instance")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def user(self) -> str:
         return get_env_var("DB_USER", "database user for cloud sql")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(loop_scope="module")
     def password(self) -> str:
         return get_env_var("DB_PASSWORD", "database password for cloud sql")
 
-    @pytest_asyncio.fixture(scope="class")
+    @pytest_asyncio.fixture(loop_scope="class")
     async def engine(self, db_project, db_region, db_instance, db_name):
         engine = await PostgresEngine.afrom_instance(
             project_id=db_project,
@@ -115,7 +115,7 @@ class TestVectorStore:
         await aexecute(engine, f'DROP TABLE IF EXISTS "{DEFAULT_TABLE}"')
         await engine.close()
 
-    @pytest_asyncio.fixture(scope="class")
+    @pytest_asyncio.fixture(loop_scope="class")
     async def vs(self, engine):
         await engine.ainit_vectorstore_table(DEFAULT_TABLE, VECTOR_SIZE)
         vs = await PostgresVectorStore.create(
@@ -125,7 +125,7 @@ class TestVectorStore:
         )
         yield vs
 
-    @pytest_asyncio.fixture(scope="class")
+    @pytest_asyncio.fixture(loop_scope="class")
     async def engine_sync(self, db_project, db_region, db_instance, db_name):
         engine_sync = PostgresEngine.from_instance(
             project_id=db_project,
@@ -138,7 +138,7 @@ class TestVectorStore:
         await aexecute(engine_sync, f'DROP TABLE IF EXISTS "{DEFAULT_TABLE_SYNC}"')
         await engine_sync.close()
 
-    @pytest_asyncio.fixture(scope="class")
+    @pytest_asyncio.fixture(loop_scope="class")
     def vs_sync(self, engine_sync):
         engine_sync.init_vectorstore_table(DEFAULT_TABLE_SYNC, VECTOR_SIZE)
 
@@ -149,7 +149,7 @@ class TestVectorStore:
         )
         yield vs
 
-    @pytest_asyncio.fixture(scope="class")
+    @pytest_asyncio.fixture(loop_scope="class")
     async def vs_custom(self, engine):
         await engine.ainit_vectorstore_table(
             CUSTOM_TABLE,
