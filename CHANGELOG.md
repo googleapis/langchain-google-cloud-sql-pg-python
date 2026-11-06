@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.16.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.15.0...v0.16.0) (2026-11-06)
+
+
+### Features
+
+* **deps:** Update dependency langchain-postgres to v0.0.17 ([#405](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/405)) ([844c250](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/844c25082f9a9c3a2724b8e7234acb8872df47f6))
+* **deps:** Update dependency langchain-postgres to v0.0.18 ([#440](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/440)) ([ddeb57b](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/ddeb57b935c334cd068041886ae5574b73ae6b3b))
+
+
+### Bug Fixes
+
+* Update schema propagation for chat message history ([#446](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/446)) ([e91cf65](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/e91cf65d231877bb9c3939aac5628bddba45bd31))
+
 ## [0.15.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.14.1...v0.15.0) (2026-01-08)
 
 
