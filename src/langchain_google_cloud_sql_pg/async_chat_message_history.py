@@ -98,7 +98,7 @@ class AsyncPostgresChatMessageHistory(BaseChatMessageHistory):
                 "\n    type TEXT NOT NULL"
                 "\n);"
             )
-        return cls(cls.__create_key, engine._pool, session_id, table_name)
+        return cls(cls.__create_key, engine._pool, session_id, table_name, schema_name)
 
     async def aadd_message(self, message: BaseMessage) -> None:
         """Append the message to the record in PostgreSQL"""
