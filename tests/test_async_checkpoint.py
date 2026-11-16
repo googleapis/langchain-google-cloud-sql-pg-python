@@ -38,6 +38,7 @@ from langgraph.checkpoint.base import (
     CheckpointMetadata,
     create_checkpoint,
     empty_checkpoint,
+    get_checkpoint_metadata,
 )
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.prebuilt import (  # type: ignore
@@ -331,13 +332,17 @@ async def test_checkpoint_alist(
     assert len(search_results_1) == 1
     print(metadata[0])
     print(search_results_1[0].metadata)
-    assert search_results_1[0].metadata == metadata[0]
+    assert search_results_1[0].metadata == get_checkpoint_metadata(
+        configs[1], metadata[0]
+    )
 
     search_results_2 = await run_on_background(
         async_engine, consume_alist(None, filter=query_2)
     )
     assert len(search_results_2) == 1
-    assert search_results_2[0].metadata == metadata[1]
+    assert search_results_2[0].metadata == get_checkpoint_metadata(
+        configs[2], metadata[1]
+    )
 
     search_results_3 = await run_on_background(
         async_engine, consume_alist(None, filter=query_3)
@@ -456,7 +461,9 @@ async def test_checkpoint_aget_tuple(
     search_results_1 = await run_on_background(
         async_engine, checkpointer.aget_tuple(new_config)
     )
-    assert search_results_1.metadata == metadata[0]  # type: ignore
+    assert search_results_1.metadata == get_checkpoint_metadata(
+        configs[1], metadata[0]
+    )  # type: ignore
 
     # No matching checkpoint
     assert (
