@@ -24,6 +24,7 @@ from langgraph.checkpoint.base import (
     CheckpointMetadata,
     CheckpointTuple,
     get_checkpoint_id,
+    get_checkpoint_metadata,
 )
 from langgraph.checkpoint.serde.base import SerializerProtocol
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
@@ -276,9 +277,9 @@ class AsyncPostgresSaver(BaseCheckpointSaver[str]):
 
         async with self.pool.connect() as conn:
             type_, serialized_checkpoint = self.serde.dumps_typed(checkpoint)
-            serialized_metadata = json.dumps(metadata, ensure_ascii=False).encode(
-                "utf-8", "ignore"
-            )
+            serialized_metadata = json.dumps(
+                get_checkpoint_metadata(config, metadata), ensure_ascii=False
+            ).encode("utf-8", "ignore")
             await conn.execute(
                 text(query),
                 {
