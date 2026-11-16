@@ -461,6 +461,7 @@ async def test_checkpoint_aget_tuple(
     search_results_1 = await run_on_background(
         async_engine, checkpointer.aget_tuple(new_config)
     )
+    assert search_results_1 is not None
     assert search_results_1.metadata == get_checkpoint_metadata(
         configs[1], metadata[0]
     )  # type: ignore

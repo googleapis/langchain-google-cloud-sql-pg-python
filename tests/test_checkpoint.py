@@ -352,6 +352,7 @@ def test_checkpoint_get_tuple(
 
     # Matching checkpoint
     search_results_1 = checkpointer.get_tuple(new_config)
+    assert search_results_1 is not None
     assert search_results_1.metadata == get_checkpoint_metadata(
         configs[1], metadata[0]
     )  # type: ignore
