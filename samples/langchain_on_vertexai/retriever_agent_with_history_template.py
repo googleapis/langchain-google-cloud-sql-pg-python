@@ -26,9 +26,9 @@ from config import (
     TABLE_NAME,
     USER,
 )
-from langchain import hub
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain.tools.retriever import create_retriever_tool
+from langchain_classic import hub
+from langchain_classic.agents import AgentExecutor, create_react_agent
+from langchain_classic.tools.retriever import create_retriever_tool
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_google_vertexai import ChatVertexAI, VertexAIEmbeddings
 from vertexai.preview import reasoning_engines  # type: ignore
@@ -151,7 +151,7 @@ class PostgresAgent(reasoning_engines.Queryable):
 
 # Uncomment to test locally
 # app = PostgresAgent(
-#     model="gemini-2.0-flash-001",
+#     model="gemini-2.5-flash",
 #     project=PROJECT_ID,
 #     region=REGION,
 #     instance=INSTANCE,
@@ -173,7 +173,7 @@ DISPLAY_NAME = os.getenv("DISPLAY_NAME") or "PostgresAgent"
 
 remote_app = reasoning_engines.ReasoningEngine.create(
     PostgresAgent(
-        model="gemini-2.0-flash-001",
+        model="gemini-2.5-flash",
         project=PROJECT_ID,
         region=REGION,
         instance=INSTANCE,

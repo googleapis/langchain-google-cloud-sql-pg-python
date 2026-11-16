@@ -25,8 +25,8 @@ from config import (
     TABLE_NAME,
     USER,
 )
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains.retrieval import create_retrieval_chain
+from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain_classic.chains.retrieval import create_retrieval_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_vertexai import VertexAI, VertexAIEmbeddings
 from vertexai.preview import reasoning_engines  # type: ignore
@@ -123,7 +123,7 @@ class PostgresRetriever(reasoning_engines.Queryable):
 # Uncomment to test locally
 
 # app = PostgresRetriever(
-#     model="gemini-2.0-flash-001",
+#     model="gemini-2.5-flash",
 #     project=PROJECT_ID,
 #     region=REGION,
 #     instance=INSTANCE,
@@ -143,7 +143,7 @@ DISPLAY_NAME = os.getenv("DISPLAY_NAME") or "PostgresRetriever"
 
 remote_app = reasoning_engines.ReasoningEngine.create(
     PostgresRetriever(
-        model="gemini-2.0-flash-001",
+        model="gemini-2.5-flash",
         project=PROJECT_ID,
         region=REGION,
         instance=INSTANCE,
