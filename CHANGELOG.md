@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.16.0...v0.16.1) (2026-11-27)
+
+
+### Bug Fixes
+
+* Merge metadata in saver ([#450](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/issues/450)) ([29c0534](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/commit/29c0534bf9a40e952fa4840138a1f918fff44c1a))
+
 ## [0.16.0](https://github.com/googleapis/langchain-google-cloud-sql-pg-python/compare/v0.15.0...v0.16.0) (2026-11-06)
 
 
