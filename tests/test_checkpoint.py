@@ -24,6 +24,7 @@ from langgraph.checkpoint.base import (
     CheckpointMetadata,
     create_checkpoint,
     empty_checkpoint,
+    get_checkpoint_metadata,
 )
 from sqlalchemy import text
 from sqlalchemy.engine.row import RowMapping
@@ -313,10 +314,14 @@ def test_checkpoint_list(
 
     search_results_1 = list(checkpointer.list(None, filter=query_1))
     assert len(search_results_1) == 1
-    assert search_results_1[0].metadata == metadata[0]
+    assert search_results_1[0].metadata == get_checkpoint_metadata(
+        configs[1], metadata[0]
+    )
     search_results_2 = list(checkpointer.list(None, filter=query_2))
     assert len(search_results_2) == 1
-    assert search_results_2[0].metadata == metadata[1]
+    assert search_results_2[0].metadata == get_checkpoint_metadata(
+        configs[2], metadata[1]
+    )
 
     search_results_3 = list(checkpointer.list(None, filter=query_3))
     assert len(search_results_3) == 3
@@ -347,7 +352,10 @@ def test_checkpoint_get_tuple(
 
     # Matching checkpoint
     search_results_1 = checkpointer.get_tuple(new_config)
-    assert search_results_1.metadata == metadata[0]  # type: ignore
+    assert search_results_1 is not None
+    assert search_results_1.metadata == get_checkpoint_metadata(
+        configs[1], metadata[0]
+    )  # type: ignore
 
     # No matching checkpoint
     assert checkpointer.get_tuple(configs[0]) is None
